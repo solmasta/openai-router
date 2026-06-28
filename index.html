@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Source AI Router</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <header>
+      <span class="wordmark">ai-router</span>
+      <select id="modelSelect" disabled>
+        <option>Loading…</option>
+      </select>
+    </header>
+
+    <main>
+      <textarea id="prompt" placeholder="Ask anything…" spellcheck="false"></textarea>
+      <button id="sendBtn">Send</button>
+      <div id="response" class="response hidden"></div>
+    </main>
+
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

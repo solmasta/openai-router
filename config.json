@@ -1,0 +1,9 @@
+{
+  "worker_url": "https://openai-router.lukedorsett.workers.dev",
+  "default_model": "meta-llama/Meta-Llama-3-8B-Instruct",
+  "models": [
+    { "id": "meta-llama/Meta-Llama-3-8B-Instruct",        "label": "Llama 3 8B"      },
+    { "id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",    "label": "DeepSeek R1 7B"  },
+    { "id": "mistralai/Mistral-7B-Instruct-v0.3",          "label": "Mistral 7B"      }
+  ]
+}

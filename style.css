@@ -1,0 +1,158 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:      #111113;
+  --surface: #18181b;
+  --border:  #2e2e32;
+  --text:    #f4f4f5;
+  --muted:   #71717a;
+  --accent:  #818cf8;
+  --error:   #f87171;
+  --mono:    'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100vh;
+  padding: 32px 16px;
+}
+
+.app {
+  max-width: 740px;
+  margin: 0 auto;
+}
+
+/* ── Header ─────────────────────────────────────── */
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wordmark {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+}
+
+/* ── Model select ────────────────────────────────── */
+
+select {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 28px 6px 10px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2371717a'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 0.15s;
+}
+
+select:hover:not(:disabled) { border-color: var(--muted); }
+select:focus                 { outline: none; border-color: var(--accent); }
+select:disabled              { opacity: 0.4; cursor: default; }
+
+/* ── Main layout ─────────────────────────────────── */
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Textarea ─────────────────────────────────────── */
+
+textarea {
+  width: 100%;
+  min-height: 140px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+
+textarea::placeholder { color: var(--muted); }
+textarea:focus        { outline: none; border-color: var(--accent); }
+
+/* ── Button ───────────────────────────────────────── */
+
+button {
+  width: 100%;
+  padding: 12px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+button:hover:not(:disabled) { background: #6366f1; }
+button:disabled             { opacity: 0.45; cursor: default; }
+
+/* ── Response pane ────────────────────────────────── */
+
+.response {
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.response.hidden  { display: none; }
+
+.response.loading {
+  color: var(--accent);
+  animation: blink 0.75s step-end infinite;
+}
+
+.response.error {
+  color: var(--error);
+  border-left-color: var(--error);
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── Mobile ───────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  body   { padding: 20px 12px; }
+  header { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
