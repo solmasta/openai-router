@@ -3,7 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Open Source AI Router</title>
+  <meta name="theme-color" content="#0f1014">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ai-router">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-32.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>ai-router</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,18 +20,86 @@
 
     <header>
       <span class="wordmark">ai-router</span>
-      <select id="modelSelect" disabled>
-        <option>Loading…</option>
-      </select>
+      <div class="header-controls">
+        <select id="modelSelect" disabled>
+          <option>Loading…</option>
+        </select>
+        <label class="temp-wrap">
+          <span class="temp-label">Temp <strong id="tempVal">0.7</strong></span>
+          <input type="range" id="tempSlider" min="0" max="1" step="0.1" value="0.7">
+        </label>
+      </div>
     </header>
 
-    <main>
-      <textarea id="prompt" placeholder="Ask anything…" spellcheck="false"></textarea>
-      <button id="sendBtn">Send</button>
-      <div id="response" class="response hidden"></div>
-    </main>
+    <button class="system-bar" id="systemToggle">
+      <span class="system-dot" id="systemDot"></span>
+      <span class="system-label" id="activePromptName">System prompt</span>
+      <span class="system-arrow">›</span>
+    </button>
+
+    <div class="chat" id="chat">
+      <div class="empty-state" id="emptyState">
+        Select a model and start chatting.
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <textarea id="prompt" placeholder="Ask anything…" spellcheck="false" rows="3"></textarea>
+      <div class="input-actions">
+        <button id="clearBtn" class="btn-ghost">Clear</button>
+        <button id="sendBtn" class="btn-primary">Send</button>
+      </div>
+    </div>
 
   </div>
+
+  <!-- Prompt Manager Modal -->
+  <div class="modal hidden" id="promptModal">
+    <div class="sheet">
+      <div class="sheet-header">
+        <span>System Prompts</span>
+        <button class="sheet-close" id="closePromptModal">✕</button>
+      </div>
+      <div class="sheet-body" id="promptList"></div>
+      <div class="sheet-footer">
+        <button class="btn-primary full-w" id="newPromptBtn">+ New prompt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt Editor Modal -->
+  <div class="modal hidden" id="promptEditor">
+    <div class="sheet">
+      <div class="sheet-header">
+        <span id="editorTitle">New prompt</span>
+        <button class="sheet-close" id="closeEditor">✕</button>
+      </div>
+      <div class="sheet-body editor-form">
+        <label class="field-label">Name</label>
+        <input
+          type="text"
+          id="promptNameInput"
+          class="field-input"
+          placeholder="e.g. Coding Expert"
+          autocomplete="off"
+          autocorrect="off"
+        >
+        <label class="field-label">Prompt</label>
+        <textarea
+          id="promptContentInput"
+          class="field-textarea"
+          placeholder="You are an expert coding assistant. Write clean, well-commented code."
+          rows="6"
+        ></textarea>
+      </div>
+      <div class="sheet-footer editor-footer">
+        <button class="btn-danger" id="deletePromptBtn">Delete</button>
+        <button class="btn-primary" id="savePromptBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

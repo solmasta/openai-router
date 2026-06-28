@@ -1,0 +1,23 @@
+{
+  "name": "ai-router",
+  "short_name": "ai-router",
+  "description": "Open source AI router — Llama, DeepSeek, Mistral via DeepInfra",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f1014",
+  "theme_color": "#0f1014",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
