@@ -6,7 +6,6 @@ const CORS = {
 
 export default {
   async fetch(request, env) {
-    // Handle CORS preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS });
     }
@@ -36,6 +35,18 @@ export default {
       },
       body: JSON.stringify(body),
     });
+
+    // Stream passthrough
+    if (body.stream) {
+      return new Response(upstream.body, {
+        status: upstream.status,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          ...CORS,
+        },
+      });
+    }
 
     return new Response(await upstream.text(), {
       status: upstream.status,
