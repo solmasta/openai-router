@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0f1014">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="ai-router">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon-32.png" type="image/png">
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <title>ai-router</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f1014">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ai-router">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>ai-router</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -22,73 +22,49 @@
   --mono:'Cascadia Code','Fira Code',ui-monospace,monospace;
 }
 html,body{height:100%}
-body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;
-  font-size:15px;line-height:1.6;display:flex;flex-direction:column;overscroll-behavior:none}
-.app{display:flex;flex-direction:column;height:100vh;max-width:820px;width:100%;
-  margin:0 auto;padding:0 16px}
-/* Header */
-header{display:flex;align-items:center;justify-content:space-between;padding:12px 0;
-  border-bottom:1px solid var(--border);flex-shrink:0;gap:10px}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.6;display:flex;flex-direction:column;overscroll-behavior:none}
+.app{display:flex;flex-direction:column;height:100vh;max-width:820px;width:100%;margin:0 auto;padding:0 16px}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);flex-shrink:0;gap:10px}
 .wordmark{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:.06em;flex-shrink:0}
 .header-right{display:flex;align-items:center;gap:8px}
-.model-btn{display:flex;align-items:center;gap:5px;background:var(--surface);
-  border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);
-  font-size:13px;font-family:var(--mono);cursor:pointer;transition:border-color .15s}
+.model-btn{display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;font-family:var(--mono);cursor:pointer;transition:border-color .15s}
 .model-btn:hover:not(:disabled){border-color:var(--muted)}
 .model-btn:disabled{opacity:.4}
 .model-arrow{color:var(--muted);font-size:10px}
-.icon-btn{background:none;border:1px solid var(--border);border-radius:6px;
-  padding:6px 9px;font-size:15px;cursor:pointer;transition:border-color .15s;line-height:1}
+.icon-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:6px 9px;font-size:15px;cursor:pointer;transition:border-color .15s;line-height:1}
 .icon-btn:hover{border-color:var(--muted)}
-/* System bar */
-.system-bar{display:flex;align-items:center;gap:8px;width:100%;padding:9px 0;
-  border:none;border-bottom:1px solid var(--border);background:none;color:var(--muted);
-  font-size:13px;font-family:system-ui,sans-serif;cursor:pointer;text-align:left;
-  flex-shrink:0;transition:color .15s}
+.system-bar{display:flex;align-items:center;gap:8px;width:100%;padding:9px 0;border:none;border-bottom:1px solid var(--border);background:none;color:var(--muted);font-size:13px;font-family:system-ui,sans-serif;cursor:pointer;text-align:left;flex-shrink:0;transition:color .15s}
 .system-bar:hover{color:var(--text)}
-.system-dot{width:7px;height:7px;border-radius:50%;background:var(--border);
-  flex-shrink:0;transition:background .2s}
+.system-dot{width:7px;height:7px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .2s}
 .system-dot.dot-on{background:var(--accent)}
 .system-label{flex:1}
 .system-arrow{font-size:16px;opacity:.4}
-/* Chat */
 .chat{flex:1;overflow-y:auto;padding:16px 0 8px;display:flex;flex-direction:column;gap:16px}
 .chat::-webkit-scrollbar{width:3px}
 .chat::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 .empty-state{margin:auto;color:var(--muted);font-size:14px;text-align:center}
-/* Messages */
 .msg{display:flex;flex-direction:column;gap:4px}
-.msg-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;
-  letter-spacing:.05em;color:var(--muted)}
+.msg-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 .msg-user .msg-label{color:var(--accent)}
-.msg-body{background:var(--surface);border:1px solid var(--border);border-radius:10px;
-  padding:12px 14px;font-size:14.5px;line-height:1.75;word-break:break-word}
+.msg-body{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14.5px;line-height:1.75;word-break:break-word}
 .msg-user .msg-body{background:var(--user-bg);border-color:var(--user-br)}
 .msg-body.error{color:var(--error);border-color:var(--error)}
-.msg-assistant.streaming .msg-body{border-left:3px solid var(--accent);
-  animation:livewire 1.4s ease-in-out infinite}
+.msg-assistant.streaming .msg-body{border-left:3px solid var(--accent);animation:livewire 1.4s ease-in-out infinite}
 @keyframes livewire{0%,100%{border-left-color:var(--accent)}50%{border-left-color:var(--accent-d)}}
 .msg-img{display:block;max-width:100%;border-radius:6px;margin-top:8px}
 .msg-actions{display:flex;gap:6px;margin-top:2px}
-.btn-action{background:none;border:1px solid var(--border);color:var(--muted);
-  font-size:12px;font-family:system-ui,sans-serif;padding:3px 10px;border-radius:4px;cursor:pointer}
+.btn-action{background:none;border:1px solid var(--border);color:var(--muted);font-size:12px;font-family:system-ui,sans-serif;padding:3px 10px;border-radius:4px;cursor:pointer}
 .btn-action:hover{color:var(--text);border-color:var(--muted)}
-/* Code */
 .code-block{margin:8px 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
-.code-header{display:flex;justify-content:space-between;align-items:center;
-  background:#0d1117;padding:6px 12px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
-.copy-code{background:none;border:1px solid var(--border);color:var(--muted);
-  font-size:11px;font-family:system-ui,sans-serif;padding:2px 8px;border-radius:3px;cursor:pointer}
+.code-header{display:flex;justify-content:space-between;align-items:center;background:#0d1117;padding:6px 12px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.copy-code{background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;font-family:system-ui,sans-serif;padding:2px 8px;border-radius:3px;cursor:pointer}
 .copy-code:hover{color:var(--text)}
 .code-block pre{margin:0;padding:14px;overflow-x:auto;background:#0d1117}
 .code-block code{font-family:var(--mono);font-size:13px;line-height:1.65}
-code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;
-  border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent)}
+code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--accent)}
 .cursor{color:var(--accent);animation:blink .75s step-end infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-/* Input bar */
-.input-bar{padding:10px 0 18px;border-top:1px solid var(--border);flex-shrink:0;
-  display:flex;flex-direction:column;gap:8px}
+.input-bar{padding:10px 0 18px;border-top:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:8px}
 .attach-preview{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px}
 .attach-item{display:flex;align-items:center;gap:8px}
 .attach-thumb{width:44px;height:44px;object-fit:cover;border-radius:5px;flex-shrink:0}
@@ -96,88 +72,58 @@ code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;
 .attach-name{flex:1;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .attach-clear{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:2px 6px;flex-shrink:0}
 .attach-clear:hover{color:var(--error)}
-#prompt{width:100%;min-height:68px;max-height:180px;font-family:system-ui,-apple-system,sans-serif;
-  font-size:15px;color:var(--text);background:var(--surface);border:1px solid var(--border);
-  border-radius:8px;padding:11px 13px;resize:none;line-height:1.5;overflow-y:auto}
+#prompt{width:100%;min-height:68px;max-height:180px;font-family:system-ui,-apple-system,sans-serif;font-size:15px;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;resize:none;line-height:1.5;overflow-y:auto}
 #prompt::placeholder{color:var(--muted)}
 #prompt:focus{outline:none;border-color:var(--accent)}
 .input-actions{display:flex;align-items:center;gap:8px}
 .attach-icon{font-size:18px;padding:6px 8px}
 .input-right{display:flex;gap:8px;margin-left:auto}
-.btn-primary{padding:10px 22px;font-size:15px;font-weight:500;font-family:system-ui,sans-serif;
-  color:#fff;background:var(--accent);border:none;border-radius:8px;cursor:pointer;
-  transition:background .15s,opacity .15s}
+.btn-primary{padding:10px 22px;font-size:15px;font-weight:500;font-family:system-ui,sans-serif;color:#fff;background:var(--accent);border:none;border-radius:8px;cursor:pointer;transition:background .15s,opacity .15s}
 .btn-primary:hover:not(:disabled){background:var(--accent-d)}
 .btn-primary:disabled{opacity:.4;cursor:default}
 .full-w{width:100%}
-.btn-ghost{padding:10px 16px;font-size:15px;font-family:system-ui,sans-serif;color:var(--muted);
-  background:none;border:1px solid var(--border);border-radius:8px;cursor:pointer;
-  transition:color .15s,border-color .15s}
+.btn-ghost{padding:10px 16px;font-size:15px;font-family:system-ui,sans-serif;color:var(--muted);background:none;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
 .btn-ghost:hover{color:var(--text);border-color:var(--muted)}
-.btn-danger{padding:10px 16px;font-size:15px;font-family:system-ui,sans-serif;color:var(--error);
-  background:none;border:1px solid #3d1f1f;border-radius:8px;cursor:pointer}
+.btn-danger{padding:10px 16px;font-size:15px;font-family:system-ui,sans-serif;color:var(--error);background:none;border:1px solid #3d1f1f;border-radius:8px;cursor:pointer}
 .btn-danger:hover{background:#1f1010;border-color:var(--error)}
-/* Modals */
-.modal{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.72);display:flex;
-  align-items:flex-end;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.modal{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .modal.hidden{display:none!important}
-.sheet{width:100%;max-width:820px;margin:0 auto;background:var(--surface);
-  border:1px solid var(--border);border-bottom:none;border-radius:18px 18px 0 0;
-  display:flex;flex-direction:column;max-height:82vh}
-.sheet-header{display:flex;align-items:center;justify-content:space-between;
-  padding:15px 18px;border-bottom:1px solid var(--border);font-size:15px;
-  font-weight:600;flex-shrink:0;gap:8px}
-.sheet-close{background:none;border:none;color:var(--muted);font-size:20px;
-  cursor:pointer;padding:2px 6px;line-height:1;flex-shrink:0}
-.back-btn{background:none;border:none;color:var(--accent);font-size:22px;
-  cursor:pointer;padding:0 6px 0 0;line-height:1;flex-shrink:0}
+.sheet{width:100%;max-width:820px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:18px 18px 0 0;display:flex;flex-direction:column;max-height:82vh}
+.sheet-header{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600;flex-shrink:0;gap:8px}
+.sheet-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 6px;line-height:1;flex-shrink:0}
+.back-btn{background:none;border:none;color:var(--accent);font-size:22px;cursor:pointer;padding:0 6px 0 0;line-height:1;flex-shrink:0}
 .sheet-body{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
 .sheet-footer{padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0}
 .editor-footer{display:flex;gap:8px;justify-content:space-between;align-items:center}
-/* Model picker */
-.model-cat-header{font-size:11px;font-weight:700;text-transform:uppercase;
-  letter-spacing:.08em;color:var(--muted);padding:8px 4px 4px;margin-top:4px}
-.model-card{background:var(--raised);border:1px solid var(--border);border-radius:10px;
-  padding:12px 14px;cursor:pointer;transition:border-color .15s}
+.model-cat-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:8px 4px 4px;margin-top:4px}
+.model-card{background:var(--raised);border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:border-color .15s}
 .model-card:active{opacity:.8}
 .model-card.active{border-color:var(--accent);background:#1a1a2e}
 .model-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
 .model-card-label{font-size:14px;font-weight:500}
 .model-card-desc{font-size:12.5px;color:var(--muted);line-height:1.5}
-.model-badge{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:20px;
-  text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+.model-badge{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
 .cat-general{background:#1e2028;color:#9ca3af;border:1px solid #374151}
 .cat-coding{background:#0f1f35;color:#60a5fa;border:1px solid #1e3a5f}
 .cat-reasoning{background:#1a1030;color:#a78bfa;border:1px solid #3730a3}
 .cat-vision{background:#0f2118;color:#34d399;border:1px solid #065f46}
-/* Cards */
 .empty-list{color:var(--muted);font-size:14px;text-align:center;padding:24px 0;line-height:1.9}
-.prompt-card,.project-card,.conv-card{background:var(--raised);border:1px solid var(--border);
-  border-radius:10px;padding:12px 14px;cursor:pointer;transition:border-color .15s;flex-shrink:0}
+.prompt-card,.project-card,.conv-card{background:var(--raised);border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:border-color .15s;flex-shrink:0}
 .prompt-card.active{border-color:var(--accent);background:#1a1a2e}
 .card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
-.card-name{font-size:14px;font-weight:500;flex:1;min-width:0;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap}
+.card-name{font-size:14px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .card-name.muted{color:var(--muted);font-weight:400}
-.card-sub{font-size:12.5px;color:var(--muted);line-height:1.5;overflow:hidden;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.card-sub{font-size:12.5px;color:var(--muted);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .card-count{font-size:12px;color:var(--muted);white-space:nowrap}
 .card-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
-.card-edit-btn,.card-del-btn{background:none;border:1px solid var(--border);color:var(--muted);
-  font-size:12px;font-family:system-ui,sans-serif;padding:3px 9px;border-radius:4px;
-  cursor:pointer;flex-shrink:0}
+.card-edit-btn,.card-del-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:12px;font-family:system-ui,sans-serif;padding:3px 9px;border-radius:4px;cursor:pointer;flex-shrink:0}
 .card-edit-btn:hover{color:var(--text);border-color:var(--muted)}
 .card-del-btn:hover{color:var(--error);border-color:var(--error)}
-/* Editor form */
 .editor-form{gap:8px}
-.field-label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);
-  text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
-.field-input{width:100%;font-family:system-ui,sans-serif;font-size:15px;color:var(--text);
-  background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.field-label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.field-input{width:100%;font-family:system-ui,sans-serif;font-size:15px;color:var(--text);background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
 .field-input:focus{outline:none;border-color:var(--accent)}
-.field-textarea{display:block;width:100%;font-family:system-ui,sans-serif;font-size:14px;
-  color:var(--text);background:var(--raised);border:1px solid var(--border);
-  border-radius:8px;padding:10px 12px;resize:none;line-height:1.6}
+.field-textarea{display:block;width:100%;font-family:system-ui,sans-serif;font-size:14px;color:var(--text);background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:10px 12px;resize:none;line-height:1.6}
 .field-textarea:focus{outline:none;border-color:var(--accent)}
 .field-textarea::placeholder,.field-input::placeholder{color:var(--muted)}
 .hidden{display:none!important}
@@ -190,30 +136,26 @@ code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;
     <span class="wordmark">ai-router</span>
     <div class="header-right">
       <button class="model-btn" id="modelBtn" disabled>
-        <span id="modelBtnLabel">Loading…</span>
+        <span id="modelBtnLabel">Loading&#8230;</span>
         <span class="model-arrow">&#9660;</span>
       </button>
       <button class="icon-btn" id="projectsBtn" title="Saved chats">&#128193;</button>
     </div>
   </header>
-
   <button class="system-bar" id="systemToggle">
     <span class="system-dot" id="systemDot"></span>
     <span class="system-label" id="activePromptName">System prompt</span>
     <span class="system-arrow">&#8250;</span>
   </button>
-
   <div class="chat" id="chat">
     <div class="empty-state" id="emptyState">Select a model and start chatting.</div>
   </div>
-
   <div class="input-bar">
     <div class="attach-preview hidden" id="attachPreview"></div>
     <textarea id="prompt" placeholder="Ask anything&#8230;" spellcheck="false" rows="3"></textarea>
     <div class="input-actions">
       <button class="icon-btn attach-icon" id="attachBtn">&#128206;</button>
-      <input type="file" id="fileInput" hidden
-        accept="image/*,.txt,.js,.ts,.jsx,.tsx,.py,.html,.css,.json,.md,.yaml,.yml,.csv,.xml,.sh">
+      <input type="file" id="fileInput" hidden accept="image/*,.txt,.js,.ts,.jsx,.tsx,.py,.html,.css,.json,.md,.yaml,.yml,.csv,.xml,.sh">
       <div class="input-right">
         <button id="clearBtn" class="btn-ghost">Clear</button>
         <button id="sendBtn" class="btn-primary">Send</button>
@@ -221,136 +163,86 @@ code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;
     </div>
   </div>
 </div>
-
-<!-- Model Picker -->
-<div class="modal hidden" id="modelModal">
-  <div class="sheet">
-    <div class="sheet-header">
-      <span>Choose Model</span>
-      <button class="sheet-close" id="closeModelModal">&#10005;</button>
-    </div>
-    <div class="sheet-body" id="modelList"></div>
+<div class="modal hidden" id="modelModal"><div class="sheet">
+  <div class="sheet-header"><span>Choose Model</span><button class="sheet-close" id="closeModelModal">&#10005;</button></div>
+  <div class="sheet-body" id="modelList"></div>
+</div></div>
+<div class="modal hidden" id="promptModal"><div class="sheet">
+  <div class="sheet-header"><span>System Prompts</span><button class="sheet-close" id="closePromptModal">&#10005;</button></div>
+  <div class="sheet-body" id="promptList"></div>
+  <div class="sheet-footer"><button class="btn-primary full-w" id="newPromptBtn">+ New prompt</button></div>
+</div></div>
+<div class="modal hidden" id="promptEditor"><div class="sheet">
+  <div class="sheet-header"><span id="editorTitle">New prompt</span><button class="sheet-close" id="closeEditor">&#10005;</button></div>
+  <div class="sheet-body editor-form">
+    <label class="field-label">Name</label>
+    <input type="text" id="promptNameInput" class="field-input" placeholder="e.g. Coding Expert" autocomplete="off">
+    <label class="field-label">Prompt</label>
+    <textarea id="promptContentInput" class="field-textarea" rows="7" placeholder="You are an expert&#8230;"></textarea>
   </div>
-</div>
-
-<!-- System Prompts -->
-<div class="modal hidden" id="promptModal">
-  <div class="sheet">
-    <div class="sheet-header">
-      <span>System Prompts</span>
-      <button class="sheet-close" id="closePromptModal">&#10005;</button>
-    </div>
-    <div class="sheet-body" id="promptList"></div>
-    <div class="sheet-footer">
-      <button class="btn-primary full-w" id="newPromptBtn">+ New prompt</button>
-    </div>
+  <div class="sheet-footer editor-footer">
+    <button class="btn-danger" id="deletePromptBtn">Delete</button>
+    <button class="btn-primary" id="savePromptBtn">Save</button>
   </div>
-</div>
-
-<!-- Prompt Editor -->
-<div class="modal hidden" id="promptEditor">
-  <div class="sheet">
-    <div class="sheet-header">
-      <span id="editorTitle">New prompt</span>
-      <button class="sheet-close" id="closeEditor">&#10005;</button>
-    </div>
-    <div class="sheet-body editor-form">
-      <label class="field-label">Name</label>
-      <input type="text" id="promptNameInput" class="field-input" placeholder="e.g. Coding Expert" autocomplete="off">
-      <label class="field-label">Prompt</label>
-      <textarea id="promptContentInput" class="field-textarea" rows="7" placeholder="You are an expert&#8230;"></textarea>
-    </div>
-    <div class="sheet-footer editor-footer">
-      <button class="btn-danger" id="deletePromptBtn">Delete</button>
-      <button class="btn-primary" id="savePromptBtn">Save</button>
-    </div>
+</div></div>
+<div class="modal hidden" id="projectsModal"><div class="sheet">
+  <div class="sheet-header"><span>Saved Chats</span><button class="sheet-close" id="closeProjectsModal">&#10005;</button></div>
+  <div class="sheet-body" id="projectList"></div>
+  <div class="sheet-footer editor-footer">
+    <button class="btn-ghost" id="newProjectBtn">+ New folder</button>
+    <button class="btn-primary" id="saveToProjectBtn">Save current chat</button>
   </div>
-</div>
-
-<!-- Projects -->
-<div class="modal hidden" id="projectsModal">
-  <div class="sheet">
-    <div class="sheet-header">
-      <span>Saved Chats</span>
-      <button class="sheet-close" id="closeProjectsModal">&#10005;</button>
-    </div>
-    <div class="sheet-body" id="projectList"></div>
-    <div class="sheet-footer editor-footer">
-      <button class="btn-ghost" id="newProjectBtn">+ New folder</button>
-      <button class="btn-primary" id="saveToProjectBtn">Save current chat</button>
-    </div>
+</div></div>
+<div class="modal hidden" id="convsModal"><div class="sheet">
+  <div class="sheet-header">
+    <button class="back-btn" id="backToProjects">&#8249;</button>
+    <span id="convsProjectName">Folder</span>
+    <button class="sheet-close" id="closeConvsModal">&#10005;</button>
   </div>
-</div>
-
-<!-- Conversations -->
-<div class="modal hidden" id="convsModal">
-  <div class="sheet">
-    <div class="sheet-header">
-      <button class="back-btn" id="backToProjects">&#8249;</button>
-      <span id="convsProjectName">Folder</span>
-      <button class="sheet-close" id="closeConvsModal">&#10005;</button>
-    </div>
-    <div class="sheet-body" id="convsList"></div>
+  <div class="sheet-body" id="convsList"></div>
+</div></div>
+<div class="modal hidden" id="projectEditor"><div class="sheet">
+  <div class="sheet-header"><span id="projEditorTitle">New folder</span><button class="sheet-close" id="closeProjEditor">&#10005;</button></div>
+  <div class="sheet-body editor-form">
+    <label class="field-label">Folder name</label>
+    <input type="text" id="projNameInput" class="field-input" placeholder="e.g. Work, HVAC, Personal" autocomplete="off">
   </div>
-</div>
-
-<!-- Project Editor -->
-<div class="modal hidden" id="projectEditor">
-  <div class="sheet">
-    <div class="sheet-header">
-      <span id="projEditorTitle">New folder</span>
-      <button class="sheet-close" id="closeProjEditor">&#10005;</button>
-    </div>
-    <div class="sheet-body editor-form">
-      <label class="field-label">Folder name</label>
-      <input type="text" id="projNameInput" class="field-input" placeholder="e.g. Work, HVAC, Personal" autocomplete="off">
-    </div>
-    <div class="sheet-footer editor-footer">
-      <button class="btn-danger hidden" id="deleteProjBtn">Delete</button>
-      <button class="btn-primary" id="saveProjBtn">Save</button>
-    </div>
+  <div class="sheet-footer editor-footer">
+    <button class="btn-danger hidden" id="deleteProjBtn">Delete</button>
+    <button class="btn-primary" id="saveProjBtn">Save</button>
   </div>
-</div>
-
+</div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script>
-
-/* ── Embedded Config ── */
 var CONFIG = {
   worker_url: "https://openai-router.lukedorsett.workers.dev",
   default_model: "meta-llama/Meta-Llama-3-8B-Instruct",
   models: [
-    { id:"Qwen/Qwen3.5-2B",                             label:"Qwen 3.5 2B",            category:"General",   description:"Blazing fast. Best for quick questions. Cheapest option." },
-    { id:"meta-llama/Llama-3.2-3B-Instruct",            label:"Llama 3.2 3B",           category:"General",   description:"Tiny and fast. Good for simple Q&A and quick summaries." },
-    { id:"meta-llama/Meta-Llama-3-8B-Instruct",         label:"Llama 3 8B",             category:"General",   description:"Solid everyday model. Good for writing, Q&A, and simple tasks." },
-    { id:"mistralai/Mistral-7B-Instruct-v0.3",          label:"Mistral 7B",             category:"General",   description:"Lightweight and precise. Great for structured answers and formatting." },
-    { id:"Qwen/Qwen3.5-27B",                            label:"Qwen 3.5 27B",           category:"General",   description:"Balanced mid-size model. Strong general performance at good speed." },
-    { id:"meta-llama/Meta-Llama-3.1-70B-Instruct",      label:"Llama 3.1 70B",          category:"General",   description:"Powerful all-rounder. Best for complex questions and long documents." },
-    { id:"meta-llama/Llama-4-Scout-17B-16E-Instruct",   label:"Llama 4 Scout",          category:"General",   description:"Meta's latest. Massive 328K context window — great for long documents and big codebases." },
-    { id:"Qwen/Qwen2.5-72B-Instruct",                   label:"Qwen 2.5 72B",           category:"Coding",    description:"Top pick for code. Excels at multi-language programming and debugging." },
-    { id:"deepseek-ai/DeepSeek-V3.2",                   label:"DeepSeek V3.2",          category:"Coding",    description:"Best open-source coding model. Rivals GPT-4 on coding benchmarks." },
-    { id:"deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",     label:"DeepSeek R1 7B",         category:"Reasoning", description:"Fast chain-of-thought reasoner. Good for math, logic, and debugging." },
-    { id:"deepseek-ai/DeepSeek-R1",                     label:"DeepSeek R1",            category:"Reasoning", description:"Full R1 — best open-source reasoning model. Slower but exceptional on hard problems." },
-    { id:"meta-llama/Llama-3.2-11B-Vision-Instruct",    label:"Llama 3.2 11B Vision",   category:"Vision",    description:"Reads images. Send photos, screenshots, or diagrams alongside your question." },
-    { id:"meta-llama/Llama-3.2-90B-Vision-Instruct",    label:"Llama 3.2 90B Vision",   category:"Vision",    description:"Advanced vision. Best for detailed image analysis and technical drawings." },
-    { id:"Qwen/Qwen2.5-VL-72B-Instruct",                label:"Qwen 2.5 VL 72B",        category:"Vision",    description:"Powerful vision model. Excellent at reading documents, charts, and complex images." }
+    {id:"Qwen/Qwen3.5-2B",                           label:"Qwen 3.5 2B",          category:"General",   description:"Blazing fast. Best for quick questions and cheap to run."},
+    {id:"meta-llama/Llama-3.2-3B-Instruct",          label:"Llama 3.2 3B",         category:"General",   description:"Tiny and fast. Good for simple Q&A and quick summaries."},
+    {id:"meta-llama/Meta-Llama-3-8B-Instruct",       label:"Llama 3 8B",           category:"General",   description:"Solid everyday model. Good for writing, Q&A, and simple tasks."},
+    {id:"mistralai/Mistral-7B-Instruct-v0.3",        label:"Mistral 7B",           category:"General",   description:"Lightweight and precise. Great for structured answers and formatting."},
+    {id:"Qwen/Qwen3.5-27B",                          label:"Qwen 3.5 27B",         category:"General",   description:"Balanced mid-size model. Strong general performance at good speed."},
+    {id:"meta-llama/Meta-Llama-3.1-70B-Instruct",    label:"Llama 3.1 70B",        category:"General",   description:"Powerful all-rounder. Best for complex questions and long documents."},
+    {id:"meta-llama/Llama-4-Scout-17B-16E-Instruct", label:"Llama 4 Scout",        category:"General",   description:"Meta latest. 328K context window — great for long docs and big codebases."},
+    {id:"Qwen/Qwen2.5-72B-Instruct",                 label:"Qwen 2.5 72B",         category:"Coding",    description:"Top pick for code. Excels at multi-language programming and debugging."},
+    {id:"deepseek-ai/DeepSeek-V3.2",                 label:"DeepSeek V3.2",        category:"Coding",    description:"Best open-source coding model. Rivals GPT-4 on coding benchmarks."},
+    {id:"deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",  label:"DeepSeek R1 7B",       category:"Reasoning", description:"Fast chain-of-thought reasoner. Good for math, logic, and debugging."},
+    {id:"deepseek-ai/DeepSeek-R1",                   label:"DeepSeek R1",          category:"Reasoning", description:"Full R1 — best open-source reasoning model. Exceptional on hard problems."},
+    {id:"meta-llama/Llama-3.2-11B-Vision-Instruct",  label:"Llama 3.2 11B Vision", category:"Vision",    description:"Reads images. Send photos, screenshots, or diagrams with your question."},
+    {id:"meta-llama/Llama-3.2-90B-Vision-Instruct",  label:"Llama 3.2 90B Vision", category:"Vision",    description:"Advanced vision. Best for detailed image analysis and technical drawings."},
+    {id:"Qwen/Qwen2.5-VL-72B-Instruct",              label:"Qwen 2.5 VL 72B",      category:"Vision",    description:"Powerful vision model. Excellent at reading documents, charts, and images."}
   ]
 };
 
-"use strict";
+var workerUrl = "", allModels = [], currentModel = {id:"",label:""};
+var history = [], sending = false, attachedFile = null;
 
-var workerUrl    = "";
-var allModels    = [];
-var currentModel = { id:"", label:"" };
-var history      = [];
-var sending      = false;
-var attachedFile = null;
-
-/* ── Config ── */
-async function loadConfig() {
+/* Config */
+function loadConfig() {
   workerUrl = CONFIG.worker_url;
   allModels = CONFIG.models;
-  var def   = allModels.find(function(m){ return m.id === CONFIG.default_model; }) || allModels[0];
+  var def = allModels.find(function(m){return m.id===CONFIG.default_model;}) || allModels[0];
   setModel(def);
   renderModelList();
   document.getElementById("modelBtn").disabled = false;
@@ -365,294 +257,234 @@ function renderModelList() {
   var list = document.getElementById("modelList");
   list.innerHTML = "";
   var cats = [];
-  allModels.forEach(function(m){ if(cats.indexOf(m.category) === -1) cats.push(m.category); });
-  cats.forEach(function(cat) {
+  allModels.forEach(function(m){if(cats.indexOf(m.category)<0)cats.push(m.category);});
+  cats.forEach(function(cat){
     var h = document.createElement("div");
-    h.className = "model-cat-header";
-    h.textContent = cat;
-    list.appendChild(h);
-    allModels.filter(function(m){ return m.category === cat; }).forEach(function(m) {
+    h.className = "model-cat-header"; h.textContent = cat; list.appendChild(h);
+    allModels.filter(function(m){return m.category===cat;}).forEach(function(m){
       var card = document.createElement("div");
-      card.className = "model-card" + (m.id === currentModel.id ? " active" : "");
+      card.className = "model-card"+(m.id===currentModel.id?" active":"");
       card.innerHTML = '<div class="model-card-top"><span class="model-card-label">'+esc(m.label)+'</span>'
         +'<span class="model-badge cat-'+m.category.toLowerCase()+'">'+m.category+'</span></div>'
         +'<div class="model-card-desc">'+esc(m.description)+'</div>';
-      card.addEventListener("click", function(){ setModel(m); closeModal("modelModal"); renderModelList(); });
+      card.addEventListener("click",function(){setModel(m);closeModal("modelModal");renderModelList();});
       list.appendChild(card);
     });
   });
 }
 
-/* ── File attachment ── */
+/* File attach */
 async function compressImage(file) {
-  return new Promise(function(resolve) {
+  return new Promise(function(resolve){
     var reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function(e){
       var img = new Image();
-      img.onload = function() {
-        var MAX = 1024, w = img.width, h = img.height;
-        if(w > MAX || h > MAX){ var r = Math.min(MAX/w, MAX/h); w = Math.round(w*r); h = Math.round(h*r); }
-        var canvas = document.createElement("canvas");
-        canvas.width = w; canvas.height = h;
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", 0.75));
+      img.onload = function(){
+        var MAX=1024, w=img.width, h=img.height;
+        if(w>MAX||h>MAX){var r=Math.min(MAX/w,MAX/h);w=Math.round(w*r);h=Math.round(h*r);}
+        var canvas=document.createElement("canvas");
+        canvas.width=w; canvas.height=h;
+        canvas.getContext("2d").drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL("image/jpeg",0.75));
       };
-      img.src = e.target.result;
+      img.src=e.target.result;
     };
     reader.readAsDataURL(file);
   });
 }
 
 async function readTextFile(file) {
-  return new Promise(function(resolve) {
-    var reader = new FileReader();
-    reader.onload = function(e){ resolve(e.target.result); };
-    reader.readAsText(file);
+  return new Promise(function(resolve){
+    var r=new FileReader();
+    r.onload=function(e){resolve(e.target.result);};
+    r.readAsText(file);
   });
 }
 
-document.getElementById("attachBtn").addEventListener("click", function(){
+document.getElementById("attachBtn").addEventListener("click",function(){
   document.getElementById("fileInput").click();
 });
 
-document.getElementById("fileInput").addEventListener("change", async function(e) {
-  var file = e.target.files[0]; if(!file) return; e.target.value = "";
-  var preview = document.getElementById("attachPreview");
-  if(file.type.startsWith("image/")) {
-    var dataUrl = await compressImage(file);
-    attachedFile = { type:"image", dataUrl:dataUrl, name:file.name };
-    preview.innerHTML = '<div class="attach-item"><img class="attach-thumb" src="'+dataUrl+'">'
+document.getElementById("fileInput").addEventListener("change",async function(e){
+  var file=e.target.files[0]; if(!file)return; e.target.value="";
+  var preview=document.getElementById("attachPreview");
+  if(file.type.startsWith("image/")){
+    var dataUrl=await compressImage(file);
+    attachedFile={type:"image",dataUrl:dataUrl,name:file.name};
+    preview.innerHTML='<div class="attach-item"><img class="attach-thumb" src="'+dataUrl+'">'
       +'<span class="attach-name">'+esc(file.name)+'</span>'
       +'<button class="attach-clear" id="clearAttach">&#10005;</button></div>';
   } else {
-    var content = await readTextFile(file);
-    attachedFile = { type:"text", content:content, name:file.name };
-    preview.innerHTML = '<div class="attach-item"><span class="attach-icon-file">&#128196;</span>'
+    var content=await readTextFile(file);
+    attachedFile={type:"text",content:content,name:file.name};
+    preview.innerHTML='<div class="attach-item"><span class="attach-icon-file">&#128196;</span>'
       +'<span class="attach-name">'+esc(file.name)+'</span>'
       +'<button class="attach-clear" id="clearAttach">&#10005;</button></div>';
   }
   preview.classList.remove("hidden");
-  document.getElementById("clearAttach").addEventListener("click", clearAttachment);
+  document.getElementById("clearAttach").addEventListener("click",clearAttachment);
 });
 
-function clearAttachment() {
-  attachedFile = null;
-  var preview = document.getElementById("attachPreview");
-  preview.innerHTML = ""; preview.classList.add("hidden");
+function clearAttachment(){
+  attachedFile=null;
+  var p=document.getElementById("attachPreview");
+  p.innerHTML=""; p.classList.add("hidden");
 }
 
-/* ── System Prompts ── */
-var PROMPTS_KEY = "ai_router_prompts";
-var prompts = [], activePromptId = null, editingId = null;
+/* System prompts */
+var PROMPTS_KEY="ai_router_prompts", prompts=[], activePromptId=null, editingId=null;
 
-function loadPrompts() {
-  try {
-    var saved = JSON.parse(localStorage.getItem(PROMPTS_KEY) || "{}");
-    prompts = saved.prompts || []; activePromptId = saved.activeId || null;
-  } catch(e){ prompts = []; activePromptId = null; }
+function loadPrompts(){
+  try{var s=JSON.parse(localStorage.getItem(PROMPTS_KEY)||"{}");prompts=s.prompts||[];activePromptId=s.activeId||null;}
+  catch(e){prompts=[];activePromptId=null;}
   refreshPromptLabel();
 }
-
-function persistPrompts() {
-  localStorage.setItem(PROMPTS_KEY, JSON.stringify({ prompts:prompts, activeId:activePromptId }));
+function persistPrompts(){localStorage.setItem(PROMPTS_KEY,JSON.stringify({prompts:prompts,activeId:activePromptId}));}
+function getActivePrompt(){return prompts.find(function(p){return p.id===activePromptId;})||null;}
+function refreshPromptLabel(){
+  var a=getActivePrompt();
+  document.getElementById("activePromptName").textContent=a?a.name:"System prompt";
+  document.getElementById("systemDot").classList.toggle("dot-on",!!a);
 }
-
-function getActivePrompt() { return prompts.find(function(p){ return p.id === activePromptId; }) || null; }
-
-function refreshPromptLabel() {
-  var a = getActivePrompt();
-  document.getElementById("activePromptName").textContent = a ? a.name : "System prompt";
-  document.getElementById("systemDot").classList.toggle("dot-on", !!a);
-}
-
-function renderPromptList() {
-  var list = document.getElementById("promptList"); list.innerHTML = "";
-  if(!prompts.length) {
-    list.innerHTML = '<p class="empty-list">No prompts yet.<br>Tap <strong>+ New prompt</strong> to create one.</p>';
-  } else {
-    var none = document.createElement("div");
-    none.className = "prompt-card" + (!activePromptId ? " active" : "");
-    none.innerHTML = '<div class="card-top"><span class="card-name muted">None</span></div>'
-      +'<div class="card-sub">No system prompt active</div>';
-    none.addEventListener("click", function(){ activePromptId=null; persistPrompts(); refreshPromptLabel(); renderPromptList(); });
-    list.appendChild(none);
-    prompts.forEach(function(p) {
-      var card = document.createElement("div");
-      card.className = "prompt-card" + (p.id===activePromptId ? " active" : "");
-      card.innerHTML = '<div class="card-top"><span class="card-name">'+esc(p.name)+'</span>'
-        +'<button class="card-edit-btn" data-id="'+p.id+'">Edit</button></div>'
-        +'<div class="card-sub">'+esc(p.content.slice(0,110))+(p.content.length>110?"&#8230;":"")+'</div>';
-      card.addEventListener("click", function(e){
-        if(e.target.classList.contains("card-edit-btn")) return;
-        activePromptId=p.id; persistPrompts(); refreshPromptLabel(); renderPromptList();
-      });
-      card.querySelector(".card-edit-btn").addEventListener("click", function(e){
-        e.stopPropagation(); openPromptEditor(p.id);
-      });
-      list.appendChild(card);
+function renderPromptList(){
+  var list=document.getElementById("promptList"); list.innerHTML="";
+  if(!prompts.length){list.innerHTML='<p class="empty-list">No prompts yet.<br>Tap <strong>+ New prompt</strong> to create one.</p>';return;}
+  var none=document.createElement("div"); none.className="prompt-card"+(!activePromptId?" active":"");
+  none.innerHTML='<div class="card-top"><span class="card-name muted">None</span></div><div class="card-sub">No system prompt active</div>';
+  none.addEventListener("click",function(){activePromptId=null;persistPrompts();refreshPromptLabel();renderPromptList();});
+  list.appendChild(none);
+  prompts.forEach(function(p){
+    var card=document.createElement("div"); card.className="prompt-card"+(p.id===activePromptId?" active":"");
+    card.innerHTML='<div class="card-top"><span class="card-name">'+esc(p.name)+'</span><button class="card-edit-btn">Edit</button></div>'
+      +'<div class="card-sub">'+esc(p.content.slice(0,110))+(p.content.length>110?"&#8230;":"")+'</div>';
+    card.addEventListener("click",function(e){
+      if(e.target.classList.contains("card-edit-btn"))return;
+      activePromptId=p.id;persistPrompts();refreshPromptLabel();renderPromptList();
     });
-  }
-}
-
-function openPromptEditor(id) {
-  editingId = id || null;
-  var p = id ? prompts.find(function(x){ return x.id===id; }) : null;
-  document.getElementById("editorTitle").textContent = id ? "Edit prompt" : "New prompt";
-  document.getElementById("promptNameInput").value = p ? p.name : "";
-  document.getElementById("promptContentInput").value = p ? p.content : "";
-  document.getElementById("deletePromptBtn").style.display = id ? "block" : "none";
-  openModal("promptEditor");
-  setTimeout(function(){ document.getElementById("promptNameInput").focus(); }, 80);
-}
-
-function savePrompt() {
-  var name = document.getElementById("promptNameInput").value.trim();
-  var content = document.getElementById("promptContentInput").value.trim();
-  if(!name || !content) return;
-  if(editingId) {
-    var idx = prompts.findIndex(function(p){ return p.id===editingId; });
-    if(idx!==-1) prompts[idx] = Object.assign({}, prompts[idx], {name:name, content:content});
-  } else {
-    var id = Date.now().toString();
-    prompts.push({id:id, name:name, content:content});
-    activePromptId = id;
-  }
-  persistPrompts(); refreshPromptLabel(); closeModal("promptEditor"); renderPromptList();
-}
-
-function deletePromptItem() {
-  if(!editingId) return;
-  prompts = prompts.filter(function(p){ return p.id!==editingId; });
-  if(activePromptId===editingId) activePromptId=null;
-  persistPrompts(); refreshPromptLabel(); closeModal("promptEditor"); renderPromptList(); editingId=null;
-}
-
-/* ── Projects ── */
-var PROJECTS_KEY = "ai_router_projects";
-var projects = [], editingProjId = null, viewingProjId = null;
-
-function loadProjects() {
-  try { projects = JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]"); }
-  catch(e){ projects = []; }
-}
-
-function persistProjects() { localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects)); }
-
-function renderProjectList() {
-  var list = document.getElementById("projectList"); list.innerHTML = "";
-  if(!projects.length) {
-    list.innerHTML = '<p class="empty-list">No folders yet.<br>Create one to start saving chats.</p>'; return;
-  }
-  projects.forEach(function(proj) {
-    var count = (proj.conversations||[]).length;
-    var card = document.createElement("div"); card.className = "project-card";
-    card.innerHTML = '<div class="card-top"><span class="card-name">&#128193; '+esc(proj.name)+'</span>'
-      +'<div class="card-actions"><span class="card-count">'+count+' chat'+(count!==1?"s":"")+'</span>'
-      +'<button class="card-edit-btn" data-id="'+proj.id+'">Edit</button></div></div>';
-    card.addEventListener("click", function(e){
-      if(e.target.classList.contains("card-edit-btn")) return;
-      openConvsModal(proj.id);
-    });
-    card.querySelector(".card-edit-btn").addEventListener("click", function(e){
-      e.stopPropagation(); openProjEditor(proj.id);
-    });
+    card.querySelector(".card-edit-btn").addEventListener("click",function(e){e.stopPropagation();openPromptEditor(p.id);});
     list.appendChild(card);
   });
 }
-
-function openConvsModal(projId) {
-  viewingProjId = projId;
-  var proj = projects.find(function(p){ return p.id===projId; });
-  document.getElementById("convsProjectName").textContent = proj.name;
-  renderConvsList(proj);
-  closeModal("projectsModal"); openModal("convsModal");
+function openPromptEditor(id){
+  editingId=id||null;
+  var p=id?prompts.find(function(x){return x.id===id;}):null;
+  document.getElementById("editorTitle").textContent=id?"Edit prompt":"New prompt";
+  document.getElementById("promptNameInput").value=p?p.name:"";
+  document.getElementById("promptContentInput").value=p?p.content:"";
+  document.getElementById("deletePromptBtn").style.display=id?"block":"none";
+  openModal("promptEditor");
+  setTimeout(function(){document.getElementById("promptNameInput").focus();},80);
+}
+function savePrompt(){
+  var name=document.getElementById("promptNameInput").value.trim();
+  var content=document.getElementById("promptContentInput").value.trim();
+  if(!name||!content)return;
+  if(editingId){var idx=prompts.findIndex(function(p){return p.id===editingId;});if(idx>-1)prompts[idx]={id:prompts[idx].id,name:name,content:content};}
+  else{var id=Date.now().toString();prompts.push({id:id,name:name,content:content});activePromptId=id;}
+  persistPrompts();refreshPromptLabel();closeModal("promptEditor");renderPromptList();
+}
+function deletePromptItem(){
+  if(!editingId)return;
+  prompts=prompts.filter(function(p){return p.id!==editingId;});
+  if(activePromptId===editingId)activePromptId=null;
+  persistPrompts();refreshPromptLabel();closeModal("promptEditor");renderPromptList();editingId=null;
 }
 
-function renderConvsList(proj) {
-  var list = document.getElementById("convsList"); list.innerHTML = "";
-  var convs = proj.conversations || [];
-  if(!convs.length) {
-    list.innerHTML = '<p class="empty-list">No saved chats in this folder yet.</p>'; return;
-  }
-  convs.slice().reverse().forEach(function(conv) {
-    var card = document.createElement("div"); card.className = "conv-card";
-    var date = new Date(conv.savedAt).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"});
-    card.innerHTML = '<div class="card-top"><span class="card-name">'+esc(conv.title)+'</span>'
-      +'<button class="card-del-btn" data-id="'+conv.id+'">&#10005;</button></div>'
+/* Projects */
+var PROJECTS_KEY="ai_router_projects", projects=[], editingProjId=null, viewingProjId=null;
+function loadProjects(){try{projects=JSON.parse(localStorage.getItem(PROJECTS_KEY)||"[]");}catch(e){projects=[];}}
+function persistProjects(){localStorage.setItem(PROJECTS_KEY,JSON.stringify(projects));}
+
+function renderProjectList(){
+  var list=document.getElementById("projectList"); list.innerHTML="";
+  if(!projects.length){list.innerHTML='<p class="empty-list">No folders yet.<br>Create one to start saving chats.</p>';return;}
+  projects.forEach(function(proj){
+    var count=(proj.conversations||[]).length;
+    var card=document.createElement("div"); card.className="project-card";
+    card.innerHTML='<div class="card-top"><span class="card-name">&#128193; '+esc(proj.name)+'</span>'
+      +'<div class="card-actions"><span class="card-count">'+count+' chat'+(count!==1?"s":"")+'</span>'
+      +'<button class="card-edit-btn">Edit</button></div></div>';
+    card.addEventListener("click",function(e){if(e.target.classList.contains("card-edit-btn"))return;openConvsModal(proj.id);});
+    card.querySelector(".card-edit-btn").addEventListener("click",function(e){e.stopPropagation();openProjEditor(proj.id);});
+    list.appendChild(card);
+  });
+}
+function openConvsModal(projId){
+  viewingProjId=projId;
+  var proj=projects.find(function(p){return p.id===projId;});
+  document.getElementById("convsProjectName").textContent=proj.name;
+  renderConvsList(proj); closeModal("projectsModal"); openModal("convsModal");
+}
+function renderConvsList(proj){
+  var list=document.getElementById("convsList"); list.innerHTML="";
+  var convs=proj.conversations||[];
+  if(!convs.length){list.innerHTML='<p class="empty-list">No saved chats in this folder.</p>';return;}
+  convs.slice().reverse().forEach(function(conv){
+    var card=document.createElement("div"); card.className="conv-card";
+    var date=new Date(conv.savedAt).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"});
+    card.innerHTML='<div class="card-top"><span class="card-name">'+esc(conv.title)+'</span>'
+      +'<button class="card-del-btn">&#10005;</button></div>'
       +'<div class="card-sub">'+esc(conv.modelLabel)+' &middot; '+date+' &middot; '+conv.messages.length+' messages</div>';
-    card.addEventListener("click", function(e){
-      if(e.target.classList.contains("card-del-btn")) return;
-      loadConversation(conv);
-    });
-    card.querySelector(".card-del-btn").addEventListener("click", function(e){
+    card.addEventListener("click",function(e){if(e.target.classList.contains("card-del-btn"))return;loadConversation(conv);});
+    card.querySelector(".card-del-btn").addEventListener("click",function(e){
       e.stopPropagation();
-      proj.conversations = proj.conversations.filter(function(c){ return c.id!==conv.id; });
+      proj.conversations=proj.conversations.filter(function(c){return c.id!==conv.id;});
       persistProjects(); renderConvsList(proj);
     });
     list.appendChild(card);
   });
 }
-
-function saveCurrentChat(projId) {
-  if(!history.length){ alert("No conversation to save yet."); return; }
-  var proj = projects.find(function(p){ return p.id===projId; });
-  var first = history.find(function(m){ return m.role==="user"; });
-  var raw = typeof first.content==="string" ? first.content
-    : ((first.content.find(function(c){ return c.type==="text"; })||{}).text||"Chat");
-  var title = raw.slice(0,50)+(raw.length>50?"&#8230;":"");
-  proj.conversations = proj.conversations||[];
+function saveCurrentChat(projId){
+  if(!history.length){alert("No conversation to save.");return;}
+  var proj=projects.find(function(p){return p.id===projId;});
+  var first=history.find(function(m){return m.role==="user";});
+  var raw=typeof first.content==="string"?first.content:((first.content.find(function(c){return c.type==="text";})||{}).text||"Chat");
+  proj.conversations=proj.conversations||[];
   proj.conversations.push({
-    id: Date.now().toString(), title:title, savedAt:Date.now(),
-    modelId:currentModel.id, modelLabel:currentModel.label,
-    messages: history.map(function(m){
-      return { role:m.role, content: typeof m.content==="string" ? m.content
-        : ((m.content.find(function(c){ return c.type==="text"; })||{}).text||"")
-          +(m.content.some(function(c){ return c.type==="image_url"; }) ? " [image]" : "") };
-    })
+    id:Date.now().toString(),
+    title:raw.slice(0,50)+(raw.length>50?"&#8230;":""),
+    savedAt:Date.now(),
+    modelId:currentModel.id,modelLabel:currentModel.label,
+    messages:history.map(function(m){return{role:m.role,content:typeof m.content==="string"?m.content:((m.content.find(function(c){return c.type==="text";})||{}).text||"")+(m.content.some&&m.content.some(function(c){return c.type==="image_url";})?" [image]":"")};})
   });
   persistProjects(); closeModal("projectsModal");
 }
-
-function loadConversation(conv) {
-  if(history.length && !confirm("Load this chat? Current chat will be cleared.")) return;
-  history = conv.messages.map(function(m){ return {role:m.role,content:m.content}; });
-  document.getElementById("chat").innerHTML = "";
-  var def = allModels.find(function(m){ return m.id===conv.modelId; });
-  if(def) setModel(def);
-  history.forEach(function(m){ appendMessage(m.role, m.content); });
+function loadConversation(conv){
+  if(history.length&&!confirm("Load this chat? Current chat will be cleared."))return;
+  history=conv.messages.map(function(m){return{role:m.role,content:m.content};});
+  document.getElementById("chat").innerHTML="";
+  var def=allModels.find(function(m){return m.id===conv.modelId;});
+  if(def)setModel(def);
+  history.forEach(function(m){appendMessage(m.role,m.content);});
   closeModal("convsModal");
 }
-
-function openProjEditor(id) {
-  editingProjId = id||null;
-  var proj = id ? projects.find(function(p){ return p.id===id; }) : null;
-  document.getElementById("projEditorTitle").textContent = id ? "Edit folder" : "New folder";
-  document.getElementById("projNameInput").value = proj ? proj.name : "";
-  document.getElementById("deleteProjBtn").classList.toggle("hidden", !id);
+function openProjEditor(id){
+  editingProjId=id||null;
+  var proj=id?projects.find(function(p){return p.id===id;}):null;
+  document.getElementById("projEditorTitle").textContent=id?"Edit folder":"New folder";
+  document.getElementById("projNameInput").value=proj?proj.name:"";
+  document.getElementById("deleteProjBtn").classList.toggle("hidden",!id);
   openModal("projectEditor");
-  setTimeout(function(){ document.getElementById("projNameInput").focus(); }, 80);
+  setTimeout(function(){document.getElementById("projNameInput").focus();},80);
 }
-
-function saveProject() {
-  var name = document.getElementById("projNameInput").value.trim(); if(!name) return;
-  if(editingProjId) {
-    var proj = projects.find(function(p){ return p.id===editingProjId; }); if(proj) proj.name=name;
-  } else { projects.push({id:Date.now().toString(),name:name,conversations:[]}); }
+function saveProject(){
+  var name=document.getElementById("projNameInput").value.trim(); if(!name)return;
+  if(editingProjId){var proj=projects.find(function(p){return p.id===editingProjId;});if(proj)proj.name=name;}
+  else{projects.push({id:Date.now().toString(),name:name,conversations:[]});}
+  persistProjects(); closeModal("projectEditor"); renderProjectList(); editingProjId=null;
+}
+function deleteProject(){
+  if(!editingProjId)return;
+  projects=projects.filter(function(p){return p.id!==editingProjId;});
   persistProjects(); closeModal("projectEditor"); renderProjectList(); editingProjId=null;
 }
 
-function deleteProject() {
-  if(!editingProjId) return;
-  projects = projects.filter(function(p){ return p.id!==editingProjId; });
-  persistProjects(); closeModal("projectEditor"); renderProjectList(); editingProjId=null;
-}
-
-/* ── Modal wiring ── */
-function openModal(id){ document.getElementById(id).classList.remove("hidden"); }
-function closeModal(id){ document.getElementById(id).classList.add("hidden"); }
+/* Modals */
+function openModal(id){document.getElementById(id).classList.remove("hidden");}
+function closeModal(id){document.getElementById(id).classList.add("hidden");}
 function bindModal(mId,cId){
-  document.getElementById(cId).addEventListener("click", function(){ closeModal(mId); });
-  document.getElementById(mId).addEventListener("click", function(e){ if(e.target===e.currentTarget) closeModal(mId); });
+  document.getElementById(cId).addEventListener("click",function(){closeModal(mId);});
+  document.getElementById(mId).addEventListener("click",function(e){if(e.target===e.currentTarget)closeModal(mId);});
 }
 bindModal("modelModal","closeModelModal");
 bindModal("promptModal","closePromptModal");
@@ -660,87 +492,77 @@ bindModal("promptEditor","closeEditor");
 bindModal("projectsModal","closeProjectsModal");
 bindModal("convsModal","closeConvsModal");
 bindModal("projectEditor","closeProjEditor");
-
-document.getElementById("modelBtn").addEventListener("click", function(){ openModal("modelModal"); });
-document.getElementById("systemToggle").addEventListener("click", function(){ renderPromptList(); openModal("promptModal"); });
-document.getElementById("newPromptBtn").addEventListener("click", function(){ closeModal("promptModal"); openPromptEditor(null); });
-document.getElementById("savePromptBtn").addEventListener("click", savePrompt);
-document.getElementById("deletePromptBtn").addEventListener("click", deletePromptItem);
-document.getElementById("projectsBtn").addEventListener("click", function(){ renderProjectList(); openModal("projectsModal"); });
-document.getElementById("newProjectBtn").addEventListener("click", function(){ closeModal("projectsModal"); openProjEditor(null); });
-document.getElementById("saveToProjectBtn").addEventListener("click", function(){
-  var list = document.getElementById("projectList");
-  list.innerHTML = '<p class="empty-list" style="text-align:left;color:var(--text);margin-bottom:8px">Save to which folder?</p>';
-  if(!projects.length){ list.innerHTML+='<p class="empty-list">No folders yet. Create one first.</p>'; return; }
+document.getElementById("modelBtn").addEventListener("click",function(){openModal("modelModal");});
+document.getElementById("systemToggle").addEventListener("click",function(){renderPromptList();openModal("promptModal");});
+document.getElementById("newPromptBtn").addEventListener("click",function(){closeModal("promptModal");openPromptEditor(null);});
+document.getElementById("savePromptBtn").addEventListener("click",savePrompt);
+document.getElementById("deletePromptBtn").addEventListener("click",deletePromptItem);
+document.getElementById("projectsBtn").addEventListener("click",function(){renderProjectList();openModal("projectsModal");});
+document.getElementById("newProjectBtn").addEventListener("click",function(){closeModal("projectsModal");openProjEditor(null);});
+document.getElementById("saveToProjectBtn").addEventListener("click",function(){
+  var list=document.getElementById("projectList");
+  list.innerHTML='<p class="empty-list" style="text-align:left;color:var(--text);margin-bottom:8px">Save to which folder?</p>';
+  if(!projects.length){list.innerHTML+='<p class="empty-list">No folders yet. Create one first.</p>';return;}
   projects.forEach(function(proj){
     var btn=document.createElement("button"); btn.className="full-w btn-primary"; btn.style.marginBottom="8px";
     btn.textContent="&#128193; "+proj.name;
-    btn.addEventListener("click",function(){ saveCurrentChat(proj.id); });
+    btn.addEventListener("click",function(){saveCurrentChat(proj.id);});
     list.appendChild(btn);
   });
 });
-document.getElementById("backToProjects").addEventListener("click", function(){
-  closeModal("convsModal"); renderProjectList(); openModal("projectsModal");
-});
-document.getElementById("saveProjBtn").addEventListener("click", saveProject);
-document.getElementById("deleteProjBtn").addEventListener("click", deleteProject);
+document.getElementById("backToProjects").addEventListener("click",function(){closeModal("convsModal");renderProjectList();openModal("projectsModal");});
+document.getElementById("saveProjBtn").addEventListener("click",saveProject);
+document.getElementById("deleteProjBtn").addEventListener("click",deleteProject);
 
-/* ── Rendering ── */
-function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-function stripThink(t){ return t.replace(/<think>[\s\S]*?<\/think>\n?/g,"").replace(/<think>[\s\S]*$/,"").trim(); }
-function renderText(t){
-  return esc(t).replace(/`([^`]+)`/g,'<code class="inline">$1</code>').replace(/\n/g,"<br>");
-}
+/* Rendering */
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function stripThink(t){return t.replace(/<think>[\s\S]*?<\/think>\n?/g,"").replace(/<think>[\s\S]*$/,"").trim();}
+function renderText(t){return esc(t).replace(/`([^`]+)`/g,'<code class="inline">$1</code>').replace(/\n/g,"<br>");}
 function renderContent(raw){
-  var text = typeof raw==="string" ? stripThink(raw) : String(raw);
-  var result="", last=0, re=/```(\w*)\n?([\s\S]*?)```/g, m;
+  var text=typeof raw==="string"?stripThink(raw):String(raw);
+  var result="",last=0,re=/```(\w*)\n?([\s\S]*?)```/g,m;
   while((m=re.exec(text))!==null){
     result+=renderText(text.slice(last,m.index));
-    var lang=m[1].trim(), code=m[2].trim(), hl;
-    try{ hl=lang&&hljs.getLanguage(lang)?hljs.highlight(code,{language:lang}).value:hljs.highlightAuto(code).value; }
-    catch(e){ hl=esc(code); }
-    result+='<div class="code-block"><div class="code-header"><span>'+lang+"</span>"
-      +'<button class="copy-code" onclick="copyCode(this)">Copy</button></div>'
-      +'<pre><code class="hljs">'+hl+'</code></pre></div>';
+    var lang=m[1].trim(),code=m[2].trim(),hl;
+    try{hl=lang&&hljs.getLanguage(lang)?hljs.highlight(code,{language:lang}).value:hljs.highlightAuto(code).value;}
+    catch(e){hl=esc(code);}
+    result+='<div class="code-block"><div class="code-header"><span>'+lang+'</span><button class="copy-code" onclick="copyCode(this)">Copy</button></div><pre><code class="hljs">'+hl+'</code></pre></div>';
     last=m.index+m[0].length;
   }
   return result+renderText(text.slice(last));
 }
 function copyCode(btn){
   navigator.clipboard.writeText(btn.closest(".code-block").querySelector("code").textContent).then(function(){
-    btn.textContent="Copied!"; setTimeout(function(){ btn.textContent="Copy"; },2000);
+    btn.textContent="Copied!";setTimeout(function(){btn.textContent="Copy";},2000);
   });
 }
 
-/* ── Chat ── */
-function hideEmpty(){ var el=document.getElementById("emptyState"); if(el) el.remove(); }
+/* Chat */
+function hideEmpty(){var el=document.getElementById("emptyState");if(el)el.remove();}
 function scrollNear(el){
   var chat=document.getElementById("chat");
-  if(chat.scrollHeight-chat.scrollTop-chat.clientHeight<150) el.scrollIntoView({behavior:"smooth",block:"end"});
+  if(chat.scrollHeight-chat.scrollTop-chat.clientHeight<150)el.scrollIntoView({behavior:"smooth",block:"end"});
 }
-function appendMessage(role, content, streaming){
+function appendMessage(role,content,streaming){
   hideEmpty();
   var chat=document.getElementById("chat");
   var wrap=document.createElement("div"); wrap.className="msg msg-"+role;
   var label=document.createElement("div"); label.className="msg-label";
   label.textContent=role==="user"?"You":currentModel.label;
   var body=document.createElement("div"); body.className="msg-body";
-  if(streaming){
-    body.innerHTML='<span class="cursor">&#9607;</span>'; wrap.classList.add("streaming");
-  } else if(Array.isArray(content)){
-    var txt=(content.find(function(c){ return c.type==="text"; })||{}).text||"";
-    var img=content.find(function(c){ return c.type==="image_url"; });
-    body.innerHTML=(txt?renderContent(txt):"")+(img?'<img class="msg-img" src="'+img.image_url.url+'">':"");
-  } else {
-    body.innerHTML=renderContent(content||"");
-  }
+  if(streaming){body.innerHTML='<span class="cursor">&#9607;</span>';wrap.classList.add("streaming");}
+  else if(Array.isArray(content)){
+    var txt=(content.find(function(c){return c.type==="text";})||{}).text||"";
+    var img=content.find(function(c){return c.type==="image_url";});
+    body.innerHTML=(txt?renderContent(txt):"")+(img?'<img class="msg-img" src="'+img.image_url.url+'">':''  );
+  } else {body.innerHTML=renderContent(content||"");}
   wrap.appendChild(label); wrap.appendChild(body);
   if(role==="assistant"){
     var actions=document.createElement("div"); actions.className="msg-actions";
     var copyBtn=document.createElement("button"); copyBtn.textContent="Copy"; copyBtn.className="btn-action";
     copyBtn.onclick=function(){
       navigator.clipboard.writeText(body.innerText.replace(/\n\n/g,"\n")).then(function(){
-        copyBtn.textContent="Copied!"; setTimeout(function(){ copyBtn.textContent="Copy"; },2000);
+        copyBtn.textContent="Copied!";setTimeout(function(){copyBtn.textContent="Copy";},2000);
       });
     };
     actions.appendChild(copyBtn); wrap.appendChild(actions);
@@ -749,79 +571,70 @@ function appendMessage(role, content, streaming){
   return {wrap:wrap,body:body};
 }
 
-/* ── Stream helpers ── */
-function streamChunk(text,wrap,body){
-  body.innerHTML=renderContent(text)+'<span class="cursor">&#9607;</span>';
-  scrollNear(wrap);
-}
-
-/* ── Send ── */
+/* Send */
 async function send(){
-  if(sending) return;
+  if(sending)return;
   var promptEl=document.getElementById("prompt"), text=promptEl.value.trim();
-  if(!text&&!attachedFile) return;
+  if(!text&&!attachedFile)return;
   var ap=getActivePrompt(), btn=document.getElementById("sendBtn");
-  sending=true; btn.disabled=true; btn.textContent="Sending\u2026";
-  var userContent, histContent;
+  sending=true; btn.disabled=true; btn.textContent="Sending…";
+
+  var userContent=text, histContent=text;
   if(attachedFile&&attachedFile.type==="image"){
     userContent=[{type:"text",text:text||"What do you see in this image?"},{type:"image_url",image_url:{url:attachedFile.dataUrl}}];
     histContent=userContent;
   } else if(attachedFile&&attachedFile.type==="text"){
-    var combined="File: "+attachedFile.name+"\n```\n"+attachedFile.content+"\n```\n\n"+text;
-    userContent=combined; histContent=combined;
-  } else { userContent=text; histContent=text; }
+    userContent=histContent="File: "+attachedFile.name+"\n```\n"+attachedFile.content+"\n```\n\n"+text;
+  }
+
   history.push({role:"user",content:histContent});
   appendMessage("user",histContent);
   promptEl.value=""; promptEl.style.height=""; clearAttachment();
+
   var messages=[];
-  if(ap) messages.push({role:"system",content:ap.content});
-  var apiHist=history.slice(0,-1).map(function(m){ return {role:m.role,content:m.content}; });
-  messages=messages.concat(apiHist); messages.push({role:"user",content:userContent});
-  var asstMsg=appendMessage("assistant","",true);
-  var full="", reply="";
+  if(ap)messages.push({role:"system",content:ap.content});
+  messages=messages.concat(history.slice(0,-1));
+  messages.push({role:"user",content:userContent});
+
+  var asstMsg=appendMessage("assistant","",true), full="";
+
   try{
-    var fetchRes=await fetch(workerUrl,{
+    var res=await fetch(workerUrl,{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({model:currentModel.id,messages:messages,temperature:0.7,stream:true})
     });
-    if(!fetchRes.ok){
-      var errBody=await fetchRes.text().catch(function(){return"";});
-      var errMsg="HTTP "+fetchRes.status;
-      try{ var ej=JSON.parse(errBody); errMsg=(ej.error&&ej.error.message)||errMsg; }catch(ex){}
-      throw new Error(errMsg);
+    if(!res.ok){
+      var errData=await res.json().catch(function(){return{};});
+      throw new Error((errData.error&&errData.error.message)||"HTTP "+res.status);
     }
-    /* Read SSE stream */
-    var reader=fetchRes.body.getReader(), dec=new TextDecoder(), buf="";
-    var deadline=Date.now()+90000;
+    var reader=res.body.getReader(), dec=new TextDecoder(), buf="";
     while(true){
-      if(Date.now()>deadline) throw new Error("Timed out after 90s — try a smaller model.");
       var chunk=await reader.read();
-      if(chunk.done) break;
+      if(chunk.done)break;
       buf+=dec.decode(chunk.value,{stream:true});
       var lines=buf.split("\n"); buf=lines.pop();
       for(var i=0;i<lines.length;i++){
         var ln=lines[i].trim();
-        if(!ln.startsWith("data: ")) continue;
+        if(!ln.startsWith("data: "))continue;
         var d=ln.slice(6);
-        if(d==="[DONE]"){ reader.cancel(); buf=""; break; }
+        if(d==="[DONE]"){reader.cancel();break;}
         try{
-          var c=(JSON.parse(d).choices||[])[0];
-          var tok=c&&c.delta&&c.delta.content;
-          if(tok){ full+=tok; streamChunk(full,asstMsg.wrap,asstMsg.body); }
+          var tok=((JSON.parse(d).choices||[])[0]||{});
+          tok=tok.delta&&tok.delta.content;
+          if(tok){full+=tok;asstMsg.body.innerHTML=renderContent(full)+'<span class="cursor">&#9607;</span>';scrollNear(asstMsg.wrap);}
         }catch(ex){}
       }
     }
-    reply=full||"(empty response)";
     asstMsg.wrap.classList.remove("streaming");
-    asstMsg.body.innerHTML=renderContent(reply);
-    history.push({role:"assistant",content:reply});
+    asstMsg.body.innerHTML=renderContent(full||"(empty response)");
+    history.push({role:"assistant",content:full});
   }catch(e){
     asstMsg.wrap.classList.remove("streaming");
     asstMsg.body.className="msg-body error";
     asstMsg.body.innerHTML="Error: "+esc(e.message);
     history.pop();
-  } finally { sending=false; btn.disabled=false; btn.textContent="Send"; }
+  } finally {sending=false;btn.disabled=false;btn.textContent="Send";}
 }
 
 document.getElementById("sendBtn").addEventListener("click",send);
