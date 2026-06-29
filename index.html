@@ -214,7 +214,8 @@ code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;border:1px
     <button class="btn-primary" id="saveProjBtn">Save</button>
   </div>
 </div></div>
-<script>
+<script>(function(){
+
 var CONFIG = {
   worker_url: "https://openai-router.lukedorsett.workers.dev",
   default_model: "meta-llama/Meta-Llama-3-8B-Instruct",
@@ -237,7 +238,7 @@ var CONFIG = {
 };
 
 var workerUrl = "", allModels = [], currentModel = {id:"",label:""};
-var history = [], sending = false, attachedFile = null;
+var chatHistory = [], sending = false, attachedFile = null;
 
 /* Config */
 function loadConfig() {
@@ -436,9 +437,9 @@ function renderConvsList(proj){
   });
 }
 function saveCurrentChat(projId){
-  if(!history.length){alert("No conversation to save.");return;}
+  if(!chatHistory.length){alert("No conversation to save.");return;}
   var proj=projects.find(function(p){return p.id===projId;});
-  var first=history.find(function(m){return m.role==="user";});
+  var first=chatHistory.find(function(m){return m.role==="user";});
   var raw=typeof first.content==="string"?first.content:((first.content.find(function(c){return c.type==="text";})||{}).text||"Chat");
   proj.conversations=proj.conversations||[];
   proj.conversations.push({
@@ -446,17 +447,17 @@ function saveCurrentChat(projId){
     title:raw.slice(0,50)+(raw.length>50?"&#8230;":""),
     savedAt:Date.now(),
     modelId:currentModel.id,modelLabel:currentModel.label,
-    messages:history.map(function(m){return{role:m.role,content:typeof m.content==="string"?m.content:((m.content.find(function(c){return c.type==="text";})||{}).text||"")+(m.content.some&&m.content.some(function(c){return c.type==="image_url";})?" [image]":"")};})
+    messages:chatHistory.map(function(m){return{role:m.role,content:typeof m.content==="string"?m.content:((m.content.find(function(c){return c.type==="text";})||{}).text||"")+(m.content.some&&m.content.some(function(c){return c.type==="image_url";})?" [image]":"")};})
   });
   persistProjects(); closeModal("projectsModal");
 }
 function loadConversation(conv){
-  if(history.length&&!confirm("Load this chat? Current chat will be cleared."))return;
+  if(chatHistory.length&&!confirm("Load this chat? Current chat will be cleared."))return;
   history=conv.messages.map(function(m){return{role:m.role,content:m.content};});
   document.getElementById("chat").innerHTML="";
   var def=allModels.find(function(m){return m.id===conv.modelId;});
   if(def)setModel(def);
-  history.forEach(function(m){appendMessage(m.role,m.content);});
+  chatHistory.forEach(function(m){appendMessage(m.role,m.content);});
   closeModal("convsModal");
 }
 function openProjEditor(id){
@@ -531,7 +532,7 @@ function renderContent(raw){
   }
   return result+renderText(text.slice(last));
 }
-function copyCode(btn){
+window.copyCode = function(btn){
   navigator.clipboard.writeText(btn.closest(".code-block").querySelector("code").textContent).then(function(){
     btn.textContent="Copied!";setTimeout(function(){btn.textContent="Copy";},2000);
   });
@@ -587,13 +588,13 @@ async function send(){
     userContent=histContent="File: "+attachedFile.name+"\n```\n"+attachedFile.content+"\n```\n\n"+text;
   }
 
-  history.push({role:"user",content:histContent});
+  chatHistory.push({role:"user",content:histContent});
   appendMessage("user",histContent);
   promptEl.value=""; promptEl.style.height=""; clearAttachment();
 
   var messages=[];
   if(ap)messages.push({role:"system",content:ap.content});
-  messages=messages.concat(history.slice(0,-1));
+  messages=messages.concat(chatHistory.slice(0,-1));
   messages.push({role:"user",content:userContent});
 
   var asstMsg=appendMessage("assistant","",true), full="";
@@ -628,12 +629,12 @@ async function send(){
     }
     asstMsg.wrap.classList.remove("streaming");
     asstMsg.body.innerHTML=renderContent(full||"(empty response)");
-    history.push({role:"assistant",content:full});
+    chatHistory.push({role:"assistant",content:full});
   }catch(e){
     asstMsg.wrap.classList.remove("streaming");
     asstMsg.body.className="msg-body error";
     asstMsg.body.innerHTML="Error: "+esc(e.message);
-    history.pop();
+    chatHistory.pop();
   } finally {sending=false;btn.disabled=false;btn.textContent="Send";}
 }
 
@@ -647,6 +648,8 @@ document.getElementById("clearBtn").addEventListener("click",function(){
 });
 
 loadConfig(); loadPrompts(); loadProjects();
+
+})();
 </script>
 </body>
 </html>
