@@ -1,4 +1,4 @@
-name = "openai-router"
+name = "openaiworker"
 main = "openai-router.js"
 compatibility_date = "2024-09-23"
 
