@@ -508,28 +508,51 @@ code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;border:1px
 </div></div>
 <script>(function(){
 
-var CONFIG = {
-  worker_url: "https://openai-router.lukedorsett.workers.dev",
-  default_model: "meta-llama/Meta-Llama-3-8B-Instruct",
-  models: [
-    {id:"Qwen/Qwen3.5-2B",                           label:"Qwen 3.5 2B",          category:"General",   description:"Blazing fast. Best for quick questions and cheap to run."},
-    {id:"meta-llama/Llama-3.2-3B-Instruct",          label:"Llama 3.2 3B",         category:"General",   description:"Tiny and fast. Good for simple Q&A and quick summaries."},
-    {id:"meta-llama/Meta-Llama-3-8B-Instruct",       label:"Llama 3 8B",           category:"General",   description:"Solid everyday model. Good for writing, Q&A, and simple tasks."},
-    {id:"mistralai/Mistral-7B-Instruct-v0.3",        label:"Mistral 7B",           category:"General",   description:"Lightweight and precise. Great for structured answers and formatting."},
-    {id:"Qwen/Qwen3.5-27B",                          label:"Qwen 3.5 27B",         category:"General",   description:"Balanced mid-size model. Strong general performance at good speed."},
-    {id:"meta-llama/Meta-Llama-3.1-70B-Instruct",    label:"Llama 3.1 70B",        category:"General",   description:"Powerful all-rounder. Best for complex questions and long documents."},
-    {id:"meta-llama/Llama-4-Scout-17B-16E-Instruct", label:"Llama 4 Scout",        category:"General",   description:"Meta latest. 328K context window — great for long docs and big codebases."},
-    {id:"Qwen/Qwen2.5-72B-Instruct",                 label:"Qwen 2.5 72B",         category:"Coding",    description:"Top pick for code. Excels at multi-language programming and debugging."},
-    {id:"deepseek-ai/DeepSeek-V3.2",                 label:"DeepSeek V3.2",        category:"Coding",    description:"Best open-source coding model. Rivals GPT-4 on coding benchmarks."},
-    {id:"Qwen/Qwen2.5-Coder-32B-Instruct",             label:"Qwen 2.5 Coder 32B",   category:"Coding",    description:"Purpose-built for code. Best for blockchain, XRP Ledger, XRPL.js, and complex multi-language projects. 92.7% HumanEval."},
-    {id:"deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",  label:"DeepSeek R1 7B",       category:"Reasoning", description:"Fast chain-of-thought reasoner. Good for math, logic, and debugging."},
-    {id:"deepseek-ai/DeepSeek-R1",                   label:"DeepSeek R1",          category:"Reasoning", description:"Full R1 — best open-source reasoning model. Exceptional on hard problems."},
-    {id:"meta-llama/Llama-3.2-11B-Vision-Instruct",  label:"Llama 3.2 11B Vision", category:"Vision",    description:"Reads images. Send photos, screenshots, or diagrams with your question."},
-    {id:"meta-llama/Llama-3.2-90B-Vision-Instruct",  label:"Llama 3.2 90B Vision", category:"Vision",    description:"Advanced vision. Best for detailed image analysis and technical drawings."},
-    {id:"Qwen/Qwen2.5-VL-72B-Instruct",              label:"Qwen 2.5 VL 72B",      category:"Vision",    description:"Powerful vision model. Excellent at reading documents, charts, and images."}
-  ]
+var BACKENDS = {
+  deepinfra: {
+    name: "DeepInfra",
+    worker_url: "https://openai-router.lukedorsett.workers.dev",
+    default_model: "meta-llama/Meta-Llama-3-8B-Instruct",
+    models: [
+      {id:"Qwen/Qwen3.5-2B",                           label:"Qwen 3.5 2B",          category:"General",   description:"Blazing fast. Best for quick questions and cheap to run."},
+      {id:"meta-llama/Llama-3.2-3B-Instruct",          label:"Llama 3.2 3B",         category:"General",   description:"Tiny and fast. Good for simple Q&A and quick summaries."},
+      {id:"meta-llama/Meta-Llama-3-8B-Instruct",       label:"Llama 3 8B",           category:"General",   description:"Solid everyday model. Good for writing, Q&A, and simple tasks."},
+      {id:"mistralai/Mistral-7B-Instruct-v0.3",        label:"Mistral 7B",           category:"General",   description:"Lightweight and precise. Great for structured answers and formatting."},
+      {id:"Qwen/Qwen3.5-27B",                          label:"Qwen 3.5 27B",         category:"General",   description:"Balanced mid-size model. Strong general performance at good speed."},
+      {id:"meta-llama/Meta-Llama-3.1-70B-Instruct",    label:"Llama 3.1 70B",        category:"General",   description:"Powerful all-rounder. Best for complex questions and long documents."},
+      {id:"meta-llama/Llama-4-Scout-17B-16E-Instruct", label:"Llama 4 Scout",        category:"General",   description:"Meta latest. 328K context window great for long docs and codebases."},
+      {id:"Qwen/Qwen2.5-72B-Instruct",                 label:"Qwen 2.5 72B",         category:"Coding",    description:"Top pick for code. Excels at multi-language programming and debugging."},
+      {id:"deepseek-ai/DeepSeek-V3.2",                 label:"DeepSeek V3.2",        category:"Coding",    description:"Best open-source coding model. Rivals GPT-4 on coding benchmarks."},
+      {id:"Qwen/Qwen2.5-Coder-32B-Instruct",           label:"Qwen 2.5 Coder 32B",   category:"Coding",    description:"Purpose-built for code. Best for blockchain, XRP Ledger, XRPL.js. 92.7% HumanEval."},
+      {id:"deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",   label:"DeepSeek R1 7B",       category:"Reasoning", description:"Fast chain-of-thought reasoner. Good for math, logic, and debugging."},
+      {id:"deepseek-ai/DeepSeek-R1",                   label:"DeepSeek R1",          category:"Reasoning", description:"Full R1 best open-source reasoning model. Exceptional on hard problems."},
+      {id:"meta-llama/Llama-3.2-11B-Vision-Instruct",  label:"Llama 3.2 11B Vision", category:"Vision",    description:"Reads images. Send photos screenshots or diagrams with your question."},
+      {id:"meta-llama/Llama-3.2-90B-Vision-Instruct",  label:"Llama 3.2 90B Vision", category:"Vision",    description:"Advanced vision. Best for detailed image analysis and technical drawings."},
+      {id:"Qwen/Qwen2.5-VL-72B-Instruct",              label:"Qwen 2.5 VL 72B",      category:"Vision",    description:"Powerful vision model. Excellent at reading documents charts and images."}
+    ]
+  },
+  openrouter: {
+    name: "OpenRouter",
+    worker_url: "https://openrouter.lukedorsett.workers.dev",
+    default_model: "nousresearch/hermes-3-llama-3.1-70b:free",
+    models: [
+      {id:"nousresearch/hermes-3-llama-3.1-70b:free",          label:"Hermes 3 70B (Free)",     category:"Uncensored", description:"NousResearch uncensored. Creative writing roleplay and unrestricted conversation. Free."},
+      {id:"cognitivecomputations/dolphin3.0-mistral-24b:free",  label:"Dolphin 3.0 24B (Free)", category:"Uncensored", description:"Eric Hartford Dolphin uncensored and unbiased. No content filters. Precision reasoning. Free."},
+      {id:"cognitivecomputations/dolphin-mixtral-8x22b",        label:"Dolphin Mixtral 8x22B",  category:"Uncensored", description:"Flagship Dolphin on Mixtral MoE. Most capable uncensored model. Full compliance no restrictions."},
+      {id:"nousresearch/hermes-3-llama-3.1-405b",               label:"Hermes 3 405B",          category:"Uncensored", description:"Largest Hermes model. Uncensored highest capability for complex creative and technical tasks."},
+      {id:"sao10k/l3.1-euryale-70b",                            label:"Euryale 70B",            category:"Uncensored", description:"Roleplay and creative writing specialist. Uncensored deep character consistency and storytelling."},
+      {id:"meta-llama/llama-3.1-70b-instruct:free",             label:"Llama 3.1 70B (Free)",   category:"General",    description:"Strong general model via OpenRouter. Less filtered than commercial alternatives. Free."},
+      {id:"meta-llama/llama-3.3-70b-instruct:free",             label:"Llama 3.3 70B (Free)",   category:"General",    description:"Latest Llama on OpenRouter. Improved instruction following. Free."},
+      {id:"deepseek/deepseek-chat-v3-0324:free",                label:"DeepSeek V3 (Free)",     category:"Coding",     description:"DeepSeek V3 via OpenRouter. Strong coder fewer restrictions than hosted versions. Free."},
+      {id:"deepseek/deepseek-r1:free",                          label:"DeepSeek R1 (Free)",     category:"Reasoning",  description:"Full R1 reasoning model via OpenRouter. Free tier with extended thinking."},
+      {id:"google/gemma-3-27b-it:free",                         label:"Gemma 3 27B (Free)",     category:"General",    description:"Google Gemma 3 via OpenRouter. Solid general model. Free."}
+    ]
+  }
 };
 
+var activeBackend = "deepinfra";
+
+var CONFIG;
 var workerUrl = "", allModels = [], currentModel = {id:"",label:""};
 var chatHistory = [], sending = false, attachedFile = null;
 
