@@ -9,14 +9,12 @@ export default {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS });
     }
-
     if (request.method !== "POST") {
       return new Response(JSON.stringify({ error: "Method not allowed" }), {
         status: 405,
         headers: { "Content-Type": "application/json", ...CORS },
       });
     }
-
     let body;
     try {
       body = await request.json();
@@ -26,17 +24,14 @@ export default {
         headers: { "Content-Type": "application/json", ...CORS },
       });
     }
-
     const upstream = await fetch("https://api.deepinfra.com/v1/openai/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${env.DEEPINFRA_KEY}`,
+        "Authorization": `Bearer ${env.DEEPINFRA_KEY}`,
       },
       body: JSON.stringify(body),
     });
-
-    // Stream passthrough
     if (body.stream) {
       return new Response(upstream.body, {
         status: upstream.status,
@@ -47,7 +42,6 @@ export default {
         },
       });
     }
-
     return new Response(await upstream.text(), {
       status: upstream.status,
       headers: { "Content-Type": "application/json", ...CORS },
