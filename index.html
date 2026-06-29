@@ -751,6 +751,16 @@ function appendMessage(role, content, streaming){
 
 /* ── Streaming ── */
 async function streamInto(res,wrap,body){
+  /* If Worker returns plain JSON (not SSE), handle gracefully */
+  var ct=res.headers.get("content-type")||"";
+  if(!ct.includes("event-stream")){
+    try{
+      var data=await res.json();
+      var text=((data.choices||[])[0]||{}).message||{};
+      text=text.content||JSON.stringify(data);
+      wrap.classList.remove("streaming"); body.innerHTML=renderContent(text); return text;
+    }catch(e){ throw new Error("Bad response from server: "+e.message); }
+  }
   var reader=res.body.getReader(), decoder=new TextDecoder(), buffer="", full="";
   try{
     while(true){
@@ -767,7 +777,7 @@ async function streamInto(res,wrap,body){
         }catch(e){}
       }
     }
-  } finally { wrap.classList.remove("streaming"); body.innerHTML=renderContent(full); }
+  } finally { wrap.classList.remove("streaming"); body.innerHTML=renderContent(full||"(empty response — try a different model)"); }
   return full;
 }
 
@@ -794,15 +804,21 @@ async function send(){
   var apiHist=history.slice(0,-1).map(function(m){ return {role:m.role,content:m.content}; });
   messages=messages.concat(apiHist); messages.push({role:"user",content:userContent});
   var res2=appendMessage("assistant","",true);
+  var controller=new AbortController();
+  var tId=setTimeout(function(){ controller.abort(); },60000);
   try{
     var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:currentModel.id,messages:messages,temperature:0.7,stream:true})});
+      body:JSON.stringify({model:currentModel.id,messages:messages,temperature:0.7,stream:true}),
+      signal:controller.signal});
+    clearTimeout(tId);
     if(!res.ok){ var err=await res.json().catch(function(){return{};}); throw new Error((err.error&&err.error.message)||"HTTP "+res.status); }
     var reply=await streamInto(res,res2.wrap,res2.body);
     history.push({role:"assistant",content:reply});
   }catch(e){
+    clearTimeout(tId);
     res2.wrap.classList.remove("streaming");
-    res2.body.className="msg-body error"; res2.body.innerHTML="Error: "+esc(e.message);
+    res2.body.className="msg-body error";
+    res2.body.innerHTML="Error: "+(e.name==="AbortError"?"Request timed out (60s). Model may be slow or unavailable — try a smaller model.":esc(e.message));
     history.pop();
   } finally { sending=false; btn.disabled=false; btn.textContent="Send"; }
 }
