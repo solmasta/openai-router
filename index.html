@@ -749,36 +749,10 @@ function appendMessage(role, content, streaming){
   return {wrap:wrap,body:body};
 }
 
-/* ── Streaming ── */
-async function streamInto(res,wrap,body){
-  /* If Worker returns plain JSON (not SSE), handle gracefully */
-  var ct=res.headers.get("content-type")||"";
-  if(!ct.includes("event-stream")){
-    try{
-      var data=await res.json();
-      var text=((data.choices||[])[0]||{}).message||{};
-      text=text.content||JSON.stringify(data);
-      wrap.classList.remove("streaming"); body.innerHTML=renderContent(text); return text;
-    }catch(e){ throw new Error("Bad response from server: "+e.message); }
-  }
-  var reader=res.body.getReader(), decoder=new TextDecoder(), buffer="", full="";
-  try{
-    while(true){
-      var r=await reader.read(); if(r.done) break;
-      buffer+=decoder.decode(r.value,{stream:true});
-      var lines=buffer.split("\n"); buffer=lines.pop();
-      for(var i=0;i<lines.length;i++){
-        var t=lines[i].trim(); if(!t.startsWith("data: ")) continue;
-        var d=t.slice(6);
-        if(d==="[DONE]"){ wrap.classList.remove("streaming"); body.innerHTML=renderContent(full); return full; }
-        try{
-          var chunk=(JSON.parse(d).choices||[])[0]; chunk=chunk&&chunk.delta&&chunk.delta.content;
-          if(chunk){ full+=chunk; body.innerHTML=renderContent(full)+'<span class="cursor">&#9607;</span>'; scrollNear(wrap); }
-        }catch(e){}
-      }
-    }
-  } finally { wrap.classList.remove("streaming"); body.innerHTML=renderContent(full||"(empty response — try a different model)"); }
-  return full;
+/* ── Stream helpers ── */
+function streamChunk(text,wrap,body){
+  body.innerHTML=renderContent(text)+'<span class="cursor">&#9607;</span>';
+  scrollNear(wrap);
 }
 
 /* ── Send ── */
@@ -803,22 +777,49 @@ async function send(){
   if(ap) messages.push({role:"system",content:ap.content});
   var apiHist=history.slice(0,-1).map(function(m){ return {role:m.role,content:m.content}; });
   messages=messages.concat(apiHist); messages.push({role:"user",content:userContent});
-  var res2=appendMessage("assistant","",true);
-  var controller=new AbortController();
-  var tId=setTimeout(function(){ controller.abort(); },60000);
+  var asstMsg=appendMessage("assistant","",true);
+  var full="", reply="";
   try{
-    var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:currentModel.id,messages:messages,temperature:0.7,stream:true}),
-      signal:controller.signal});
-    clearTimeout(tId);
-    if(!res.ok){ var err=await res.json().catch(function(){return{};}); throw new Error((err.error&&err.error.message)||"HTTP "+res.status); }
-    var reply=await streamInto(res,res2.wrap,res2.body);
+    var fetchRes=await fetch(workerUrl,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:currentModel.id,messages:messages,temperature:0.7,stream:true})
+    });
+    if(!fetchRes.ok){
+      var errBody=await fetchRes.text().catch(function(){return"";});
+      var errMsg="HTTP "+fetchRes.status;
+      try{ var ej=JSON.parse(errBody); errMsg=(ej.error&&ej.error.message)||errMsg; }catch(ex){}
+      throw new Error(errMsg);
+    }
+    /* Read SSE stream */
+    var reader=fetchRes.body.getReader(), dec=new TextDecoder(), buf="";
+    var deadline=Date.now()+90000;
+    while(true){
+      if(Date.now()>deadline) throw new Error("Timed out after 90s — try a smaller model.");
+      var chunk=await reader.read();
+      if(chunk.done) break;
+      buf+=dec.decode(chunk.value,{stream:true});
+      var lines=buf.split("\n"); buf=lines.pop();
+      for(var i=0;i<lines.length;i++){
+        var ln=lines[i].trim();
+        if(!ln.startsWith("data: ")) continue;
+        var d=ln.slice(6);
+        if(d==="[DONE]"){ reader.cancel(); buf=""; break; }
+        try{
+          var c=(JSON.parse(d).choices||[])[0];
+          var tok=c&&c.delta&&c.delta.content;
+          if(tok){ full+=tok; streamChunk(full,asstMsg.wrap,asstMsg.body); }
+        }catch(ex){}
+      }
+    }
+    reply=full||"(empty response)";
+    asstMsg.wrap.classList.remove("streaming");
+    asstMsg.body.innerHTML=renderContent(reply);
     history.push({role:"assistant",content:reply});
   }catch(e){
-    clearTimeout(tId);
-    res2.wrap.classList.remove("streaming");
-    res2.body.className="msg-body error";
-    res2.body.innerHTML="Error: "+(e.name==="AbortError"?"Request timed out (60s). Model may be slow or unavailable — try a smaller model.":esc(e.message));
+    asstMsg.wrap.classList.remove("streaming");
+    asstMsg.body.className="msg-body error";
+    asstMsg.body.innerHTML="Error: "+esc(e.message);
     history.pop();
   } finally { sending=false; btn.disabled=false; btn.textContent="Send"; }
 }
