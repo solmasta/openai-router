@@ -20,9 +20,13 @@
 
     <header>
       <span class="wordmark">ai-router</span>
-      <select id="modelSelect" disabled>
-        <option>Loading…</option>
-      </select>
+      <div class="header-right">
+        <button class="model-btn" id="modelBtn" disabled>
+          <span id="modelBtnLabel">Loading…</span>
+          <span class="model-arrow">▾</span>
+        </button>
+        <button class="icon-btn" id="projectsBtn" title="Saved chats">📁</button>
+      </div>
     </header>
 
     <button class="system-bar" id="systemToggle">
@@ -36,16 +40,33 @@
     </div>
 
     <div class="input-bar">
+      <div class="attach-preview hidden" id="attachPreview"></div>
       <textarea id="prompt" placeholder="Ask anything…" spellcheck="false" rows="3"></textarea>
       <div class="input-actions">
-        <button id="clearBtn" class="btn-ghost">Clear</button>
-        <button id="sendBtn" class="btn-primary">Send</button>
+        <button class="icon-btn attach-icon" id="attachBtn" title="Attach file or photo">📎</button>
+        <input type="file" id="fileInput" hidden
+          accept="image/*,.txt,.js,.ts,.jsx,.tsx,.py,.html,.css,.json,.md,.yaml,.yml,.csv,.xml,.vue,.sh">
+        <div class="input-right">
+          <button id="clearBtn" class="btn-ghost">Clear</button>
+          <button id="sendBtn" class="btn-primary">Send</button>
+        </div>
       </div>
     </div>
 
   </div>
 
-  <!-- Prompt Manager -->
+  <!-- ── Model Picker ───────────────────────────────────────────────────────── -->
+  <div class="modal hidden" id="modelModal">
+    <div class="sheet">
+      <div class="sheet-header">
+        <span>Choose Model</span>
+        <button class="sheet-close" id="closeModelModal">✕</button>
+      </div>
+      <div class="sheet-body" id="modelList"></div>
+    </div>
+  </div>
+
+  <!-- ── System Prompt Manager ─────────────────────────────────────────────── -->
   <div class="modal hidden" id="promptModal">
     <div class="sheet">
       <div class="sheet-header">
@@ -59,7 +80,7 @@
     </div>
   </div>
 
-  <!-- Prompt Editor -->
+  <!-- ── Prompt Editor ──────────────────────────────────────────────────────── -->
   <div class="modal hidden" id="promptEditor">
     <div class="sheet">
       <div class="sheet-header">
@@ -77,6 +98,52 @@
       <div class="sheet-footer editor-footer">
         <button class="btn-danger" id="deletePromptBtn">Delete</button>
         <button class="btn-primary" id="savePromptBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Projects List ──────────────────────────────────────────────────────── -->
+  <div class="modal hidden" id="projectsModal">
+    <div class="sheet">
+      <div class="sheet-header">
+        <span>Saved Chats</span>
+        <button class="sheet-close" id="closeProjectsModal">✕</button>
+      </div>
+      <div class="sheet-body" id="projectList"></div>
+      <div class="sheet-footer editor-footer">
+        <button class="btn-ghost" id="newProjectBtn">+ New folder</button>
+        <button class="btn-primary" id="saveToProjectBtn">Save current chat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Conversations List ─────────────────────────────────────────────────── -->
+  <div class="modal hidden" id="convsModal">
+    <div class="sheet">
+      <div class="sheet-header">
+        <button class="back-btn" id="backToProjects">‹</button>
+        <span id="convsProjectName">Folder</span>
+        <button class="sheet-close" id="closeConvsModal">✕</button>
+      </div>
+      <div class="sheet-body" id="convsList"></div>
+    </div>
+  </div>
+
+  <!-- ── Project / Folder Editor ───────────────────────────────────────────── -->
+  <div class="modal hidden" id="projectEditor">
+    <div class="sheet">
+      <div class="sheet-header">
+        <span id="projEditorTitle">New folder</span>
+        <button class="sheet-close" id="closeProjEditor">✕</button>
+      </div>
+      <div class="sheet-body editor-form">
+        <label class="field-label">Folder name</label>
+        <input type="text" id="projNameInput" class="field-input"
+          placeholder="e.g. Work, HVAC, Personal" autocomplete="off">
+      </div>
+      <div class="sheet-footer editor-footer">
+        <button class="btn-danger hidden" id="deleteProjBtn">Delete</button>
+        <button class="btn-primary" id="saveProjBtn">Save</button>
       </div>
     </div>
   </div>
