@@ -654,6 +654,39 @@ function appendMessage(role, content, streaming) {
   return {wrap:wrap, body:body};
 }
 
+/* ── Auto-save ── */
+var AUTOSAVE_KEY = 'ai_autosave';
+
+function autoSave() {
+  if (!chatHistory.length) return;
+  try {
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({
+      modelId: currentModel.id,
+      modelLabel: currentModel.label,
+      backend: activeBackend,
+      savedAt: Date.now(),
+      messages: chatHistory.map(function(m) {
+        return {
+          role: m.role,
+          content: typeof m.content === 'string' ? m.content
+            : ((m.content.find(function(c){ return c.type==='text'; })||{}).text||'')
+        };
+      })
+    }));
+  } catch(e) {}
+}
+
+function loadAutoSave() {
+  try {
+    var saved = JSON.parse(localStorage.getItem(AUTOSAVE_KEY));
+    if (!saved || !saved.messages || !saved.messages.length) return;
+    chatHistory = saved.messages.map(function(m){ return {role:m.role, content:m.content}; });
+    var def = allModels.find(function(m){ return m.id === saved.modelId; });
+    if (def) setModel(def);
+    chatHistory.forEach(function(m){ appendMessage(m.role, m.content); });
+  } catch(e) {}
+}
+
 /* ── Send ── */
 async function send() {
   if (sending) return;
@@ -715,6 +748,7 @@ async function send() {
     asstMsg.wrap.classList.remove('streaming');
     asstMsg.body.innerHTML = renderContent(full || '(empty response)');
     chatHistory.push({role:'assistant', content:full});
+    autoSave();
   } catch(e) {
     asstMsg.wrap.classList.remove('streaming');
     asstMsg.body.className = 'msg-body error';
@@ -731,7 +765,7 @@ document.getElementById('prompt').addEventListener('input', function() {
   this.style.height = Math.min(this.scrollHeight, 180) + 'px';
 });
 document.getElementById('clearBtn').addEventListener('click', function() {
-  chatHistory = []; clearAttachment();
+  chatHistory = []; clearAttachment(); localStorage.removeItem(AUTOSAVE_KEY);
   document.getElementById('chat').innerHTML = '<div class="empty-state" id="emptyState">Select a model and start chatting.</div>';
 });
 
