@@ -224,20 +224,20 @@ code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;border:1px
 (function() {
 
 /* ── Backends ── */
-var DI_URL = 'https://openaiworker.lukedorsett.workers.dev';
-var OR_URL = 'https://openrouter.lukedorsett.workers.dev';
+var DI_URL = 'https://openai-router.lukedorsett.workers.dev';
+var OR_URL = 'https://openaiworker.lukedorsett.workers.dev';
 
 var BACKENDS = {
   deepinfra: {
     name: 'DeepInfra', url: DI_URL,
-    def: 'meta-llama/Meta-Llama-3-8B-Instruct',
+    def: 'mistralai/Mistral-7B-Instruct-v0.3',
     models: [
       {id:'Qwen/Qwen3.5-2B',label:'Qwen 3.5 2B',cat:'General',desc:'Blazing fast. Best for quick questions.'},
       {id:'meta-llama/Llama-3.2-3B-Instruct',label:'Llama 3.2 3B',cat:'General',desc:'Tiny and fast. Good for simple Q&A.'},
-      {id:'meta-llama/Meta-Llama-3-8B-Instruct',label:'Llama 3 8B',cat:'General',desc:'Solid everyday model. Good for writing and Q&A.'},
+      {id:'meta-llama/Meta-Llama-3.1-8B-Instruct',label:'Llama 3.1 8B',cat:'General',desc:'Solid everyday model. Good for writing and Q&A.'},
       {id:'mistralai/Mistral-7B-Instruct-v0.3',label:'Mistral 7B',cat:'General',desc:'Lightweight and precise. Great for structured answers.'},
       {id:'Qwen/Qwen3.5-27B',label:'Qwen 3.5 27B',cat:'General',desc:'Balanced mid-size. Strong general performance.'},
-      {id:'meta-llama/Meta-Llama-3.1-70B-Instruct',label:'Llama 3.1 70B',cat:'General',desc:'Powerful all-rounder. Best for complex questions.'},
+      {id:'meta-llama/Llama-3.3-70B-Instruct',label:'Llama 3.3 70B',cat:'General',desc:'Powerful all-rounder. Best for complex questions.'},
       {id:'meta-llama/Llama-4-Scout-17B-16E-Instruct',label:'Llama 4 Scout',cat:'General',desc:'Meta latest. 328K context window.'},
       {id:'Qwen/Qwen2.5-72B-Instruct',label:'Qwen 2.5 72B',cat:'Coding',desc:'Top for code. Excels at multi-language programming.'},
       {id:'deepseek-ai/DeepSeek-V3.2',label:'DeepSeek V3.2',cat:'Coding',desc:'Best open-source coder. Rivals GPT-4.'},
