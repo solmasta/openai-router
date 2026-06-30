@@ -1,29 +1,51 @@
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS });
     }
+
+    // Live model list endpoint
+    if (request.method === "GET" && url.pathname === "/models") {
+      const res = await fetch("https://openrouter.ai/api/v1/models", {
+        headers: {
+          "Authorization": `Bearer ${env.OPENROUTER_KEY}`,
+          "HTTP-Referer": "https://solmasta.github.io/openai-router",
+        }
+      });
+      const data = await res.json();
+      return new Response(JSON.stringify(data), {
+        headers: { "Content-Type": "application/json", ...CORS }
+      });
+    }
+
+    if (request.method === "GET") {
+      return new Response(JSON.stringify({ status: "ok" }), {
+        headers: { "Content-Type": "application/json", ...CORS }
+      });
+    }
+
     if (request.method !== "POST") {
       return new Response(JSON.stringify({ error: "Method not allowed" }), {
-        status: 405,
-        headers: { "Content-Type": "application/json", ...CORS },
+        status: 405, headers: { "Content-Type": "application/json", ...CORS }
       });
     }
+
     let body;
-    try {
-      body = await request.json();
-    } catch {
+    try { body = await request.json(); }
+    catch {
       return new Response(JSON.stringify({ error: "Invalid request body" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", ...CORS },
+        status: 400, headers: { "Content-Type": "application/json", ...CORS }
       });
     }
+
     const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -34,19 +56,17 @@ export default {
       },
       body: JSON.stringify(body),
     });
+
     if (body.stream) {
       return new Response(upstream.body, {
         status: upstream.status,
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          ...CORS,
-        },
+        headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", ...CORS }
       });
     }
+
     return new Response(await upstream.text(), {
       status: upstream.status,
-      headers: { "Content-Type": "application/json", ...CORS },
+      headers: { "Content-Type": "application/json", ...CORS }
     });
   },
 };
