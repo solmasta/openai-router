@@ -106,11 +106,13 @@ code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;border:1px
 .model-card-label{font-size:14px;font-weight:500}
 .model-card-desc{font-size:12.5px;color:var(--muted);line-height:1.5}
 .model-badge{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
-.cat-general{background:#1e2028;color:#9ca3af;border:1px solid #374151}
-.cat-coding{background:#0f1f35;color:#60a5fa;border:1px solid #1e3a5f}
-.cat-reasoning{background:#1a1030;color:#a78bfa;border:1px solid #3730a3}
+.cat-general,.cat-everyday{background:#1e2028;color:#9ca3af;border:1px solid #374151}
+.cat-coding,.cat-blockchain{background:#0f1f35;color:#60a5fa;border:1px solid #1e3a5f}
+.cat-reasoning,.cat-technical{background:#1a1030;color:#a78bfa;border:1px solid #3730a3}
 .cat-vision{background:#0f2118;color:#34d399;border:1px solid #065f46}
 .cat-uncensored{background:#2d1515;color:#f87171;border:1px solid #7f1d1d}
+.cat-recommended{background:#1a1a2e;color:#818cf8;border:1px solid #4338ca}
+.cat-free{background:#0f2820;color:#6ee7b7;border:1px solid #064e3b}
 .empty-list{color:var(--muted);font-size:14px;text-align:center;padding:24px 0;line-height:1.9}
 .prompt-card,.project-card,.conv-card{background:var(--raised);border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:border-color .15s;flex-shrink:0}
 .prompt-card.active{border-color:var(--accent);background:#1a1a2e}
@@ -232,36 +234,36 @@ var BACKENDS = {
     name: 'DeepInfra', url: DI_URL,
     def: 'mistralai/Mistral-7B-Instruct-v0.3',
     models: [
-      {id:'Qwen/Qwen3.5-2B',label:'Qwen 3.5 2B',cat:'General',
-        desc:'Ultra-fast and dirt cheap. Use for quick lookups, simple yes/no questions, or when you need a fast answer and cost matters. Not ideal for complex tasks.'},
-      {id:'meta-llama/Llama-3.2-3B-Instruct',label:'Llama 3.2 3B',cat:'General',
-        desc:'Small and speedy. Good for basic Q/A, short summaries, and simple rewrites. Struggles with long or technical content.'},
-      {id:'mistralai/Mistral-7B-Instruct-v0.3',label:'Mistral 7B',cat:'General',
-        desc:'Reliable everyday workhorse. Great for writing, emails, structured responses, and general questions. Fast, accurate, and cheap. Good default for most tasks.'},
-      {id:'Qwen/Qwen3.5-27B',label:'Qwen 3.5 27B',cat:'General',
-        desc:'Strong mid-size model. Handles longer conversations, detailed explanations, and multi-step tasks better than 7B models. Good balance of speed and power.'},
-      {id:'meta-llama/Meta-Llama-3.1-8B-Instruct',label:'Llama 3.1 8B',cat:'General',
-        desc:'Meta efficient 8B model. Better instruction following than older Llama versions. Good for writing assistance, summaries, and general Q/A at low cost.'},
-      {id:'meta-llama/Llama-3.3-70B-Instruct',label:'Llama 3.3 70B',cat:'General',
-        desc:'Meta powerful 70B. Excellent for complex questions, long documents, and technical explanations. Use when smaller models fall short.'},
-      {id:'meta-llama/Llama-4-Scout-17B-16E-Instruct',label:'Llama 4 Scout',cat:'General',
-        desc:'Meta latest with a 328K context window. Best for analyzing very long documents, entire codebases, or lengthy conversations without losing context.'},
+      {id:'mistralai/Mistral-7B-Instruct-v0.3',label:'Mistral 7B',cat:'Recommended',
+        desc:'Best starting point. Fast, accurate, cheap, and reliable. Use this for everyday questions, writing, emails, and anything you just need done quickly. Very stable model.'},
+      {id:'meta-llama/Llama-3.3-70B-Instruct',label:'Llama 3.3 70B',cat:'Recommended',
+        desc:'Step up when you need more power. Handles complex questions, long documents, detailed explanations, and multi-step tasks. Still fast enough for daily use.'},
+      {id:'deepseek-ai/DeepSeek-R1',label:'DeepSeek R1',cat:'Recommended',
+        desc:'Best for anything technical or analytical. Use for HVAC troubleshooting, diagnosing system problems, step-by-step logic, calculations, and hard decisions. Thinks before answering.'},
+      {id:'Qwen/Qwen2.5-Coder-32B-Instruct',label:'Qwen 2.5 Coder 32B',cat:'Recommended',
+        desc:'Best for code and XRP Ledger work. Purpose-built for programming. Use for XRPL.js, smart contracts, debugging code, and technical blockchain questions.'},
+      {id:'Qwen/Qwen3.5-2B',label:'Qwen 3.5 2B',cat:'Everyday',
+        desc:'Tiny and ultra-fast. Use only for very simple quick questions where speed matters more than quality. Not for complex or technical tasks.'},
+      {id:'meta-llama/Llama-3.2-3B-Instruct',label:'Llama 3.2 3B',cat:'Everyday',
+        desc:'Small and fast. Good for basic Q/A and short summaries. Struggles with anything technical or long.'},
+      {id:'meta-llama/Meta-Llama-3.1-8B-Instruct',label:'Llama 3.1 8B',cat:'Everyday',
+        desc:'Solid 8B everyday model. Good for writing help, summarizing, and general questions at low cost.'},
+      {id:'Qwen/Qwen3.5-27B',label:'Qwen 3.5 27B',cat:'Everyday',
+        desc:'Balanced mid-size. Handles longer conversations and multi-step tasks better than 7B models without the cost of a 70B.'},
+      {id:'meta-llama/Llama-4-Scout-17B-16E-Instruct',label:'Llama 4 Scout',cat:'Everyday',
+        desc:'Meta latest with 328K context window. Best when you need to feed in very long documents, full reports, or entire conversation histories without losing track.'},
       {id:'Qwen/Qwen2.5-72B-Instruct',label:'Qwen 2.5 72B',cat:'Coding',
-        desc:'Top all-around coding model. Excellent at writing, debugging, and explaining code across all major languages. Also strong for technical analysis and documentation.'},
+        desc:'Top all-around coding model. Excellent at writing, debugging, and explaining code across all major languages. Also strong for technical documentation.'},
       {id:'deepseek-ai/DeepSeek-V3.2',label:'DeepSeek V3.2',cat:'Coding',
-        desc:'Best open-source coding model available. Rivals GPT-4 on benchmarks. Use for complex multi-file projects, architecture decisions, and hard debugging problems.'},
-      {id:'Qwen/Qwen2.5-Coder-32B-Instruct',label:'Qwen 2.5 Coder 32B',cat:'Coding',
-        desc:'Purpose-built for code. Strongest pick for XRP Ledger development, XRPL.js, blockchain smart contracts, and deep language-specific work.'},
-      {id:'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',label:'DeepSeek R1 7B',cat:'Reasoning',
-        desc:'Fast reasoning model. Thinks step by step before answering. Good for math, logic, and debugging when you want to see the reasoning. Faster and cheaper than full R1.'},
-      {id:'deepseek-ai/DeepSeek-R1',label:'DeepSeek R1',cat:'Reasoning',
-        desc:'Full reasoning powerhouse. Best for hard problems, complex HVAC diagnostics, multi-step troubleshooting, financial calculations, and anything needing careful analysis. Slower but worth it.'},
+        desc:'Best open-source coder available. Use for complex multi-file projects, architecture decisions, and hard debugging. Rivals GPT-4 on coding benchmarks.'},
+      {id:'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',label:'DeepSeek R1 7B',cat:'Technical',
+        desc:'Fast reasoning model. Great for math, logic, and step-by-step problem solving. Faster and cheaper than full R1 when you need quick reasoning.'},
       {id:'meta-llama/Llama-3.2-11B-Vision-Instruct',label:'Llama 3.2 11B Vision',cat:'Vision',
-        desc:'Switch to this when attaching images. Good for reading photos, equipment nameplates, wiring diagrams, and screenshots. Use the camera or file attach button.'},
+        desc:'Use this when attaching images. Good for reading equipment nameplates, wiring diagrams, screenshots, and photos. Tap the paperclip to attach.'},
       {id:'meta-llama/Llama-3.2-90B-Vision-Instruct',label:'Llama 3.2 90B Vision',cat:'Vision',
-        desc:'More powerful vision. Better for complex technical images, charts, handwritten notes, small text in photos, and images with multiple elements to analyze.'},
+        desc:'More powerful vision model. Better for complex technical images, charts, dense text in photos, and P&ID diagrams.'},
       {id:'Qwen/Qwen2.5-VL-72B-Instruct',label:'Qwen 2.5 VL 72B',cat:'Vision',
-        desc:'Strongest vision model on DeepInfra. Best for multi-page documents, dense technical drawings, P&ID diagrams, and any image where detail and accuracy matter most.'}
+        desc:'Strongest vision on DeepInfra. Best for multi-page documents, technical drawings, and images where every detail matters.'}
     ]
   },
   openrouter: {
@@ -269,21 +271,21 @@ var BACKENDS = {
     def: 'nousresearch/hermes-3-llama-3.1-70b',
     models: [
       {id:'nousresearch/hermes-3-llama-3.1-70b',label:'Hermes 3 70B',cat:'Uncensored',
-        desc:'NousResearch uncensored model. No content filters. Will engage with any topic openly. Great for creative writing, roleplay, and conversations other models refuse. Paid.'},
+        desc:'NousResearch uncensored model. No content filters. Will engage with any topic openly. Best for conversations and topics other models refuse. Paid.'},
       {id:'cognitivecomputations/dolphin-mixtral-8x22b',label:'Dolphin Mixtral 8x22B',cat:'Uncensored',
-        desc:'Eric Hartford flagship uncensored Dolphin model. Helpful without restrictions. Strong reasoning, no refusals. Best all-around uncensored option. Paid.'},
+        desc:'Flagship uncensored Dolphin on Mixtral. Helpful without restrictions. Strong reasoning and no refusals. Best all-around uncensored option. Paid.'},
       {id:'nousresearch/hermes-3-llama-3.1-405b',label:'Hermes 3 405B',cat:'Uncensored',
-        desc:'Largest Hermes model. Maximum capability with zero content filtering. Use for the most complex uncensored tasks where you need both power and full compliance. Paid.'},
+        desc:'Largest Hermes. Maximum power with zero content filtering. Use for the most complex uncensored tasks. Paid.'},
       {id:'sao10k/l3.1-euryale-70b',label:'Euryale 70B',cat:'Uncensored',
-        desc:'Specialized for creative and roleplay tasks. Uncensored, highly expressive, maintains character consistency better than general models. Paid.'},
-      {id:'meta-llama/llama-3.3-70b-instruct:free',label:'Llama 3.3 70B (Free)',cat:'General',
-        desc:'Meta strong 70B model free on OpenRouter. Good general capability, less filtered than commercial alternatives. 20 requests per minute limit. Free.'},
-      {id:'deepseek/deepseek-r1:free',label:'DeepSeek R1 (Free)',cat:'Reasoning',
-        desc:'Full DeepSeek R1 reasoning model via OpenRouter. Same step-by-step thinking as the paid version. Rate limited but completely free. Great for hard problems. Free.'},
-      {id:'google/gemma-3-27b-it:free',label:'Gemma 3 27B (Free)',cat:'General',
-        desc:'Google open Gemma 3 model. Solid for general tasks, writing, and Q/A. Well-tuned instruction following. Rate limited. Free.'},
+        desc:'Specialized for creative and roleplay. Uncensored, expressive, deep character consistency. Paid.'},
       {id:'openrouter/free',label:'Auto Free Router',cat:'Free',
-        desc:'Let OpenRouter automatically pick the best available free model for your request. Good for experimenting without worrying about which model to use. Always free.'}
+        desc:'OpenRouter automatically picks the best available free model. Good for experimenting at zero cost. Always free.'},
+      {id:'meta-llama/llama-3.3-70b-instruct:free',label:'Llama 3.3 70B (Free)',cat:'Free',
+        desc:'Meta strong 70B free on OpenRouter. Good general capability. 20 requests per minute limit. Free.'},
+      {id:'deepseek/deepseek-r1:free',label:'DeepSeek R1 (Free)',cat:'Free',
+        desc:'Full reasoning model via OpenRouter free tier. Great for hard problems at zero cost. Rate limited. Free.'},
+      {id:'google/gemma-3-27b-it:free',label:'Gemma 3 27B (Free)',cat:'Free',
+        desc:'Google Gemma 3 free on OpenRouter. Solid general tasks and writing. Rate limited. Free.'}
     ]
   }
 };
@@ -357,45 +359,69 @@ async function fetchLiveModels() {
   }
 }
 
+/* Trusted provider prefixes for live model filtering */
+var TRUSTED = ['meta-llama','deepseek','deepseek-ai','mistralai','qwen','google',
+  'nousresearch','cognitivecomputations','sao10k','anthropic','openai','nvidia',
+  'microsoft','cohere','01-ai','moonshotai','x-ai','amazon'];
+
 function parseModelList(data) {
   var models = data.data || [];
+  /* Get IDs already in our hardcoded list to avoid duplicates */
+  var B = BACKENDS[activeBackend];
+  var pinnedIds = B.models.map(function(m){ return m.id; });
+
   if (activeBackend === 'openrouter') {
-    // Sort: free first, then by name
-    return models
-      .filter(function(m) { return m.id && m.name && m.context_length > 0; })
-      .map(function(m) {
-        var p = m.pricing || {};
-        var isFree = p.prompt === '0' && p.completion === '0';
-        var id = m.id.toLowerCase();
-        var cat;
-        if (isFree) cat = 'Free';
-        else if (id.includes('dolphin') || id.includes('hermes') || id.includes('euryale') || id.includes('uncensor')) cat = 'Uncensored';
-        else if (id.includes('vision') || id.includes('-vl') || id.includes('pixtral')) cat = 'Vision';
-        else if (id.includes('coder') || id.includes('code') || id.includes('deepseek-v')) cat = 'Coding';
-        else if (id.includes('r1') || id.includes('reason') || id.includes('think')) cat = 'Reasoning';
-        else cat = 'General';
-        var label = m.name.replace(/^[^:]+:\s*/, '').slice(0, 35);
-        var ctx = m.context_length ? Math.round(m.context_length/1000) + 'K ctx' : '';
-        return { id: m.id, label: label, cat: cat, desc: (isFree ? 'Free. ' : '') + ctx };
-      })
-      .sort(function(a, b) {
-        var order = {Free:0, Uncensored:1, General:2, Coding:3, Reasoning:4, Vision:5};
-        return (order[a.cat]||9) - (order[b.cat]||9);
-      });
+    var filtered = models.filter(function(m) {
+      if (!m.id || !m.name || !m.context_length) return false;
+      if (m.context_length < 32000) return false; /* Skip tiny context models */
+      if (pinnedIds.indexOf(m.id) > -1) return false; /* Already shown */
+      /* Only trusted providers */
+      var prefix = m.id.split('/')[0];
+      if (TRUSTED.indexOf(prefix) < 0) return false;
+      /* Skip obviously old/experimental */
+      var id = m.id.toLowerCase();
+      if (id.includes('gpt-3') || id.includes('slerp') || id.includes('weaver') ||
+          id.includes('remm') || id.includes('mytho') || id.includes('alpha') ||
+          id.includes('preview') || id.includes('deprecated')) return false;
+      return true;
+    });
+    return filtered.slice(0, 25).map(function(m) {
+      var p = m.pricing || {};
+      var isFree = p.prompt === '0' && p.completion === '0';
+      var id = m.id.toLowerCase();
+      var cat;
+      if (isFree) cat = 'Free';
+      else if (id.includes('dolphin')||id.includes('hermes')||id.includes('euryale')) cat = 'Uncensored';
+      else if (id.includes('vision')||id.includes('-vl')||id.includes('pixtral')) cat = 'Vision';
+      else if (id.includes('coder')||id.includes('code')||id.includes('deepseek-v')) cat = 'Coding';
+      else if (id.includes('r1')||id.includes('reason')||id.includes('think')) cat = 'Technical';
+      else cat = 'Everyday';
+      var label = m.name.replace(/^[^:]+:\s*/,'').slice(0, 32);
+      var ctx = m.context_length ? Math.round(m.context_length/1000)+'K ctx' : '';
+      return { id:m.id, label:label, cat:cat, desc:(isFree?'Free. ':'')+ctx+'. Live from OpenRouter.' };
+    }).sort(function(a,b){
+      var o = {Free:0,Uncensored:1,Everyday:2,Coding:3,Technical:4,Vision:5};
+      return (o[a.cat]||9)-(o[b.cat]||9);
+    });
   } else {
-    // DeepInfra
-    return models
-      .filter(function(m) { return m.id && !m.id.includes('embed') && !m.id.includes('whisper') && !m.id.includes('tts'); })
-      .map(function(m) {
-        var id = m.id.toLowerCase();
-        var cat;
-        if (id.includes('vision') || id.includes('-vl')) cat = 'Vision';
-        else if (id.includes('coder') || id.includes('deepseek-v3') || id.includes('deepseek-v2')) cat = 'Coding';
-        else if (id.includes('r1') || id.includes('reasoner')) cat = 'Reasoning';
-        else cat = 'General';
-        var label = m.id.split('/').pop().replace(/-instruct$/i,'').replace(/-chat$/i,'').slice(0,30);
-        return { id: m.id, label: label, cat: cat, desc: m.id };
-      });
+    /* DeepInfra - filter to chat models only */
+    return models.filter(function(m) {
+      if (!m.id) return false;
+      if (pinnedIds.indexOf(m.id) > -1) return false;
+      var id = m.id.toLowerCase();
+      if (id.includes('embed')||id.includes('whisper')||id.includes('tts')||
+          id.includes('stable')||id.includes('flux')||id.includes('sdxl')) return false;
+      return true;
+    }).slice(0, 20).map(function(m) {
+      var id = m.id.toLowerCase();
+      var cat;
+      if (id.includes('vision')||id.includes('-vl')) cat = 'Vision';
+      else if (id.includes('coder')||id.includes('deepseek-v')) cat = 'Coding';
+      else if (id.includes('r1')||id.includes('reasoner')) cat = 'Technical';
+      else cat = 'Everyday';
+      var label = m.id.split('/').pop().replace(/-instruct$/i,'').replace(/-chat$/i,'').slice(0,30);
+      return { id:m.id, label:label, cat:cat, desc:'Live from DeepInfra. '+m.id };
+    });
   }
 }
 
