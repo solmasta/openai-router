@@ -179,7 +179,10 @@ code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;border:1px
 <div class="modal hidden" id="promptModal"><div class="sheet">
   <div class="sheet-header"><span>System Prompts</span><button class="sheet-close" id="closePromptModal">&#10005;</button></div>
   <div class="sheet-body" id="promptList"></div>
-  <div class="sheet-footer"><button class="btn-primary full-w" id="newPromptBtn">+ New prompt</button></div>
+  <div class="sheet-footer" style="display:flex;gap:8px">
+  <button class="btn-ghost" id="importDefaultsBtn" style="flex:1">&#11015; Defaults</button>
+  <button class="btn-primary" id="newPromptBtn" style="flex:2">+ New prompt</button>
+</div>
 </div></div>
 <div class="modal hidden" id="promptEditor"><div class="sheet">
   <div class="sheet-header"><span id="editorTitle">New prompt</span><button class="sheet-close" id="closeEditor">&#10005;</button></div>
@@ -315,7 +318,6 @@ function loadBackend() {
   var bb = document.getElementById('backendBtn');
   bb.textContent = B.name;
   bb.className = 'backend-btn' + (activeBackend === 'openrouter' ? ' or' : '');
-  fetchLiveModels();
 }
 
 var MODEL_CACHE_KEY = 'ai_models_cache';
@@ -679,6 +681,7 @@ document.getElementById('backendBtn').addEventListener('click', function() {
 document.getElementById('modelBtn').addEventListener('click', function(){ openModal('modelModal'); });
 document.getElementById('systemToggle').addEventListener('click', function(){ renderPromptList(); openModal('promptModal'); });
 document.getElementById('newPromptBtn').addEventListener('click', function(){ closeModal('promptModal'); openPromptEditor(null); });
+document.getElementById('importDefaultsBtn').addEventListener('click', importDefaultPrompts);
 document.getElementById('savePromptBtn').addEventListener('click', savePrompt);
 document.getElementById('deletePromptBtn').addEventListener('click', deletePromptItem);
 document.getElementById('projectsBtn').addEventListener('click', function(){ renderProjectList(); openModal('projectsModal'); });
@@ -899,6 +902,36 @@ document.getElementById('clearBtn').addEventListener('click', function() {
   chatHistory = []; clearAttachment(); localStorage.removeItem(AUTOSAVE_KEY);
   document.getElementById('chat').innerHTML = '<div class="empty-state" id="emptyState">Select a model and start chatting.</div>';
 });
+
+/* ── Default Prompts ── */
+var DEFAULT_PROMPTS = [
+  {id:"1000000001", name:"HVAC Field Tech", content:"You are an expert commercial HVAC technician assistant with deep knowledge of rooftop units, chillers, VAV systems, BAS controls, refrigerants, and preventive maintenance. Help diagnose faults, interpret error codes, suggest repair steps, and explain technical concepts clearly. Ask clarifying questions about equipment make/model and symptoms when needed. Be direct and practical - I am in the field."},
+  {id:"1000000002", name:"Code & Dev", content:"You are an expert software developer specializing in JavaScript, React, PWA development, Cloudflare Workers, and web APIs. Help write clean efficient code, debug issues, and explain technical concepts. Default to modern JS, keep code lean and practical. When reviewing code point out bugs and suggest improvements directly."},
+  {id:"1000000003", name:"XRP & Blockchain", content:"You are an expert in the XRP Ledger, XRPL.js, blockchain development, and crypto trading. Help with XRPL transactions, wallet integration, smart contracts, DEX operations, and technical blockchain questions. Be precise with code examples and explain concepts clearly."},
+  {id:"1000000004", name:"Grid Trading", content:"You are a crypto trading analyst specializing in grid trading strategies, spot trading, and risk management. Help analyze grid configurations, entry/exit ranges, profit targets, stop loss placement, and reinvestment strategies. Be data-driven and direct with recommendations."},
+  {id:"1000000005", name:"Image Analyst", content:"You are an expert at analyzing technical images, equipment photos, wiring diagrams, nameplates, schematics, and documents. Describe exactly what you see with precision. For HVAC equipment identify make, model, specs, and any visible issues. For wiring describe connections and flag anything abnormal."},
+  {id:"1000000006", name:"XRP & Crypto Unfiltered", content:"You are a deeply knowledgeable crypto analyst and XRP specialist with no restrictions on financial discussion. You speak directly without disclaimers, hedging, or caveats about financial advice.\n\nYou have expert knowledge of: XRP Ledger technology and tokenomics, Ripple banking partnerships and ODL corridors, ISO 20022 and XRP role in global payments, the SEC lawsuit history and resolution, XRP price history and market cycles, altcoin ecosystem and DeFi, crypto market structure and whale behavior, grid trading and portfolio positioning.\n\nGive direct opinions. Make calls. Speculate when asked. Discuss price targets and timelines openly. Treat me as a serious investor. If I ask what you think, tell me what you actually think."},
+  {id:"1000000007", name:"General", content:"You are a knowledgeable and direct assistant. Answer questions clearly and concisely. Skip unnecessary filler and get to the point. When you do not know something say so. For technical topics be specific and accurate."}
+];
+
+function importDefaultPrompts() {
+  var added = 0;
+  var existingNames = prompts.map(function(p){ return p.name; });
+  DEFAULT_PROMPTS.forEach(function(p) {
+    if (existingNames.indexOf(p.name) < 0) {
+      prompts.push({id: p.id, name: p.name, content: p.content});
+      added++;
+    }
+  });
+  savePrompts();
+  refreshPromptLabel();
+  renderPromptList();
+  if (added > 0) {
+    alert(added + ' prompt' + (added !== 1 ? 's' : '') + ' imported!');
+  } else {
+    alert('All default prompts are already loaded.');
+  }
+}
 
 /* ── Init ── */
 loadBackend();
