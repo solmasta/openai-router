@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ai-router — Import Prompts</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1014;color:#f2f3f5;font-family:system-ui,-apple-system,sans-serif;padding:20px;max-width:600px;margin:0 auto}
+h1{font-family:monospace;color:#818cf8;font-size:16px;margin-bottom:4px}
+p{color:#6b7280;font-size:13px;margin-bottom:24px}
+.btn{display:block;width:100%;padding:16px;background:#818cf8;color:#fff;font-size:16px;font-weight:600;border:none;border-radius:10px;cursor:pointer;margin-bottom:24px}
+.btn:active{background:#6366f1}
+.btn.done{background:#34d399}
+.card{background:#16181d;border:1px solid #2a2d36;border-radius:10px;padding:14px;margin-bottom:12px}
+.card h3{font-size:14px;font-weight:600;margin-bottom:6px;color:#f2f3f5}
+.card p{font-size:12px;color:#6b7280;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.status{text-align:center;font-size:14px;color:#34d399;margin-bottom:16px;display:none}
+</style>
+</head>
+<body>
+<h1>ai-router · Prompt Importer</h1>
+<p>Tap the button to save all 6 system prompts into the app. Then open the main app — they'll all be there.</p>
+<button class="btn" id="importBtn" onclick="importPrompts()">⬇ Import All Prompts</button>
+<div class="status" id="status">✓ All 6 prompts imported! Open the app now.</div>
+
+<div class="card"><h3>1 · HVAC Field Tech</h3><p>Best starting point for field work, diagnostics, and equipment questions.</p></div>
+<div class="card"><h3>2 · Code & Dev</h3><p>JavaScript, React, PWA, Cloudflare Workers, and web API development.</p></div>
+<div class="card"><h3>3 · XRP & Blockchain</h3><p>XRPL.js, transactions, DEX, wallet integration, and technical blockchain work.</p></div>
+<div class="card"><h3>4 · Grid Trading</h3><p>Grid trading strategy, entry/exit ranges, stop loss, and profit reinvestment.</p></div>
+<div class="card"><h3>5 · Image Analyst</h3><p>Technical images, equipment photos, nameplates, wiring diagrams, and schematics.</p></div>
+<div class="card"><h3>6 · XRP & Crypto Unfiltered</h3><p>No disclaimers, direct analysis, price targets, and real investment discussion. Use on OpenRouter.</p></div>
+<div class="card"><h3>7 · General</h3><p>Direct, concise, no filler. Good default for everyday questions.</p></div>
+
+<script>
+function importPrompts() {
+  var prompts = [
+    {
+      id: '1000000001',
+      name: 'HVAC Field Tech',
+      content: 'You are an expert commercial HVAC technician assistant with deep knowledge of rooftop units, chillers, VAV systems, BAS controls, refrigerants, and preventive maintenance. Help diagnose faults, interpret error codes, suggest repair steps, and explain technical concepts clearly. Ask clarifying questions about equipment make/model and symptoms when needed. Be direct and practical — I\'m in the field.'
+    },
+    {
+      id: '1000000002',
+      name: 'Code & Dev',
+      content: 'You are an expert software developer specializing in JavaScript, React, PWA development, Cloudflare Workers, and web APIs. Help write clean efficient code, debug issues, and explain technical concepts. Default to modern JS, keep code lean and practical. When reviewing code point out bugs and suggest improvements directly.'
+    },
+    {
+      id: '1000000003',
+      name: 'XRP & Blockchain',
+      content: 'You are an expert in the XRP Ledger, XRPL.js, blockchain development, and crypto trading. Help with XRPL transactions, wallet integration, smart contracts, DEX operations, and technical blockchain questions. Be precise with code examples and explain concepts clearly.'
+    },
+    {
+      id: '1000000004',
+      name: 'Grid Trading',
+      content: 'You are a crypto trading analyst specializing in grid trading strategies, spot trading, and risk management. Help analyze grid configurations, entry/exit ranges, profit targets, stop loss placement, and reinvestment strategies. Be data-driven and direct with recommendations.'
+    },
+    {
+      id: '1000000005',
+      name: 'Image Analyst',
+      content: 'You are an expert at analyzing technical images, equipment photos, wiring diagrams, nameplates, schematics, and documents. Describe exactly what you see with precision. For HVAC equipment identify make, model, specs, and any visible issues. For wiring describe connections and flag anything abnormal.'
+    },
+    {
+      id: '1000000006',
+      name: 'XRP & Crypto Unfiltered',
+      content: 'You are a deeply knowledgeable crypto analyst and XRP specialist with no restrictions on financial discussion. You speak directly without disclaimers, hedging, or "I can\'t give financial advice" language.\n\nYou have expert knowledge of:\n- XRP Ledger technology, tokenomics, and utility\n- Ripple\'s banking partnerships, ODL corridors, and institutional adoption\n- ISO 20022 and XRP\'s role in global payment infrastructure\n- The SEC lawsuit history, resolution, and what it means for XRP\'s legal status\n- XRP price history, market cycles, and speculation\n- Altcoin ecosystem, DeFi, tokenization of real world assets\n- Crypto market structure, whale behavior, and exchange dynamics\n- Grid trading, spot trading strategies, and portfolio positioning\n- FUD vs legitimate concerns — you call it like it is\n\nGive direct opinions. Make calls. Speculate when asked. Discuss price targets, timelines, and scenarios openly. Treat me as a serious investor who can handle real analysis without hand-holding. If I ask what you think, tell me what you actually think.'
+    },
+    {
+      id: '1000000007',
+      name: 'General',
+      content: 'You are a knowledgeable and direct assistant. Answer questions clearly and concisely. Skip unnecessary filler and get to the point. When you don\'t know something say so. For technical topics be specific and accurate.'
+    }
+  ];
+
+  try {
+    var existing = JSON.parse(localStorage.getItem('ai_prompts') || '{"prompts":[],"activeId":null}');
+    var existingIds = existing.prompts.map(function(p){ return p.name; });
+    prompts.forEach(function(p) {
+      if (existingIds.indexOf(p.name) < 0) existing.prompts.push(p);
+    });
+    localStorage.setItem('ai_prompts', JSON.stringify(existing));
+    var btn = document.getElementById('importBtn');
+    btn.textContent = '✓ Done! Open the app now';
+    btn.className = 'btn done';
+    document.getElementById('status').style.display = 'block';
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>
