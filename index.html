@@ -329,13 +329,9 @@ async function fetchLiveModels() {
   try {
     var cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
     if (cached && Date.now() - cached.ts < MODEL_CACHE_TTL) {
-      allModels = cached.models;
+      /* Always show curated first, then cached live extras */
+      allModels = B.models.concat(cached.models);
       renderModelList();
-      // Set model to default if not already set
-      if (!currentModel.id) {
-        var def = allModels.find(function(m){ return m.id === B.def; }) || allModels[0];
-        if (def) setModel(def);
-      }
       return;
     }
   } catch(e) {}
@@ -346,16 +342,13 @@ async function fetchLiveModels() {
     var data = await res.json();
     var parsed = parseModelList(data);
     if (parsed.length > 0) {
-      allModels = parsed;
+      /* Keep curated models first, append live extras after */
+      allModels = B.models.concat(parsed);
       localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), models: parsed }));
       renderModelList();
-      if (!currentModel.id || !parsed.find(function(m){ return m.id === currentModel.id; })) {
-        var def = parsed.find(function(m){ return m.id === B.def; }) || parsed[0];
-        if (def) setModel(def);
-      }
     }
   } catch(e) {
-    console.log('Live model fetch failed, using fallback:', e);
+    console.log('Live model fetch failed, using curated list:', e);
   }
 }
 
@@ -404,23 +397,32 @@ function parseModelList(data) {
       return (o[a.cat]||9)-(o[b.cat]||9);
     });
   } else {
-    /* DeepInfra - filter to chat models only */
+    /* DeepInfra - only chat/instruction models */
     return models.filter(function(m) {
       if (!m.id) return false;
       if (pinnedIds.indexOf(m.id) > -1) return false;
       var id = m.id.toLowerCase();
+      /* Must be a chat model - require instruct, chat, or known families */
+      var isChat = id.includes('instruct') || id.includes('-chat') ||
+                   id.includes('llama') || id.includes('mistral') ||
+                   id.includes('deepseek-v3') || id.includes('deepseek-r') ||
+                   id.includes('qwen') || id.includes('gemma');
+      if (!isChat) return false;
+      /* Exclude non-chat model types */
       if (id.includes('embed')||id.includes('whisper')||id.includes('tts')||
-          id.includes('stable')||id.includes('flux')||id.includes('sdxl')) return false;
+          id.includes('stable')||id.includes('flux')||id.includes('sdxl')||
+          id.includes('guard')||id.includes('asr')||id.includes('video')||
+          id.includes('audio')||id.includes('rerank')||id.includes('safety')) return false;
       return true;
-    }).slice(0, 20).map(function(m) {
+    }).slice(0, 15).map(function(m) {
       var id = m.id.toLowerCase();
       var cat;
       if (id.includes('vision')||id.includes('-vl')) cat = 'Vision';
       else if (id.includes('coder')||id.includes('deepseek-v')) cat = 'Coding';
-      else if (id.includes('r1')||id.includes('reasoner')) cat = 'Technical';
-      else cat = 'Everyday';
+      else if (id.includes('r1')||id.includes('reasoner')||id.includes('thinking')) cat = 'Technical';
+      else cat = 'More';
       var label = m.id.split('/').pop().replace(/-instruct$/i,'').replace(/-chat$/i,'').slice(0,30);
-      return { id:m.id, label:label, cat:cat, desc:'Live from DeepInfra. '+m.id };
+      return { id:m.id, label:label, cat:cat, desc:'Available on DeepInfra. '+m.id };
     });
   }
 }
