@@ -200,9 +200,16 @@ code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;border:1px
 <div class="modal hidden" id="projectsModal"><div class="sheet">
   <div class="sheet-header"><span>Saved Chats</span><button class="sheet-close" id="closeProjectsModal">&#10005;</button></div>
   <div class="sheet-body" id="projectList"></div>
-  <div class="sheet-footer editor-footer">
-    <button class="btn-ghost" id="newProjectBtn">+ New folder</button>
-    <button class="btn-primary" id="saveToProjectBtn">Save current chat</button>
+  <div class="sheet-footer" style="display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;gap:8px">
+      <button class="btn-ghost" id="newProjectBtn" style="flex:1">+ New folder</button>
+      <button class="btn-primary" id="saveToProjectBtn" style="flex:2">Save current chat</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-ghost" id="exportBackupBtn" style="flex:1">&#11014; Export</button>
+      <button class="btn-ghost" id="importBackupBtn" style="flex:1">&#11015; Import</button>
+      <input type="file" id="backupFileInput" hidden accept=".json">
+    </div>
   </div>
 </div></div>
 <div class="modal hidden" id="convsModal"><div class="sheet">
@@ -700,6 +707,12 @@ document.getElementById('saveToProjectBtn').addEventListener('click', function()
   });
 });
 document.getElementById('backToProjects').addEventListener('click', function(){ closeModal('convsModal'); renderProjectList(); openModal('projectsModal'); });
+document.getElementById('exportBackupBtn').addEventListener('click', exportBackup);
+document.getElementById('importBackupBtn').addEventListener('click', function(){ document.getElementById('backupFileInput').click(); });
+document.getElementById('backupFileInput').addEventListener('change', function(e) {
+  var file = e.target.files[0]; if (!file) return; e.target.value = '';
+  importBackup(file);
+});
 document.getElementById('saveProjBtn').addEventListener('click', saveProject);
 document.getElementById('deleteProjBtn').addEventListener('click', deleteProject);
 document.getElementById('attachBtn').addEventListener('click', function(){ document.getElementById('fileInput').click(); });
@@ -931,6 +944,53 @@ function importDefaultPrompts() {
   } else {
     alert('All default prompts are already loaded.');
   }
+}
+
+/* ── Backup / Restore ── */
+function exportBackup() {
+  var data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    prompts: JSON.parse(localStorage.getItem('ai_prompts') || '{}'),
+    projects: JSON.parse(localStorage.getItem('ai_projects') || '[]'),
+    autosave: localStorage.getItem('ai_autosave') || null
+  };
+  var blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var date = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = 'ai-router-backup-' + date + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importBackup(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (!data.version) { alert('Invalid backup file.'); return; }
+      if (data.prompts && Object.keys(data.prompts).length) {
+        localStorage.setItem('ai_prompts', JSON.stringify(data.prompts));
+        loadPrompts();
+      }
+      if (data.projects && data.projects.length) {
+        localStorage.setItem('ai_projects', JSON.stringify(data.projects));
+        loadProjects();
+      }
+      if (data.autosave) {
+        localStorage.setItem('ai_autosave', data.autosave);
+      }
+      alert('Backup restored! Prompts and saved chats loaded.');
+      renderProjectList();
+    } catch(err) {
+      alert('Could not read backup file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
 }
 
 /* ── Init ── */
