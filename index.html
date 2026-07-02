@@ -95,7 +95,7 @@ code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;border:1px
 .sheet-header{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600;flex-shrink:0;gap:8px}
 .sheet-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 6px;line-height:1;flex-shrink:0}
 .back-btn{background:none;border:none;color:var(--accent);font-size:22px;cursor:pointer;padding:0 6px 0 0;line-height:1;flex-shrink:0}
-.sheet-body{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.sheet-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
 .sheet-footer{padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0}
 .editor-footer{display:flex;gap:8px;justify-content:space-between;align-items:center}
 .model-cat-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:8px 4px 4px;margin-top:4px}
@@ -827,18 +827,37 @@ function loadAutoSave() {
   try {
     var saved = JSON.parse(localStorage.getItem(AUTOSAVE_KEY));
     if (!saved || !saved.messages || !saved.messages.length) return;
-    chatHistory = saved.messages.map(function(m){ return {role:m.role, content:m.content}; });
+    if (saved.backend && saved.backend !== activeBackend) {
+      activeBackend = saved.backend;
+      var B = BACKENDS[activeBackend];
+      workerUrl = B.url; allModels = B.models;
+      var bb = document.getElementById('backendBtn');
+      bb.textContent = B.name;
+      bb.className = 'backend-btn' + (activeBackend === 'openrouter' ? ' or' : '');
+    }
     var def = allModels.find(function(m){ return m.id === saved.modelId; });
-    if (def) setModel(def);
+    if (def) { setModel(def); }
+    else { currentModel={id:saved.modelId,label:saved.modelLabel||saved.modelId}; document.getElementById('modelBtnLabel').textContent=currentModel.label; document.getElementById('modelBtn').disabled=false; }
+    chatHistory = saved.messages.map(function(m){ return {role:m.role,content:m.content}; });
     chatHistory.forEach(function(m){ appendMessage(m.role, m.content); });
-  } catch(e) {}
+    setTimeout(function(){ var c=document.getElementById('chat'); c.scrollTop=c.scrollHeight; }, 100);
+  } catch(e) { console.log('restore err:',e); }
 }
+
+function loadDraft() {
+  try { var d=localStorage.getItem('ai_draft'); if(d){ var el=document.getElementById('prompt'); if(el&&!el.value){ el.value=d; el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,180)+'px'; } } } catch(e) {}
+}
+
+setInterval(function(){
+  try { var t=document.getElementById('prompt'); if(t&&t.value.trim()) localStorage.setItem('ai_draft',t.value); } catch(e) {}
+}, 15000);
 
 /* ── Send ── */
 async function send() {
   if (sending) return;
   var promptEl = document.getElementById('prompt');
   var text = promptEl.value.trim();
+  localStorage.removeItem('ai_draft');
   if (!text && !attachedFile) return;
   var ap = getActivePrompt();
   var btn = document.getElementById('sendBtn');
@@ -912,7 +931,7 @@ document.getElementById('prompt').addEventListener('input', function() {
   this.style.height = Math.min(this.scrollHeight, 180) + 'px';
 });
 document.getElementById('clearBtn').addEventListener('click', function() {
-  chatHistory = []; clearAttachment(); localStorage.removeItem(AUTOSAVE_KEY);
+  chatHistory = []; clearAttachment(); localStorage.removeItem(AUTOSAVE_KEY); localStorage.removeItem('ai_draft');
   document.getElementById('chat').innerHTML = '<div class="empty-state" id="emptyState">Select a model and start chatting.</div>';
 });
 
@@ -997,6 +1016,8 @@ function importBackup(file) {
 loadBackend();
 loadPrompts();
 loadProjects();
+loadAutoSave();
+loadDraft();
 
 })();
 
