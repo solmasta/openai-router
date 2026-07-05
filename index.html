@@ -20,6 +20,14 @@
   --user-bg:#1a1c2e;--user-br:#2d2f4a;--error:#f87171;--success:#34d399;
   --mono:'Cascadia Code','Fira Code',ui-monospace,monospace;
 }
+.light{
+  --bg:#f8f9fa;--surface:#ffffff;--raised:#f1f3f5;--border:#dee2e6;
+  --text:#212529;--muted:#868e96;--accent:#6366f1;--accent-d:#4f46e5;
+  --user-bg:#eef0ff;--user-br:#c5c8ff;--error:#e03131;--success:#2f9e44;
+}
+.light .code-block pre,.light .code-block code{background:#1e1e2e!important;color:#cdd6f4!important}
+.light .code-block,.light .code-header{background:#1e1e2e;border-color:#313244}
+.light code.inline{background:#e9ecef;border-color:#dee2e6;color:#6366f1}
 html,body{height:100%}
 body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.6;display:flex;flex-direction:column;overscroll-behavior:none}
 .app{display:flex;flex-direction:column;height:100vh;max-width:820px;width:100%;margin:0 auto;padding:0 16px}
@@ -183,7 +191,7 @@ code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;border:1px
         <span class="model-btn-label" id="modelBtnLabel">Loading&#8230;</span>
         <span class="model-arrow">&#9660;</span>
       </button>
-      <button class="icon-btn" id="settingsBtn" title="Settings">&#9881;</button>
+      <button class="icon-btn" id="settingsBtn" title="Settings" style="color:var(--accent)">&#9881;</button>
       <button class="icon-btn" id="projectsBtn" title="Saved chats">&#128193;</button>
     </div>
   </header>
@@ -298,12 +306,24 @@ code.inline{font-family:var(--mono);font-size:13px;background:#0d1117;border:1px
       </div>
     </div>
     <div class="settings-row">
+      <div><div class="settings-label">Theme</div><div class="settings-sub">Switch between dark and light mode</div></div>
+      <button class="btn-ghost" id="themeBtn">&#9790; Light</button>
+    </div>
+    <div class="settings-row">
       <div><div class="settings-label">Share conversation</div><div class="settings-sub">Copy current chat to clipboard</div></div>
       <button class="btn-ghost" id="shareBtn">Share</button>
     </div>
     <div class="settings-row">
       <div><div class="settings-label">Clear favorites</div><div class="settings-sub">Remove all starred models</div></div>
       <button class="btn-ghost" id="clearFavesBtn">Clear</button>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-label">&#128176; Add DeepInfra credits</div><div class="settings-sub">Pay-as-you-go, fractions of a cent per message</div></div>
+      <a href="https://deepinfra.com/billing" target="_blank" class="btn-ghost" style="text-decoration:none">Open</a>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-label">&#128176; Add OpenRouter credits</div><div class="settings-sub">Needed for uncensored paid models</div></div>
+      <a href="https://openrouter.ai/credits" target="_blank" class="btn-ghost" style="text-decoration:none">Open</a>
     </div>
   </div>
 </div></div>
@@ -959,6 +979,18 @@ document.getElementById('tempSlider').addEventListener('input',function(){
   document.getElementById('tempVal').textContent=temperature.toFixed(2);
 });
 document.getElementById('shareBtn').addEventListener('click',function(){shareConversation();closeModal('settingsModal');});
+var isDark = true;
+document.getElementById('themeBtn').addEventListener('click',function(){
+  isDark = !isDark;
+  document.body.classList.toggle('light', !isDark);
+  this.textContent = isDark ? '☽ Light' : '☀ Dark';
+  localStorage.setItem('ai_theme', isDark ? 'dark' : 'light');
+});
+// Restore theme on load
+(function(){
+  var t = localStorage.getItem('ai_theme');
+  if(t === 'light'){isDark=false;document.body.classList.add('light');document.getElementById('themeBtn').textContent='☀ Dark';}
+})();
 document.getElementById('clearFavesBtn').addEventListener('click',function(){favorites={};saveFavorites();renderModelList();closeModal('settingsModal');});
 
 /* ── Chat rendering ── */
@@ -987,7 +1019,7 @@ function appendMessage(role,content,streaming) {
     var actions=document.createElement('div'); actions.className='msg-actions';
     var copyBtn=document.createElement('button'); copyBtn.textContent='Copy'; copyBtn.className='btn-action';
     copyBtn.onclick=function(){navigator.clipboard.writeText(body.innerText).then(function(){copyBtn.textContent='Copied!';setTimeout(function(){copyBtn.textContent='Copy';},2000);});};
-    var regenBtn=document.createElement('button'); regenBtn.textContent='&#8635; Regen'; regenBtn.className='btn-action';
+    var regenBtn=document.createElement('button'); regenBtn.innerHTML='&#8635; Regen'; regenBtn.className='btn-action';
     regenBtn.onclick=function(){regenLast();};
     actions.appendChild(copyBtn);actions.appendChild(regenBtn);wrap.appendChild(actions);
   }
