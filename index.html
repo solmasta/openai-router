@@ -945,5 +945,25 @@ loadBackend();loadPrompts();loadProjects();loadAutoSave();loadDraft();
 
 })();
 </script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/openai-router/sw.js').then(function(reg) {
+    reg.addEventListener('updatefound', function() {
+      var worker = reg.installing;
+      worker.addEventListener('statechange', function() {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          /* New version available - reload to get it */
+          worker.postMessage({action: 'skipWaiting'});
+          window.location.reload();
+        }
+      });
+    });
+  });
+  /* Reload when new SW takes control */
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    window.location.reload();
+  });
+}
+</script>
 </body>
 </html>
