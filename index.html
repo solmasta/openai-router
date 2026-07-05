@@ -306,6 +306,7 @@ var currentModel = {id:'', label:''};
 var chatHistory = [];
 var sending = false;
 var attachedFile = null;
+var sessionId = Date.now().toString(), responseCount = 0;
 var activePromptId = null;
 var editingId = null;
 var editingProjId = null;
@@ -852,6 +853,45 @@ setInterval(function(){
   try { var t=document.getElementById('prompt'); if(t&&t.value.trim()) localStorage.setItem('ai_draft',t.value); } catch(e) {}
 }, 15000);
 
+/* ── Auto Snapshots ── */
+function autoSnapshot() {
+  if (chatHistory.length < 2) return;
+  try {
+    var folderName = currentModel.label;
+    var folder = projects.find(function(p){ return p.name === folderName && p.auto; });
+    if (!folder) {
+      folder = {id:'auto_'+currentModel.id.replace(/[^a-z0-9]/gi,'_'), name:folderName, conversations:[], auto:true};
+      projects.push(folder);
+    }
+    var first = chatHistory.find(function(m){ return m.role==='user'; });
+    var raw = typeof first.content==='string' ? first.content : ((first.content.find(function(c){ return c.type==='text'; })||{}).text||'Chat');
+    var snap = {
+      id: sessionId,
+      sessionId: sessionId,
+      title: raw.slice(0,50) + (raw.length>50?'...':''),
+      savedAt: Date.now(),
+      modelId: currentModel.id,
+      modelLabel: currentModel.label,
+      messages: chatHistory.map(function(m){
+        return {role:m.role, content:typeof m.content==='string'?m.content:((m.content.find(function(c){return c.type==='text';})||{}).text||'')};
+      })
+    };
+    var idx = folder.conversations.findIndex(function(c){ return c.sessionId===sessionId; });
+    if (idx > -1) { folder.conversations[idx] = snap; }
+    else { folder.conversations.push(snap); }
+    if (folder.conversations.length > 30) folder.conversations = folder.conversations.slice(-30);
+    saveProjects();
+  } catch(e) { console.log('snapshot err:', e); }
+}
+
+/* Snapshot every 10 min */
+setInterval(autoSnapshot, 10 * 60 * 1000);
+
+/* Snapshot on page hide (phone switches app, screen off, etc) */
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState === 'hidden') autoSnapshot();
+});
+
 /* ── Send ── */
 async function send() {
   if (sending) return;
@@ -915,6 +955,8 @@ async function send() {
     asstMsg.body.innerHTML = renderContent(full || '(empty response)');
     chatHistory.push({role:'assistant', content:full});
     autoSave();
+    responseCount++;
+    if (responseCount % 5 === 0) autoSnapshot();
   } catch(e) {
     asstMsg.wrap.classList.remove('streaming');
     asstMsg.body.className = 'msg-body error';
@@ -931,7 +973,7 @@ document.getElementById('prompt').addEventListener('input', function() {
   this.style.height = Math.min(this.scrollHeight, 180) + 'px';
 });
 document.getElementById('clearBtn').addEventListener('click', function() {
-  chatHistory = []; clearAttachment(); localStorage.removeItem(AUTOSAVE_KEY); localStorage.removeItem('ai_draft');
+  chatHistory = []; clearAttachment(); localStorage.removeItem(AUTOSAVE_KEY); localStorage.removeItem('ai_draft'); sessionId = Date.now().toString(); responseCount = 0;
   document.getElementById('chat').innerHTML = '<div class="empty-state" id="emptyState">Select a model and start chatting.</div>';
 });
 
