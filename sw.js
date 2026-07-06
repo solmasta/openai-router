@@ -1,4 +1,4 @@
-var CACHE = 'ai-router-v28';
+var CACHE = 'ai-router-v29';
 var FILES = [
   '/',
   '/index.html',
