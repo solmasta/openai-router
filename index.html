@@ -181,6 +181,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:#0d1117;border:1px solid
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
       <button class="ib" id="settingsBtn" style="color:var(--ac)" title="Settings">&#9881;</button>
+      <button class="ib" id="newTabBtn" title="New chat in new tab" style="font-size:16px;font-weight:300">&#43;</button>
       <button class="ib" id="projectsBtn" title="Saved chats">&#128193;</button>
     </div>
   </header>
@@ -304,6 +305,7 @@ var prompts=[],projects=[];
 var sessionId=Date.now().toString(),responseCount=0,lastUsedModelId="";
 var temperature=0.7,favorites={},isDark=true,webSearchOn=true;
 var summarizing=false;
+var abortController=null;
 
 /* BACKENDS and data injected by build script */
 var BACKENDS={
@@ -869,6 +871,7 @@ bindM("settingsModal","closeSettingsModal");
 document.getElementById("backendBtn").addEventListener("click",function(){activeBackend=activeBackend==="deepinfra"?"openrouter":"deepinfra";loadBackend();});
 document.getElementById("modelBtn").addEventListener("click",function(){renderModelList();openModal("modelModal");});
 document.getElementById("settingsBtn").addEventListener("click",function(){openModal("settingsModal");});
+document.getElementById("newTabBtn").addEventListener("click",function(){window.open(window.location.href,"_blank");});
 document.getElementById("systemToggle").addEventListener("click",function(){renderPromptList();openModal("promptModal");});
 document.getElementById("newPromptBtn").addEventListener("click",function(){closeModal("promptModal");openPE(null);});
 document.getElementById("importDefaultsBtn").addEventListener("click",importDefaults);
@@ -1000,6 +1003,10 @@ function regenLast(){
 }
 
 /* ---- Send ---- */
+function stopGeneration(){
+  if(abortController){abortController.abort();}
+}
+
 async function send(){
   if(sending)return;
   var promptEl=document.getElementById("prompt");
@@ -1011,8 +1018,9 @@ async function send(){
   }
   var ap=getAP();
   sending=true;
-  document.getElementById("sendBtn").disabled=true;
-  document.getElementById("sendBtn").textContent="Sending\u2026";
+  document.getElementById("sendBtn").disabled=false;
+  document.getElementById("sendBtn").textContent="\u25A0 Stop";
+  document.getElementById("sendBtn").style.background="var(--er)";
   localStorage.removeItem("ai_draft");
   var userContent=text;
   if(attachedFiles.length){
@@ -1045,7 +1053,14 @@ async function doSendRequest(userContent,isRegen,ap){
   if(webSearchOn){
     var qtext=typeof userContent==="string"?userContent:((userContent&&userContent.find&&userContent.find(function(c){return c.type==="text";})||{}).text||"");
     var ctx=await doSearch(qtext);
-    if(ctx)messages.push({role:"system",content:"Use this real-time data:\n"+ctx+"\nAnswer based on this current data."});
+    if(ctx){
+      /* Merge into first system message to avoid multiple system msgs confusing model */
+      if(messages.length>0&&messages[0].role==="system"){
+        messages[0].content+=("\n\n[REAL-TIME DATA]\n"+ctx);
+      }else{
+        messages.unshift({role:"system",content:"[REAL-TIME DATA]\n"+ctx});
+      }
+    }
   }
   messages=messages.concat(chatHistory.slice(0,-1));
   messages.push({role:"user",content:userContent});
@@ -1070,7 +1085,8 @@ async function doSendRequest(userContent,isRegen,ap){
         }
       }catch(te){}
     }
-    var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel.id,messages:messages,temperature:temperature,stream:true})});
+    abortController=new AbortController();
+    var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel.id,messages:messages,temperature:temperature,stream:true}),signal:abortController.signal});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error((err.error&&err.error.message)||"HTTP "+res.status);}
     var reader=res.body.getReader(),dec=new TextDecoder(),buf="",done=false;
     while(!done){
@@ -1094,15 +1110,30 @@ async function doSendRequest(userContent,isRegen,ap){
     if(cost){var ct=document.createElement("span");ct.className="ct";ct.textContent=cost;asstMsg.label.appendChild(ct);}
     autoSave();responseCount++;if(responseCount%5===0)autoSnap();updTokenBar();
   }catch(e){
-    asstMsg.wrap.classList.remove("ma2");asstMsg.body.className="body err";asstMsg.body.innerHTML="Error: "+esc(e.message);
-    if(!isRegen)chatHistory.pop();
+    asstMsg.wrap.classList.remove("ma2");
+    if(e.name==="AbortError"){
+      /* User stopped generation - keep partial response if any */
+      if(full){
+        asstMsg.body.innerHTML=renderMd(full);
+        chatHistory.push({role:"assistant",content:full});
+        autoSave();
+      }else{
+        asstMsg.wrap.remove();
+        if(!isRegen)chatHistory.pop();
+      }
+    }else{
+      asstMsg.body.className="body err";asstMsg.body.innerHTML="Error: "+esc(e.message);
+      if(!isRegen)chatHistory.pop();
+    }
   }finally{
-    sending=false;document.getElementById("sendBtn").disabled=false;document.getElementById("sendBtn").textContent="Send";
+    sending=false;abortController=null;document.getElementById("sendBtn").disabled=false;document.getElementById("sendBtn").textContent="Send";document.getElementById("sendBtn").style.background="";
   }
 }
 
-document.getElementById("sendBtn").addEventListener("click",send);
-document.getElementById("prompt").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}});
+document.getElementById("sendBtn").addEventListener("click",function(){
+  if(sending){stopGeneration();}else{send();}
+});
+/* Enter = new line, no auto-send */
 document.getElementById("prompt").addEventListener("input",function(){this.style.height="auto";this.style.height=Math.min(this.scrollHeight,150)+"px";});
 document.getElementById("clearBtn").addEventListener("click",function(){
   chatHistory=[];clearAttach();localStorage.removeItem(AUTOSAVE_KEY);localStorage.removeItem("ai_draft");
