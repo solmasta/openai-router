@@ -68,6 +68,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:11p
 .ba{background:none;border:1px solid var(--br);color:var(--mu);font-size:11.5px;padding:3px 9px;border-radius:4px;cursor:pointer;font-family:system-ui,sans-serif}
 .ba:hover{color:var(--tx);border-color:var(--mu)}
 .ct{font-size:10.5px;color:var(--mu);font-family:var(--mn);margin-left:auto}
+.srch{font-size:10px;color:var(--ac);font-family:var(--mn);background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.3);border-radius:10px;padding:1px 7px;white-space:nowrap}
 .msw{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:11.5px;font-family:var(--mn)}
 .msw::before,.msw::after{content:'';flex:1;height:1px;background:var(--br)}
 .cb{margin:8px 0;border-radius:8px;overflow:hidden;border:1px solid var(--br)}
@@ -775,7 +776,7 @@ function loadAutoSave(){
   try{
     var saved=JSON.parse(localStorage.getItem(AUTOSAVE_KEY));
     if(!saved||!saved.messages||!saved.messages.length)return;
-    if(saved.savedAt&&Date.now()-saved.savedAt>28800000){localStorage.removeItem(AUTOSAVE_KEY);return;}
+    /* No expiry - always restore last conversation */
     if(saved.backend&&saved.backend!==activeBackend){
       activeBackend=saved.backend;var B=BACKENDS[activeBackend];workerUrl=B.url;allModels=B.models;
       var bb=document.getElementById("backendBtn");bb.textContent=B.name;bb.className="bb"+(activeBackend==="openrouter"?" or":"");
@@ -1050,15 +1051,19 @@ async function doSendRequest(userContent,isRegen,ap){
   if(!ap)ap=getAP();
   var messages=[];
   if(ap)messages.push({role:"system",content:ap.content});
+  var searchUsed=false;
+  var searchTime=null;
   if(webSearchOn){
     var qtext=typeof userContent==="string"?userContent:((userContent&&userContent.find&&userContent.find(function(c){return c.type==="text";})||{}).text||"");
     var ctx=await doSearch(qtext);
     if(ctx){
-      /* Merge into first system message to avoid multiple system msgs confusing model */
+      searchUsed=true;
+      searchTime=new Date().toLocaleTimeString();
+      var searchNote="A web search was just performed by the app on your behalf. When asked if you searched the web, say yes - the app searched and provided you these real-time results:\n\n"+ctx+"\n\nUse this data to answer accurately.";
       if(messages.length>0&&messages[0].role==="system"){
-        messages[0].content+=("\n\n[REAL-TIME DATA]\n"+ctx);
+        messages[0].content+="\n\n"+searchNote;
       }else{
-        messages.unshift({role:"system",content:"[REAL-TIME DATA]\n"+ctx});
+        messages.unshift({role:"system",content:searchNote});
       }
     }
   }
@@ -1079,6 +1084,7 @@ async function doSendRequest(userContent,isRegen,ap){
             var args=JSON.parse(tc["function"].arguments||"{}");
             asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\uD83D\uDD0D Searching: '+esc(args.query||"")+'&#8230;</span>';
             var sr=await doSearch(args.query||"");
+            if(sr){searchUsed=true;searchTime=new Date().toLocaleTimeString();}
             messages=messages.concat([p1choice.message,{role:"tool",tool_call_id:tc.id,content:sr||"No results found"}]);
             asstMsg.body.innerHTML='<span class="cur">\u2587</span>';
           }
@@ -1106,6 +1112,7 @@ async function doSendRequest(userContent,isRegen,ap){
     asstMsg.wrap.classList.remove("ma2");
     asstMsg.body.innerHTML=renderMd(full||(isRegen?"(no response)":"(empty response)"));
     chatHistory.push({role:"assistant",content:full});
+    if(searchUsed){var sb=document.createElement("span");sb.className="srch";sb.textContent="\uD83D\uDD0D searched "+searchTime;asstMsg.label.appendChild(sb);}
     var cost=calcCost(full);
     if(cost){var ct=document.createElement("span");ct.className="ct";ct.textContent=cost;asstMsg.label.appendChild(ct);}
     autoSave();responseCount++;if(responseCount%5===0)autoSnap();updTokenBar();
