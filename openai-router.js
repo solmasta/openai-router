@@ -8,19 +8,41 @@ async function handleSearch(query, env) {
   const q = query.toLowerCase();
   const results = [];
 
-  // Crypto price detection
+  // Crypto price detection - 60+ coins, free via CoinGecko
   const cryptoMap = {
-    'xrp': 'ripple', 'ripple': 'ripple', 'bitcoin': 'bitcoin', 'btc': 'bitcoin',
-    'ethereum': 'ethereum', 'eth': 'ethereum', 'solana': 'solana', 'sol': 'solana',
-    'dogecoin': 'dogecoin', 'doge': 'dogecoin', 'cardano': 'cardano', 'ada': 'cardano',
-    'bnb': 'binancecoin', 'binance': 'binancecoin', 'avalanche': 'avalanche-2',
-    'avax': 'avalanche-2', 'chainlink': 'chainlink', 'link': 'chainlink',
-    'polygon': 'matic-network', 'matic': 'matic-network', 'sui': 'sui',
-    'pepe': 'pepe', 'shiba': 'shiba-inu', 'shib': 'shiba-inu',
+    'xrp':'ripple','ripple':'ripple','bitcoin':'bitcoin','btc':'bitcoin',
+    'ethereum':'ethereum','eth':'ethereum','solana':'solana','sol':'solana',
+    'dogecoin':'dogecoin','doge':'dogecoin','cardano':'cardano','ada':'cardano',
+    'bnb':'binancecoin','binance coin':'binancecoin','avalanche':'avalanche-2','avax':'avalanche-2',
+    'chainlink':'chainlink','link':'chainlink','polygon':'matic-network','matic':'matic-network',
+    'sui':'sui','pepe':'pepe','shiba':'shiba-inu','shib':'shiba-inu',
+    'polkadot':'polkadot','dot':'polkadot','litecoin':'litecoin','ltc':'litecoin',
+    'tron':'tron','trx':'tron','stellar':'stellar','xlm':'stellar',
+    'hedera':'hedera-hashgraph','hbar':'hedera-hashgraph','near':'near',
+    'aptos':'aptos','apt':'aptos','arbitrum':'arbitrum','arb':'arbitrum',
+    'optimism':'optimism','uniswap':'uniswap','uni':'uniswap',
+    'cosmos':'cosmos','atom':'cosmos','filecoin':'filecoin','fil':'filecoin',
+    'internet computer':'internet-computer','icp':'internet-computer',
+    'monero':'monero','xmr':'monero','ethereum classic':'ethereum-classic','etc':'ethereum-classic',
+    'vechain':'vechain','vet':'vechain','algorand':'algorand','algo':'algorand',
+    'toncoin':'the-open-network','ton':'the-open-network','bonk':'bonk',
+    'render':'render-token','rndr':'render-token','injective':'injective-protocol','inj':'injective-protocol',
+    'fantom':'fantom','ftm':'fantom','tezos':'tezos','xtz':'tezos',
+    'sei':'sei-network','celestia':'celestia','tia':'celestia',
+    'usdc':'usd-coin','usdt':'tether','tether':'tether','dai':'dai',
+    'worldcoin':'worldcoin-wld','wld':'worldcoin-wld','pyth':'pyth-network',
+    'jupiter':'jupiter-exchange-solana','jup':'jupiter-exchange-solana',
+    'wif':'dogwifcoin','dogwifhat':'dogwifcoin','floki':'floki',
+    'immutable':'immutable-x','imx':'immutable-x','sandbox':'the-sandbox',
+    'decentraland':'decentraland','mana':'decentraland','axie':'axie-infinity',
+    'gala':'gala','flow':'flow','theta':'theta-token',
+    'kaspa':'kaspa','kas':'kaspa','mantle':'mantle','mnt':'mantle',
+    'ondo':'ondo-finance','pendle':'pendle','ethena':'ethena','ena':'ethena',
   };
   const foundCoins = [];
   for (const [key, id] of Object.entries(cryptoMap)) {
-    if (q.includes(key)) foundCoins.push(id);
+    const re = new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    if (re.test(q)) foundCoins.push(id);
   }
   const uniqueCoins = [...new Set(foundCoins)];
 
@@ -38,7 +60,7 @@ async function handleSearch(query, env) {
     } catch(e) {}
   }
 
-  // Weather detection
+  // Weather - free via wttr.in
   const weatherMatch = q.match(/weather\s+(?:in\s+)?([a-z\s]+?)(?:\?|$|today|tomorrow|this week)/);
   const isWeather = q.includes('weather') || q.includes('temperature') || q.includes('forecast');
   if (isWeather) {
@@ -50,30 +72,99 @@ async function handleSearch(query, env) {
       const area = wData.nearest_area[0];
       const city = area.areaName[0].value + ', ' + area.country[0].value;
       const desc = cur.weatherDesc[0].value;
-      const tempF = cur.temp_F;
-      const tempC = cur.temp_C;
-      const feels = cur.FeelsLikeF;
-      const humidity = cur.humidity;
-      const wind = cur.windspeedMiles;
-      results.push(`Weather in ${city}: ${desc}, ${tempF}°F (${tempC}°C), feels like ${feels}°F, humidity ${humidity}%, wind ${wind}mph`);
-      // Today's forecast
+      results.push(`Weather in ${city}: ${desc}, ${cur.temp_F}°F (${cur.temp_C}°C), feels like ${cur.FeelsLikeF}°F, humidity ${cur.humidity}%, wind ${cur.windspeedMiles}mph`);
       const today = wData.weather[0];
       results.push(`Today: High ${today.maxtempF}°F / Low ${today.mintempF}°F`);
     } catch(e) {}
   }
 
-  // General web search via Brave (if key set)
-  if (env.BRAVE_KEY && results.length === 0) {
+  // Stock price - free via Stooq
+  const stockMatch = q.match(/\$([a-z]{1,5})\b/i);
+  const stockWords = q.match(/\b(stock|share price|shares of)\b/);
+  if (stockMatch || stockWords) {
+    let ticker = stockMatch ? stockMatch[1].toUpperCase() : null;
+    if (!ticker) {
+      const tickerMap = {
+        'apple':'AAPL','microsoft':'MSFT','google':'GOOGL','alphabet':'GOOGL',
+        'amazon':'AMZN','tesla':'TSLA','meta':'META','facebook':'META',
+        'nvidia':'NVDA','netflix':'NFLX','disney':'DIS','coinbase':'COIN',
+        'paypal':'PYPL','visa':'V','mastercard':'MA','walmart':'WMT',
+        'jpmorgan':'JPM','berkshire':'BRK-B','johnson':'JNJ','exxon':'XOM',
+        'chevron':'CVX','boeing':'BA','intel':'INTC','amd':'AMD',
+        'qualcomm':'QCOM','ford':'F','general motors':'GM','starbucks':'SBUX',
+        'mcdonalds':'MCD','nike':'NKE','ibm':'IBM','oracle':'ORCL',
+        'salesforce':'CRM','adobe':'ADBE','uber':'UBER','airbnb':'ABNB',
+        'palantir':'PLTR','micron':'MU','broadcom':'AVGO',
+      };
+      for (const [name, tick] of Object.entries(tickerMap)) {
+        if (q.includes(name)) { ticker = tick; break; }
+      }
+    }
+    if (ticker) {
+      try {
+        const sRes = await fetch(`https://stooq.com/q/l/?s=${ticker.toLowerCase()}.us&f=sd2t2ohlcv&h&e=csv`);
+        const csv = await sRes.text();
+        const lines = csv.trim().split('\n');
+        if (lines.length > 1) {
+          const [sym, date, time, open, high, low, close, vol] = lines[1].split(',');
+          if (close && close !== 'N/D') {
+            results.push(`${ticker} stock: $${close} (open $${open}, high $${high}, low $${low}) as of ${date} ${time}`);
+          }
+        }
+      } catch(e) {}
+    }
+  }
+
+  // Sports scores - free via ESPN
+  const sportsWords = /\b(score|game|match|playing tonight|vs\.?|versus)\b/;
+  const leagueMap = {
+    'nfl':'football/nfl','nba':'basketball/nba','mlb':'baseball/mlb',
+    'nhl':'hockey/nhl','ncaa football':'football/college-football',
+    'ncaa basketball':'basketball/mens-college-basketball',
+    'premier league':'soccer/eng.1','champions league':'soccer/uefa.champions',
+  };
+  if (sportsWords.test(q)) {
+    let league = null;
+    for (const [key, path] of Object.entries(leagueMap)) {
+      if (q.includes(key)) { league = path; break; }
+    }
+    if (league) {
+      try {
+        const eRes = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${league}/scoreboard`);
+        const eData = await eRes.json();
+        const events = (eData.events || []).slice(0, 5);
+        events.forEach(ev => {
+          const comp = ev.competitions[0];
+          const teams = comp.competitors.map(c => `${c.team.abbreviation} ${c.score || ''}`).join(' vs ');
+          const status = comp.status.type.shortDetail;
+          results.push(`${teams} - ${status}`);
+        });
+      } catch(e) {}
+    }
+  }
+
+  // General fallback - DuckDuckGo Instant Answer API, free, zero setup, no key
+  if (results.length === 0) {
     try {
-      const bRes = await fetch(
-        `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5`,
-        { headers: { 'Accept': 'application/json', 'X-Subscription-Token': env.BRAVE_KEY } }
+      const dRes = await fetch(
+        `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`
       );
-      const bData = await bRes.json();
-      const hits = (bData.web && bData.web.results) || [];
-      hits.slice(0, 4).forEach(r => {
-        results.push(`${r.title}: ${r.description || ''} [${r.url}]`);
-      });
+      const dData = await dRes.json();
+
+      if (dData.AbstractText) {
+        results.push(`${dData.Heading || 'Summary'}: ${dData.AbstractText} (source: ${dData.AbstractSource || 'DuckDuckGo'})`);
+      }
+      if (dData.Answer) {
+        results.push(`Answer: ${dData.Answer}`);
+      }
+      if (dData.Definition) {
+        results.push(`Definition: ${dData.Definition} (source: ${dData.DefinitionSource || ''})`);
+      }
+      if (results.length === 0 && dData.RelatedTopics && dData.RelatedTopics.length > 0) {
+        dData.RelatedTopics.slice(0, 3).forEach(t => {
+          if (t.Text) results.push(t.Text);
+        });
+      }
     } catch(e) {}
   }
 
