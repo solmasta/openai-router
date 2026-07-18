@@ -182,7 +182,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v3.3</span></span>
+      <span class="wm">ai-router <span>v3.4</span></span>
       <button class="bb" id="backendBtn">DeepInfra</button>
     </div>
     <div class="hr">
@@ -327,7 +327,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v3.3</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v3.4</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -430,7 +430,7 @@ function updTokenBar(){
   var fill=document.getElementById("tokenFill");
   fill.style.width=pct+"%";
   fill.className="tf"+(pct>90?" danger":pct>70?" warn":"");
-  if(pct>=80&&chatHistory.length>6&&!summarizing){
+  if(pct>=65&&chatHistory.length>6&&!summarizing){
     doSummarize();
   }
 }
@@ -1450,6 +1450,27 @@ async function send(){
     if(!parts.length)parts.push({type:"text",text:text||"What do you see?"});
     userContent=parts.length===1&&parts[0].type==="text"?parts[0].text:parts;
   }
+
+  /* Context safety: shrink history BEFORE sending if getting full, and
+     hard-stop with a clear message if the outgoing text alone would
+     still overflow even after summarizing. Prevents silent "(no response)"
+     failures from oversized requests. */
+  var outgoingText=typeof userContent==="string"?userContent:((userContent.find&&userContent.find(function(c){return c.type==="text";})||{}).text||"");
+  var ctxLimit=CTX_MAP[currentModel.id]||BACKENDS[activeBackend].ctx;
+  var projectedPct=Math.round((estTokens()+Math.round(outgoingText.length/4))/ctxLimit*100);
+  if(projectedPct>=65&&chatHistory.length>=6&&!summarizing){
+    await doSummarize();
+  }
+  var afterPct=Math.round((estTokens()+Math.round(outgoingText.length/4))/ctxLimit*100);
+  if(afterPct>=92){
+    sending=false;
+    document.getElementById("sendBtn").disabled=false;
+    document.getElementById("sendBtn").textContent="Send";
+    document.getElementById("sendBtn").style.background="";
+    alert("This message is too large for "+currentModel.label+"'s context window ("+afterPct+"% full even after summarizing earlier messages). Try a shorter message, split it into parts, or tap Clear to start a fresh conversation.");
+    return;
+  }
+
   chatHistory.push({role:"user",content:userContent});
   appendMsg("user",userContent);
   promptEl.value="";promptEl.style.height="";clearAttach();
