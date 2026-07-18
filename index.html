@@ -182,7 +182,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v3.4</span></span>
+      <span class="wm">ai-router <span>v3.5</span></span>
       <button class="bb" id="backendBtn">DeepInfra</button>
     </div>
     <div class="hr">
@@ -327,7 +327,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v3.4</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v3.5</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1240,7 +1240,10 @@ function shareChat(){
 /* ---- Web search ---- */
 async function doSearch(query){
   try{
-    var res=await fetch(BACKENDS.deepinfra.url+"/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:query})});
+    var ac=new AbortController();
+    var timer=setTimeout(function(){ac.abort();},5000);
+    var res=await fetch(BACKENDS.deepinfra.url+"/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:query}),signal:ac.signal});
+    clearTimeout(timer);
     var data=await res.json();
     if(data.results&&data.results.length)return "REAL-TIME DATA as of "+new Date().toLocaleTimeString()+":\n"+data.results.join("\n");
   }catch(e){}
@@ -1485,13 +1488,19 @@ async function doSendRequest(userContent,isRegen,ap){
   var searchTime=null;
   if(webSearchOn){
     var qtext=typeof userContent==="string"?userContent:((userContent&&userContent.find&&userContent.find(function(c){return c.type==="text";})||{}).text||"");
-    /* Pull in recent conversation context so search picks up topics discussed
-       earlier even if the current message is just "any update?" or similar */
-    var recentCtx=chatHistory.slice(-6).map(function(m){
-      return typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(x){return x.type==="text";})||{}).text||"");
-    }).join(" ");
-    var searchQuery=(recentCtx+" "+qtext).trim();
-    var ctx=await doSearch(searchQuery);
+    /* Skip search entirely for code-heavy pastes - searching the web for raw
+       code makes no sense and risks sending an oversized query downstream */
+    var looksLikeCode=qtext.indexOf("```")>=0||qtext.length>800;
+    var ctx=null;
+    if(!looksLikeCode){
+      /* Pull in recent conversation context so search picks up topics discussed
+         earlier even if the current message is just "any update?" or similar */
+      var recentCtx=chatHistory.slice(-6).map(function(m){
+        return typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(x){return x.type==="text";})||{}).text||"");
+      }).join(" ");
+      var searchQuery=(recentCtx+" "+qtext).trim().slice(0,300);
+      ctx=await doSearch(searchQuery);
+    }
     if(ctx){
       searchUsed=true;
       searchTime=new Date().toLocaleTimeString();

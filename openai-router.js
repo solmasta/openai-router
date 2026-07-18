@@ -5,6 +5,9 @@ const CORS = {
 };
 
 async function handleSearch(query, env) {
+  // Defense in depth: cap query length regardless of what the client sends,
+  // so a stray large paste can never produce an oversized downstream request.
+  query = (query || "").slice(0, 300);
   const q = query.toLowerCase();
   const results = [];
 
@@ -146,9 +149,13 @@ async function handleSearch(query, env) {
   // General fallback - DuckDuckGo Instant Answer API, free, zero setup, no key
   if (results.length === 0) {
     try {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 4000);
       const dRes = await fetch(
-        `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`
+        `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`,
+        { signal: ac.signal }
       );
+      clearTimeout(timer);
       const dData = await dRes.json();
 
       if (dData.AbstractText) {
