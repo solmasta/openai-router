@@ -182,7 +182,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v3.2</span></span>
+      <span class="wm">ai-router <span>v3.3</span></span>
       <button class="bb" id="backendBtn">DeepInfra</button>
     </div>
     <div class="hr">
@@ -327,12 +327,13 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v3.2</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v3.3</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
     <div class="sr"><div><div class="slb">Share conversation</div><div class="ssb">Copy current chat to clipboard</div></div><button class="bg" id="shareBtn">Share</button></div>
     <div class="sr"><div><div class="slb">Clear favorites</div><div class="ssb">Remove all starred models</div></div><button class="bg" id="clearFavesBtn">Clear</button></div>
+    <div class="sr"><div><div class="slb">Install app</div><div class="ssb" id="installSub">Checking&#8230;</div></div><button class="bg" id="installBtn">Install</button></div>
     <div class="sr"><div><div class="slb">Google Drive backup</div><div class="ssb" id="driveStatus">Not connected</div></div><div style="display:flex;gap:6px"><button class="bg hidden" id="driveRestoreBtn">Restore</button><button class="bg" id="driveConnectBtn">Connect</button></div></div>
     <div class="sr"><div><div class="slb">&#128176; DeepInfra credits</div><div class="ssb">Pay-as-you-go, fractions of a cent per message</div></div><a href="https://deepinfra.com/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; OpenRouter credits</div><div class="ssb">Needed for uncensored paid models</div></div><a href="https://openrouter.ai/credits" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
@@ -1125,6 +1126,47 @@ function updateDriveUI(connected){
 function updateDriveStatus(text){var s=document.getElementById("driveStatus");if(s)s.textContent=text;}
 document.getElementById("driveRestoreBtn").addEventListener("click",driveRestore);
 driveLoadCache();
+
+/* ---- Install (Android/Desktop native, iPhone guided) ---- */
+var deferredInstallPrompt=null;
+var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;
+var isStandaloneApp=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+
+window.addEventListener("beforeinstallprompt",function(e){
+  e.preventDefault();
+  deferredInstallPrompt=e;
+  updateInstallUI();
+});
+window.addEventListener("appinstalled",function(){
+  deferredInstallPrompt=null;isStandaloneApp=true;updateInstallUI();
+});
+
+function updateInstallUI(){
+  var sub=document.getElementById("installSub"),btn=document.getElementById("installBtn");
+  if(!sub||!btn)return;
+  if(isStandaloneApp){
+    sub.textContent="Already installed";btn.textContent="Installed";btn.disabled=true;
+  }else if(deferredInstallPrompt){
+    sub.textContent="Add to your home screen or desktop";btn.textContent="Install";btn.disabled=false;
+  }else if(isIOS){
+    sub.textContent="iPhone/iPad needs a manual step";btn.textContent="How to install";btn.disabled=false;
+  }else{
+    sub.textContent="Use your browser menu to add this app";btn.textContent="Install";btn.disabled=false;
+  }
+}
+async function handleInstallClick(){
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt=null;updateInstallUI();
+  }else if(isIOS){
+    alert("To install on iPhone/iPad:\n\n1. Tap the Share button in Safari (square with an arrow)\n2. Scroll down and tap \"Add to Home Screen\"\n3. Tap \"Add\"\n\nIt will then open full-screen from your home screen like a native app.");
+  }else{
+    alert("To install:\n\nOpen your browser menu (usually three dots) and look for \"Install app\" or \"Add to Home screen\".");
+  }
+}
+document.getElementById("installBtn").addEventListener("click",handleInstallClick);
+updateInstallUI();
 
 /* ---- Backup ---- */
 async function shareOrDownload(blob,filename,mime){
