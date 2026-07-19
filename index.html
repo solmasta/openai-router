@@ -26,9 +26,12 @@ header{display:flex;align-items:center;justify-content:space-between;padding:13p
 .hl{display:flex;align-items:center;gap:8px;min-width:0}
 .wm{font-family:var(--mn);font-size:13px;color:var(--tx);letter-spacing:.02em;flex-shrink:0;font-weight:600}
 .wm span{font-size:9.5px;opacity:.35;font-weight:400;margin-left:2px}
-.bb{background:var(--up);border:none;border-radius:20px;padding:5px 11px;font-size:11px;font-family:var(--mn);color:var(--mu);cursor:pointer;letter-spacing:.02em;transition:background .15s,color .15s;flex-shrink:0}
-.bb:hover{color:var(--tx);background:var(--brs)}
-.bb.or{background:rgba(245,158,11,.13);color:#f59e0b}
+.btabs{display:flex;gap:0;padding:10px 16px 0;flex-shrink:0}
+.btab{flex:1;background:var(--up);border:none;padding:9px 0;font-size:12.5px;font-family:var(--mn);color:var(--mu);cursor:pointer;letter-spacing:.02em;transition:background .15s,color .15s}
+.btab:first-child{border-radius:12px 0 0 12px}
+.btab:last-child{border-radius:0 12px 12px 0}
+.btab.act{background:rgba(139,140,247,.18);color:var(--ac)}
+.btab.act.or{background:rgba(245,158,11,.15);color:#f59e0b}
 .hr{display:flex;align-items:center;gap:5px;flex-shrink:0}
 .mb{display:flex;align-items:center;gap:5px;background:var(--up);border:none;border-radius:20px;padding:6px 12px;color:var(--tx);font-size:12px;font-family:var(--mn);cursor:pointer;max-width:150px;overflow:hidden;transition:background .15s}
 .mb:hover:not(:disabled){background:var(--brs)}
@@ -182,8 +185,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v3.5</span></span>
-      <button class="bb" id="backendBtn">DeepInfra</button>
+      <span class="wm">ai-router <span>v4.0</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -224,6 +226,10 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 
 <div class="modal hidden" id="modelModal"><div class="sheet">
   <div class="sh"><span>Choose Model</span><button class="sc" id="closeModelModal">&#10005;</button></div>
+  <div class="btabs">
+    <button class="btab act" id="deepinfraBtn">DeepInfra</button>
+    <button class="btab" id="openrouterBtn">OpenRouter</button>
+  </div>
   <div class="sbody" id="modelList"></div>
 </div></div>
 
@@ -530,18 +536,25 @@ function saveFavs(){localStorage.setItem(FK,JSON.stringify(favorites));}
 async function loadBackend(){
   var B=BACKENDS[activeBackend];
   workerUrl=B.url;allModels=B.models;
-  try{
-    var mRes=await fetch(workerUrl+"/models");
-    var mData=await mRes.json();
-    var validIds=new Set((mData.data||[]).map(function(m){return m.id;}));
-    var filtered=B.models.filter(function(m){return validIds.has(m.id);});
-    if(filtered.length)allModels=filtered;
-  }catch(e){/* live check unavailable, fall back to static list */}
   var def=allModels.find(function(m){return m.id===B.def;})||allModels[0];
   setModel(def);renderModelList();
   document.getElementById("modelBtn").disabled=false;
-  var bb=document.getElementById("backendBtn");
-  bb.textContent=B.name;bb.className="bb"+(activeBackend==="openrouter"?" or":"");
+  document.getElementById("deepinfraBtn").className="btab"+(activeBackend==="deepinfra"?" act":"");
+  document.getElementById("openrouterBtn").className="btab"+(activeBackend==="openrouter"?" act or":"");
+  try{
+    var ac=new AbortController();
+    var timer=setTimeout(function(){ac.abort();},4000);
+    var mRes=await fetch(workerUrl+"/models",{signal:ac.signal});
+    clearTimeout(timer);
+    var mData=await mRes.json();
+    var validIds=new Set((mData.data||[]).map(function(m){return m.id;}));
+    var filtered=B.models.filter(function(m){return validIds.has(m.id);});
+    if(filtered.length){
+      allModels=filtered;
+      var def2=allModels.find(function(m){return m.id===B.def;})||allModels[0];
+      setModel(def2);renderModelList();
+    }
+  }catch(e){/* live check unavailable or timed out, static list already showing */}
 }
 function setModel(m){currentModel=m;document.getElementById("modelBtnLabel").textContent=m.label;}
 function renderModelList(){
@@ -978,7 +991,8 @@ function loadAutoSave(){
     /* No expiry - always restore last conversation */
     if(saved.backend&&saved.backend!==activeBackend){
       activeBackend=saved.backend;var B=BACKENDS[activeBackend];workerUrl=B.url;allModels=B.models;
-      var bb=document.getElementById("backendBtn");bb.textContent=B.name;bb.className="bb"+(activeBackend==="openrouter"?" or":"");
+      document.getElementById("deepinfraBtn").className="btab"+(activeBackend==="deepinfra"?" act":"");
+      document.getElementById("openrouterBtn").className="btab"+(activeBackend==="openrouter"?" act or":"");
     }
     var def=allModels.find(function(m){return m.id===saved.modelId;});
     if(def){setModel(def);}else{currentModel={id:saved.modelId,label:saved.modelLabel||saved.modelId};document.getElementById("modelBtnLabel").textContent=currentModel.label;document.getElementById("modelBtn").disabled=false;}
@@ -1276,7 +1290,8 @@ bindM("wprojEditor","closeWprojEditor");
 bindM("wprojDetail","closeWprojDetail");
 
 /* ---- Event listeners ---- */
-document.getElementById("backendBtn").addEventListener("click",function(){activeBackend=activeBackend==="deepinfra"?"openrouter":"deepinfra";loadBackend();});
+document.getElementById("deepinfraBtn").addEventListener("click",function(){if(activeBackend!=="deepinfra"){activeBackend="deepinfra";loadBackend();}});
+document.getElementById("openrouterBtn").addEventListener("click",function(){if(activeBackend!=="openrouter"){activeBackend="openrouter";loadBackend();}});
 document.getElementById("modelBtn").addEventListener("click",function(){renderModelList();openModal("modelModal");});
 document.getElementById("settingsBtn").addEventListener("click",function(){openModal("settingsModal");});
 document.getElementById("newTabBtn").addEventListener("click",function(){window.open(window.location.href,"_blank");});
