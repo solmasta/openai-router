@@ -2,11 +2,25 @@
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let workerUrl    = "";
+let driveWorkerUrl = "";
 let allModels    = [];
 let currentModel = { id: "", label: "" };
 let history      = [];
 let sending      = false;
 let attachedFile = null;   // { type:"image"|"text", dataUrl?, content?, name }
+
+// ── Drive Auth State ──────────────────────────────────────────────────────────
+const GOOGLE_CLIENT_ID = "899534056653-eb854ngfhontj1v370l0luj6fd1s6hcj.apps.googleusercontent.com";
+const GOOGLE_REDIRECT_URI = "https://solmasta.github.io/callback";
+const DRIVE_SCOPES = "https://www.googleapis.com/auth/drive.file";
+
+let driveAuth = {
+  accessToken: null,
+  refreshToken: null,
+  expiresAt: null,
+};
+
+let autoBackupInterval = null;
 
 // ── Config / Model Picker ─────────────────────────────────────────────────────
 
@@ -15,6 +29,7 @@ async function loadConfig() {
     const res    = await fetch("config.json");
     const config = await res.json();
     workerUrl    = config.worker_url;
+    driveWorkerUrl = config.drive_worker_url;
     allModels    = config.models;
 
     const def = allModels.find(m => m.id === config.default_model) || allModels[0];
@@ -395,6 +410,176 @@ function deleteProject() {
   editingProjId = null;
 }
 
+// ── Google Drive Integration ──────────────────────────────────────────────────
+
+function loadDriveAuth() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("drive_auth") || "{}");
+    driveAuth = { ...driveAuth, ...saved };
+  } catch { }
+}
+
+function saveDriveAuth() {
+  localStorage.setItem("drive_auth", JSON.stringify(driveAuth));
+}
+
+function startGoogleOAuth() {
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: GOOGLE_REDIRECT_URI,
+    response_type: "code",
+    scope: DRIVE_SCOPES,
+    access_type: "offline",
+    prompt: "consent",
+  });
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+
+async function handleGoogleCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+  const error = params.get("error");
+
+  if (error) {
+    console.error("OAuth error:", error);
+    alert("Google authentication failed. Please try again.");
+    window.history.replaceState({}, "", "/");
+    return;
+  }
+
+  if (!code) return;
+
+  try {
+    const res = await fetch(`${driveWorkerUrl}/auth/exchange`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error);
+
+    driveAuth.accessToken = data.access_token;
+    if (data.refresh_token) driveAuth.refreshToken = data.refresh_token;
+    driveAuth.expiresAt = Date.now() + (data.expires_in * 1000);
+
+    saveDriveAuth();
+    updateDriveAuthUI();
+    startAutoBackup();
+    alert("Google Drive connected! Auto-backups enabled.");
+    window.history.replaceState({}, "", "/");
+  } catch (err) {
+    console.error("Token exchange failed:", err);
+    alert("Failed to connect to Google Drive.");
+  }
+}
+
+async function refreshDriveToken() {
+  if (!driveAuth.refreshToken) return false;
+
+  try {
+    const res = await fetch(`${driveWorkerUrl}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: driveAuth.refreshToken }),
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    driveAuth.accessToken = data.access_token;
+    driveAuth.expiresAt = Date.now() + (data.expires_in * 1000);
+    saveDriveAuth();
+    return true;
+  } catch (err) {
+    console.error("Token refresh failed:", err);
+    driveAuth.accessToken = null;
+    driveAuth.refreshToken = null;
+    saveDriveAuth();
+    return false;
+  }
+}
+
+async function ensureValidToken() {
+  if (!driveAuth.accessToken) return false;
+  if (driveAuth.expiresAt && Date.now() >= driveAuth.expiresAt) {
+    return await refreshDriveToken();
+  }
+  return true;
+}
+
+async function createDriveBackup() {
+  if (!await ensureValidToken()) return false;
+
+  const fileName = `ai-router-backup-${new Date().toISOString()}.json`;
+  const content = JSON.stringify({
+    version: 1,
+    timestamp: Date.now(),
+    model: currentModel,
+    history,
+    prompts,
+    projects,
+  }, null, 2);
+
+  try {
+    const res = await fetch(`${driveWorkerUrl}/drive/backup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileName,
+        content,
+        accessToken: driveAuth.accessToken,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+    console.log("Backup uploaded to Drive");
+    return true;
+  } catch (err) {
+    console.error("Backup failed:", err);
+    return false;
+  }
+}
+
+function updateDriveAuthUI() {
+  const btn = document.getElementById("driveAuthBtn");
+  if (!btn) return;
+
+  if (driveAuth.accessToken) {
+    btn.textContent = "✓ Drive Connected";
+    btn.classList.add("connected");
+    btn.disabled = true;
+  } else {
+    btn.textContent = "Connect Google Drive";
+    btn.classList.remove("connected");
+    btn.disabled = false;
+  }
+}
+
+function disconnectDrive() {
+  driveAuth = { accessToken: null, refreshToken: null, expiresAt: null };
+  saveDriveAuth();
+  stopAutoBackup();
+  updateDriveAuthUI();
+}
+
+function startAutoBackup() {
+  if (autoBackupInterval) return;
+  autoBackupInterval = setInterval(async () => {
+    if (driveAuth.accessToken) {
+      await createDriveBackup();
+    }
+  }, 30000);
+}
+
+function stopAutoBackup() {
+  if (autoBackupInterval) {
+    clearInterval(autoBackupInterval);
+    autoBackupInterval = null;
+  }
+}
+
 // ── Modal helpers ─────────────────────────────────────────────────────────────
 
 function openModal(id)  { document.getElementById(id).classList.remove("hidden"); }
@@ -416,244 +601,4 @@ bindModal("projectEditor","closeProjEditor");
 
 document.getElementById("modelBtn").addEventListener("click",      () => openModal("modelModal"));
 document.getElementById("systemToggle").addEventListener("click",  () => { renderPromptList(); openModal("promptModal"); });
-document.getElementById("newPromptBtn").addEventListener("click",  () => { closeModal("promptModal"); openPromptEditor(null); });
-document.getElementById("savePromptBtn").addEventListener("click", savePrompt);
-document.getElementById("deletePromptBtn").addEventListener("click", deletePrompt);
-
-document.getElementById("projectsBtn").addEventListener("click",   () => { renderProjectList(); openModal("projectsModal"); });
-document.getElementById("newProjectBtn").addEventListener("click", () => { closeModal("projectsModal"); openProjEditor(null); });
-document.getElementById("saveToProjectBtn").addEventListener("click", () => {
-  // Show project list for pick-to-save
-  const list = document.getElementById("projectList");
-  // Add "save here" buttons to existing cards by re-rendering with save mode
-  renderProjectListSaveMode();
-});
-document.getElementById("backToProjects").addEventListener("click", () => {
-  closeModal("convsModal");
-  renderProjectList();
-  openModal("projectsModal");
-});
-document.getElementById("saveProjBtn").addEventListener("click",   saveProject);
-document.getElementById("deleteProjBtn").addEventListener("click", deleteProject);
-
-function renderProjectListSaveMode() {
-  const list = document.getElementById("projectList");
-  list.innerHTML = '<p class="empty-list" style="margin-bottom:8px;text-align:left;color:var(--text)">Save to which folder?</p>';
-
-  if (projects.length === 0) {
-    list.innerHTML += '<p class="empty-list">No folders yet. Create one first.</p>';
-    return;
-  }
-
-  for (const proj of projects) {
-    const btn = document.createElement("button");
-    btn.className   = "full-w btn-primary";
-    btn.style.marginBottom = "8px";
-    btn.textContent = `📁 ${proj.name}`;
-    btn.addEventListener("click", () => saveCurrentChat(proj.id));
-    list.appendChild(btn);
-  }
-}
-
-// ── Rendering helpers ─────────────────────────────────────────────────────────
-
-function esc(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-
-function stripThink(t) {
-  return t.replace(/<think>[\s\S]*?<\/think>\n?/g,"").replace(/<think>[\s\S]*$/,"").trim();
-}
-
-function renderText(t) {
-  return esc(t).replace(/`([^`]+)`/g,'<code class="inline">$1</code>').replace(/\n/g,"<br>");
-}
-
-function renderContent(raw) {
-  const text = typeof raw === "string" ? stripThink(raw) : raw;
-  if (typeof text !== "string") return esc(JSON.stringify(text));
-  let result = "", last = 0;
-  const re   = /```(\w*)\n?([\s\S]*?)```/g;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    result += renderText(text.slice(last, m.index));
-    const lang = m[1].trim(), code = m[2].trim();
-    let hl;
-    try { hl = lang && hljs.getLanguage(lang) ? hljs.highlight(code,{language:lang}).value : hljs.highlightAuto(code).value; }
-    catch { hl = esc(code); }
-    result += `<div class="code-block"><div class="code-header"><span>${lang||"code"}</span><button class="copy-code" onclick="copyCode(this)">Copy</button></div><pre><code class="hljs">${hl}</code></pre></div>`;
-    last = m.index + m[0].length;
-  }
-  return result + renderText(text.slice(last));
-}
-
-function copyCode(btn) {
-  navigator.clipboard.writeText(btn.closest(".code-block").querySelector("code").textContent).then(() => {
-    btn.textContent = "Copied!";
-    setTimeout(() => (btn.textContent = "Copy"), 2000);
-  });
-}
-
-// ── Chat ──────────────────────────────────────────────────────────────────────
-
-function hideEmpty() { const el = document.getElementById("emptyState"); if (el) el.remove(); }
-
-function scrollNear(el) {
-  const chat = document.getElementById("chat");
-  if (chat.scrollHeight - chat.scrollTop - chat.clientHeight < 150)
-    el.scrollIntoView({ behavior:"smooth", block:"end" });
-}
-
-function appendMessage(role, content = "", streaming = false) {
-  hideEmpty();
-  const chat  = document.getElementById("chat");
-  const wrap  = document.createElement("div");
-  wrap.className = `msg msg-${role}`;
-  const label = document.createElement("div");
-  label.className   = "msg-label";
-  label.textContent = role === "user" ? "You" : currentModel.label;
-  const body  = document.createElement("div");
-  body.className = "msg-body";
-
-  if (streaming) {
-    body.innerHTML = '<span class="cursor">▋</span>';
-    wrap.classList.add("streaming");
-  } else if (Array.isArray(content)) {
-    // Vision message — show text + image
-    const txt = content.find(c => c.type === "text")?.text || "";
-    const img = content.find(c => c.type === "image_url");
-    body.innerHTML = (txt ? renderContent(txt) : "") +
-      (img ? `<img class="msg-img" src="${img.image_url.url}" alt="attached">` : "");
-  } else {
-    body.innerHTML = renderContent(content);
-  }
-
-  wrap.appendChild(label);
-  wrap.appendChild(body);
-
-  if (role === "assistant") {
-    const actions = document.createElement("div");
-    actions.className = "msg-actions";
-    const copyBtn = document.createElement("button");
-    copyBtn.textContent = "Copy";
-    copyBtn.className   = "btn-action";
-    copyBtn.onclick     = () => {
-      navigator.clipboard.writeText(body.innerText.replace(/\n\n/g,"\n")).then(() => {
-        copyBtn.textContent = "Copied!";
-        setTimeout(() => (copyBtn.textContent = "Copy"), 2000);
-      });
-    };
-    actions.appendChild(copyBtn);
-    wrap.appendChild(actions);
-  }
-
-  chat.appendChild(wrap);
-  wrap.scrollIntoView({ behavior:"smooth", block:"end" });
-  return { wrap, body };
-}
-
-// ── Streaming ─────────────────────────────────────────────────────────────────
-
-async function streamInto(res, wrap, body) {
-  const reader = res.body.getReader(), decoder = new TextDecoder();
-  let buffer = "", full = "";
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop();
-      for (const line of lines) {
-        const t = line.trim();
-        if (!t.startsWith("data: ")) continue;
-        const d = t.slice(6);
-        if (d === "[DONE]") { wrap.classList.remove("streaming"); body.innerHTML = renderContent(full); return full; }
-        try {
-          const chunk = JSON.parse(d).choices?.[0]?.delta?.content;
-          if (chunk) { full += chunk; body.innerHTML = renderContent(full) + '<span class="cursor">▋</span>'; scrollNear(wrap); }
-        } catch {}
-      }
-    }
-  } finally { wrap.classList.remove("streaming"); body.innerHTML = renderContent(full); }
-  return full;
-}
-
-// ── Send ──────────────────────────────────────────────────────────────────────
-
-async function send() {
-  if (sending) return;
-  const promptEl = document.getElementById("prompt");
-  const text     = promptEl.value.trim();
-  if (!text && !attachedFile) return;
-
-  const activePrompt = getActivePrompt();
-  const btn          = document.getElementById("sendBtn");
-
-  sending = true; btn.disabled = true; btn.textContent = "Sending…";
-
-  // Build message content
-  let userContent;
-  let historyContent;
-
-  if (attachedFile?.type === "image") {
-    userContent = [
-      { type: "text",      text: text || "What do you see in this image?" },
-      { type: "image_url", image_url: { url: attachedFile.dataUrl } }
-    ];
-    historyContent = userContent; // keep for display
-  } else if (attachedFile?.type === "text") {
-    const combined = `File: ${attachedFile.name}\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${text}`.trim();
-    userContent    = combined;
-    historyContent = combined;
-  } else {
-    userContent    = text;
-    historyContent = text;
-  }
-
-  history.push({ role: "user", content: historyContent });
-  appendMessage("user", historyContent);
-  promptEl.value = ""; promptEl.style.height = "";
-  clearAttachment();
-
-  const messages = [];
-  if (activePrompt) messages.push({ role: "system", content: activePrompt.content });
-
-  // For the API call, use userContent; for history after first message, keep historyContent
-  const apiHistory = history.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
-  messages.push(...apiHistory, { role: "user", content: userContent });
-
-  const { wrap, body } = appendMessage("assistant", "", true);
-
-  try {
-    const res = await fetch(workerUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: currentModel.id, messages, temperature: 0.7, stream: true }),
-    });
-    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error?.message || `HTTP ${res.status}`); }
-    const reply = await streamInto(res, wrap, body);
-    history.push({ role: "assistant", content: reply });
-  } catch (err) {
-    wrap.classList.remove("streaming");
-    body.className = "msg-body error";
-    body.innerHTML = "Error: " + esc(err.message);
-    history.pop();
-  } finally {
-    sending = false; btn.disabled = false; btn.textContent = "Send";
-  }
-}
-
-document.getElementById("sendBtn").addEventListener("click", send);
-document.getElementById("prompt").addEventListener("input", function () {
-  this.style.height = "auto";
-  this.style.height = Math.min(this.scrollHeight, 180) + "px";
-});
-document.getElementById("clearBtn").addEventListener("click", () => {
-  history = [];
-  clearAttachment();
-  document.getElementById("chat").innerHTML = '<div class="empty-state" id="emptyState">Select a model and start chatting.</div>';
-});
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-loadConfig();
-loadPrompts();
-loadProjects();
+document.ge
