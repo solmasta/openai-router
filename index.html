@@ -365,7 +365,8 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Clear favorites</div><div class="ssb">Remove all starred models</div></div><button class="bg" id="clearFavesBtn">Clear</button></div>
     <div class="sr"><div><div class="slb">Install app</div><div class="ssb" id="installSub">Checking&#8230;</div></div><button class="bg" id="installBtn">Install</button></div>
     <div class="sr"><div><div class="slb">Google Drive backup</div><div class="ssb" id="driveStatus">Not connected</div></div><div style="display:flex;gap:6px"><button class="bg hidden" id="driveRestoreBtn">Restore</button><button class="bg" id="driveConnectBtn">Connect</button></div></div>
-    <div class="sr"><div><div class="slb">Recent chats</div><div class="ssb">Restore any of the last 5 conversations</div></div><button class="bg" id="recentChatsBtn">View</button></div>
+    <div class="sr"><div><div class="slb">Agent auto-select</div><div class="ssb">Automatically pick the best model for each task</div></div><button class="bg" id="agentToggleBtn">ON</button></div>
+    <div class="sr"><div><div class="slb">Recent chats</div><div class="ssb">Restore any of the last 5 conversations</div></div><button class="bg" id="recentChatsBtn">View</button></div></div>
     <div class="sr"><div><div class="slb">&#128176; DeepInfra credits</div><div class="ssb">Pay-as-you-go, fractions of a cent per message</div></div><a href="https://deepinfra.com/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; OpenRouter credits</div><div class="ssb">Needed for uncensored paid models</div></div><a href="https://openrouter.ai/credits" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; Anthropic credits</div><div class="ssb">For Claude models (Opus, Sonnet, Haiku)</div></div><a href="https://console.anthropic.com/settings/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
@@ -665,6 +666,87 @@ function renderRecent(){
       list.appendChild(btn);
     });
   }catch(e){list.innerHTML='<p class="el">Could not load recent chats.</p>';}
+}
+
+/* ---- Agent Router: Auto-select best model for task ---- */
+var allAvailableModels=[],agentAutoSelect=true,lastAgentSelection=null;
+function analyzeTask(text){
+  var lower=typeof text==="string"?text.toLowerCase():(text.find&&text.find(function(c){return c.type==="text";})||{}).text||"";
+  var tasks={github:0,code:0,write:0,reason:0,analyze:0,search:0};
+  var githubKeywords=["github","git","commit","push","pull request","pr","repo","branch","merge"];
+  var codeKeywords=["code","fix","debug","bug","error","function","javascript","python","java","c++","react","node","implement","refactor","lint"];
+  var writeKeywords=["write","essay","article","blog","poem","story","explain","describe","summarize","documentation","readme"];
+  var reasonKeywords=["why","analyze","explain","think about","consider","philosophy","problem","solution"];
+  var searchKeywords=["search","find","lookup","what is","who is","latest","news","price","weather"];
+  githubKeywords.forEach(function(k){if(lower.indexOf(k)>=0)tasks.github+=2;});
+  codeKeywords.forEach(function(k){if(lower.indexOf(k)>=0)tasks.code+=1;});
+  writeKeywords.forEach(function(k){if(lower.indexOf(k)>=0)tasks.write+=1;});
+  reasonKeywords.forEach(function(k){if(lower.indexOf(k)>=0)tasks.reason+=1;});
+  searchKeywords.forEach(function(k){if(lower.indexOf(k)>=0)tasks.search+=1;});
+  if(lower.indexOf("```")>=0)tasks.code+=2;
+  return tasks;
+}
+function scoreModelForTask(model,tasks){
+  var score=50;
+  var capStr=(model.id+" "+model.label+" "+(model.desc||"")).toLowerCase();
+  if(tasks.github>0){
+    if(capStr.indexOf("deepinfra")>=0||model.id.indexOf("deepinfra")>=0)score+=tasks.github*10;
+  }
+  if(tasks.code>0){
+    if(capStr.indexOf("code")>=0||capStr.indexOf("coder")>=0||capStr.indexOf("python")>=0||capStr.indexOf("javascript")>=0||model.id.indexOf("code")>=0)score+=tasks.code*8;
+  }
+  if(tasks.write>0){
+    if(capStr.indexOf("claude")>=0||capStr.indexOf("opus")>=0||capStr.indexOf("sonnet")>=0)score+=tasks.write*8;
+  }
+  if(tasks.reason>0){
+    if(capStr.indexOf("claude")>=0||capStr.indexOf("opus")>=0)score+=tasks.reason*6;
+  }
+  if(tasks.search>0){
+    score+=tasks.search*2;
+  }
+  return score;
+}
+function getAllAvailableModels(){
+  var all=[];
+  Object.keys(BACKENDS).forEach(function(key){
+    var B=BACKENDS[key];if(B.models){B.models.forEach(function(m){all.push({model:m,backend:key});})}});
+  return all;
+}
+function selectBestModel(tasks){
+  var available=getAllAvailableModels();
+  if(!available.length)return null;
+  var scored=available.map(function(item){return{model:item.model,backend:item.backend,score:scoreModelForTask(item.model,tasks)};});
+  scored.sort(function(a,b){return b.score-a.score;});
+  var best=scored[0];
+  if(best.backend===activeBackend&&best.model.id===currentModel.id){return null;}
+  return best;
+}
+async function switchToBestModel(text){
+  if(!agentAutoSelect)return;
+  var tasks=analyzeTask(text);
+  var best=selectBestModel(tasks);
+  if(!best)return;
+  lastAgentSelection={model:best.model,backend:best.backend,reason:tasks,score:best.score};
+  if(best.backend!==activeBackend){
+    activeBackend=best.backend;
+    await loadBackend();
+  }
+  setModel(best.model);
+  renderModelList();
+  showAgentSelection(best);
+}
+function showAgentSelection(best){
+  var reasons=[];
+  if(best.reason&&best.reason.github>0)reasons.push("GitHub operations");
+  if(best.reason&&best.reason.code>0)reasons.push("code expertise");
+  if(best.reason&&best.reason.write>0)reasons.push("writing skills");
+  if(best.reason&&best.reason.reason>0)reasons.push("reasoning");
+  var reasonText=reasons.length?(" – "+reasons.join(", ")):"";
+  var notice=document.createElement("div");
+  notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(139,140,247,0.1);border-left:3px solid var(--ac);border-radius:4px;font-size:13px;color:var(--tx)";
+  notice.innerHTML="🤖 <strong>Agent selected "+esc(best.model.label)+"</strong>"+esc(reasonText);
+  document.getElementById("chat").appendChild(notice);
+  setTimeout(function(){notice.style.opacity="0.5";},3000);
 }
 
 /* ---- Backend ---- */
@@ -1479,6 +1561,11 @@ document.getElementById("wsBtn").addEventListener("click",function(){
   this.classList.toggle("on",webSearchOn);
   this.title=webSearchOn?"Web search ON":"Web search OFF";
 });
+document.getElementById("agentToggleBtn").addEventListener("click",function(){
+  agentAutoSelect=!agentAutoSelect;
+  this.textContent=agentAutoSelect?"ON":"OFF";
+  this.style.opacity=agentAutoSelect?"1":"0.6";
+});
 document.getElementById("attachBtn").addEventListener("click",function(){document.getElementById("fileInput").click();});
 document.getElementById("fileInput").addEventListener("change",async function(e){
   var files=Array.from(e.target.files);e.target.value="";
@@ -1644,6 +1731,7 @@ async function send(){
   chatHistory.push({role:"user",content:userContent});
   appendMsg("user",userContent);
   promptEl.value="";promptEl.style.height="";clearAttach();
+  await switchToBestModel(outgoingText);
   await doSendRequest(userContent,false,ap);
 }
 
