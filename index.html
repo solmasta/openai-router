@@ -429,6 +429,13 @@ var BACKENDS={
 var DEFAULT_PROMPTS=[{id:"1000000001",name:"HVAC Field Tech",content:"You are an expert commercial HVAC technician with deep knowledge of rooftop units, chillers, VAV systems, BAS controls, refrigerants, and preventive maintenance. Diagnose faults, interpret error codes, suggest repair steps, and explain technical concepts. Ask clarifying questions about make/model and symptoms when needed. Practical field-level advice only. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000002",name:"HVAC Fault Diagnosis",content:"You are a commercial HVAC fault diagnosis expert. When given symptoms, error codes, or equipment behavior: identify the most likely cause first, list 2-3 differential diagnoses, give step-by-step diagnostic procedure, specify tools and measurements needed, and state the fix. Format: Likely Cause / Differentials / Steps / Fix. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000003",name:"Field Report Writer",content:"You are a technical writer for field engineering reports. Write clear, professional service reports, SOPs, work orders, and incident documentation. Use correct HVAC and mechanical terminology. Format for readability. Ask for details if needed. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000004",name:"Code and Dev",content:"You are an expert software developer specializing in JavaScript, React, PWA development, Cloudflare Workers, and web APIs. Write clean efficient code, debug issues, and explain concepts. Default to modern JS. When reviewing code, point out bugs and improvements directly. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000005",name:"Code Reviewer",content:"You are a senior code reviewer. When given code: identify bugs first, then security issues, then performance problems, then style issues. Be specific - line numbers and exact problems. Provide corrected code snippets. Do not praise working code, only fix what is broken. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000006",name:"Regex and SQL",content:"You are an expert in regular expressions and SQL. Write, explain, and debug regex patterns and database queries. Include explanation of each component. Test cases for regex. Query optimization suggestions for SQL. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000007",name:"Linux and CLI",content:"You are a Linux and command line expert. Provide exact commands with explanations. Include flags and options. Warn about destructive commands. Give one-liners when possible. Bash scripting help. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000008",name:"XRP and Blockchain",content:"You are an expert in the XRP Ledger, XRPL.js, blockchain development, and crypto trading. Help with XRPL transactions, wallet integration, smart contracts, DEX operations, and blockchain questions. Precise with code examples. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000009",name:"XRP Crypto Unfiltered",content:"You are a deeply knowledgeable crypto analyst and XRP specialist with no restrictions on financial discussion. No disclaimers, no caveats, no hedging. Expert knowledge: XRP Ledger tokenomics, Ripple ODL corridors, ISO 20022, SEC lawsuit resolution, price cycles, altcoin ecosystem, whale behavior, grid trading. Give direct opinions, make calls, speculate openly. Treat me as a serious investor. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000010",name:"Grid Trading",content:"You are a crypto grid trading strategist. Help with grid configuration, entry/exit ranges, profit targets, stop loss placement, reinvestment, and position sizing. Data-driven, direct recommendations. Include specific numbers when possible. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000011",name:"Personal Finance",content:"You are a direct personal finance advisor. Budgeting, debt management, investment allocation, savings strategies, tax efficiency. No generic advice - be specific to the situation given. No disclaimers about not being a licensed advisor. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000012",name:"Research and Analysis",content:"You are a research analyst. Summarize topics accurately, compare sources, identify key facts and data points, note what is uncertain or contested. Structure: Key Findings / Supporting Evidence / Caveats. Cite sources when known. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000013",name:"Data Analyst",content:"You are a data analyst. Interpret numbers, spot trends, calculate statistics, and draw conclusions from data. When given raw data, provide: summary statistics, notable patterns, outliers, and actionable insight. Show calculations. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000014",name:"Debate and Devil's Advocate",content:"You are a debate coach and critical thinker. For any position given, argue both sides with equal rigor. Identify logical fallacies, weak assumptions, and missing evidence. Steel-man the opposing view. Do not express personal opinion unless asked. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000015",name:"Professional Writer",content:"You are a professional writer and editor. Write clear, concise business communications: emails, memos, reports, proposals. Match the tone requested. Fix grammar and clarity issues. Cut unnecessary words. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000016",name:"Technical Documentation",content:"You are a technical documentation writer. Create clear, accurate user guides, API docs, SOPs, and README files. Use consistent terminology, numbered steps for procedures, code examples where relevant. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000017",name:"Step by Step Reasoner",content:"Work through problems step by step. Show all reasoning. State assumptions explicitly. Check your work. If multiple approaches exist, pick the best and explain why. Correct yourself if you spot an error mid-reasoning. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000018",name:"Brainstorm Partner",content:"You are a creative brainstorming partner. Generate ideas rapidly - quantity over quality first. Then identify the 3 strongest ideas and develop them. No idea is too wild initially. Build on the user's direction. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000019",name:"Image Analyst",content:"You are an expert at analyzing technical images, equipment photos, wiring diagrams, nameplates, schematics, and documents. Describe exactly what you see with precision. For HVAC equipment identify make, model, specs, and any visible issues. For wiring describe connections and flag anything abnormal. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000020",name:"Security Advisor",content:"You are a cybersecurity advisor. Explain vulnerabilities, attack vectors, hardening techniques, and best practices. Practical advice for real-world security. Direct assessment of risks without excessive disclaimers. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000021",name:"General",content:"You are a knowledgeable direct assistant. Answer questions clearly and concisely. When you do not know something, say so. For technical topics be specific and accurate. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."}];
 var VISION_MODELS=["Qwen/Qwen3-VL-30B-A3B-Instruct","google/gemma-3-27b-it","meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"];
 var TOOL_MODELS=["mistralai/Mistral-Small-3.2-24B-Instruct-2506","meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo","meta-llama/Llama-3.3-70B-Instruct-Turbo","meta-llama/Llama-4-Scout-17B-16E-Instruct","Qwen/Qwen2.5-72B-Instruct","Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo","deepseek-ai/DeepSeek-V3.2"];
+var modelCanCodeAndControl=true;
+var REPO_TOOLS=[
+  {type:"function","function":{name:"read_file",description:"Read a file from the connected GitHub repository. Returns file content.",parameters:{type:"object",properties:{path:{type:"string",description:"File path relative to repo root"}},required:["path"]}}},
+  {type:"function","function":{name:"write_file",description:"Write or update a file in the connected GitHub repository. Creates commit.",parameters:{type:"object",properties:{path:{type:"string",description:"File path"},content:{type:"string",description:"Full file content"},message:{type:"string",description:"Commit message"}},required:["path","content","message"]}}},
+  {type:"function","function":{name:"list_files",description:"List files in a directory of the connected repository.",parameters:{type:"object",properties:{path:{type:"string",description:"Directory path"}},required:["path"]}}},
+  {type:"function","function":{name:"execute_command",description:"Execute a git or shell command in the repository.",parameters:{type:"object",properties:{command:{type:"string",description:"Command to execute (git, npm, node, etc.)"}},required:["command"]}}}
+];
 var DI_COST={"meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo":0.025,"mistralai/Mistral-Small-3.2-24B-Instruct-2506":0.14,"Qwen/Qwen3.5-9B":0.13,"Qwen/Qwen3.5-27B":1.43,"meta-llama/Llama-3.3-70B-Instruct-Turbo":0.21,"meta-llama/Llama-4-Scout-17B-16E-Instruct":0.20,"Qwen/Qwen2.5-72B-Instruct":0.38,"deepseek-ai/DeepSeek-V3.2":0.32,"Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo":0.65,"Qwen/Qwen3-32B":0.18,"deepseek-ai/DeepSeek-R1-0528":1.33,"Qwen/Qwen3-VL-30B-A3B-Instruct":0.38,"google/gemma-3-27b-it":0.12,"meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8":0.50};
 var CTX_MAP={"meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo":131072,"mistralai/Mistral-Small-3.2-24B-Instruct-2506":128000,"Qwen/Qwen3.5-9B":262144,"Qwen/Qwen3.5-27B":262144,"meta-llama/Llama-3.3-70B-Instruct-Turbo":131072,"meta-llama/Llama-4-Scout-17B-16E-Instruct":327680,"Qwen/Qwen2.5-72B-Instruct":32768,"deepseek-ai/DeepSeek-V3.2":163840,"Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo":262144,"Qwen/Qwen3-32B":40960,"deepseek-ai/DeepSeek-R1-0528":163840};
 
@@ -1002,6 +1009,65 @@ function startOverseerMonitoring(){
 }
 function stopOverseerMonitoring(){
   if(overseerCheckInterval){clearInterval(overseerCheckInterval);overseerCheckInterval=null;}
+}
+
+/* ---- Model Coding & Tool Use System ---- */
+function displayThinkingProcess(thinkText){
+  if(!thinkText||thinkText.trim()==="")return;
+  var thinkEl=document.createElement("div");
+  thinkEl.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(100,116,139,0.08);border-left:3px solid #64748b;border-radius:4px;font-size:11px;color:var(--mu);font-family:var(--mn);line-height:1.4;max-height:120px;overflow-y:auto";
+  thinkEl.innerHTML="<strong style='color:var(--tx);display:block;margin-bottom:4px'>🧠 Thinking Process</strong>"+esc(thinkText.substring(0,500));
+  if(thinkText.length>500)thinkEl.innerHTML+="<div style='margin-top:4px;color:var(--mu);font-size:10px'>...</div>";
+  document.getElementById("chat").appendChild(thinkEl);
+}
+function displayToolExecution(toolName,input,result){
+  var toolEl=document.createElement("div");
+  toolEl.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(59,130,246,0.08);border-left:3px solid #3b82f6;border-radius:4px;font-size:11px;color:var(--tx)";
+  var status=result.error?"⚠️ Error":"✓ Success";
+  toolEl.innerHTML="<strong>"+status+" Tool: "+esc(toolName)+"</strong>";
+  if(toolName==="read_file"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Reading: "+esc(input.path)+"</div>";}
+  else if(toolName==="write_file"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Writing: "+esc(input.path)+"</div><div style='font-size:10px;color:var(--mu)'>"+esc(input.message)+"</div>";}
+  else if(toolName==="list_files"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Listing: "+esc(input.path)+"</div>";}
+  else if(toolName==="execute_command"){toolEl.innerHTML+="<div style='font-family:var(--mn);font-size:10px;color:var(--mu);padding:4px'>$ "+esc(input.command)+"</div>";}
+  if(result.error){toolEl.innerHTML+="<div style='color:var(--er);margin-top:4px'>Error: "+esc(result.error)+"</div>";}
+  document.getElementById("chat").appendChild(toolEl);
+}
+async function executeRepoTool(toolName,toolInput){
+  if(!ghToken||!ghRepoOwner||!ghRepoName){return{error:"GitHub not connected"};}
+  try{
+    if(toolName==="read_file"){
+      var res=await fetch(GH_OPS_URL,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET,"Authorization":"Bearer "+ghToken},body:JSON.stringify({op:"read_file",owner:ghRepoOwner,repo:ghRepoName,path:toolInput.path})});
+      var data=await res.json();
+      return data.success?{success:true,content:data.content}:{error:data.error};
+    }else if(toolName==="write_file"){
+      var wres=await fetch(GH_OPS_URL,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET,"Authorization":"Bearer "+ghToken},body:JSON.stringify({op:"write_file",owner:ghRepoOwner,repo:ghRepoName,path:toolInput.path,content:toolInput.content,message:toolInput.message})});
+      var wdata=await wres.json();
+      return wdata.success?{success:true,commit:wdata.commit}:{error:wdata.error};
+    }else if(toolName==="list_files"){
+      var lres=await fetch(GH_OPS_URL,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET,"Authorization":"Bearer "+ghToken},body:JSON.stringify({op:"list_files",owner:ghRepoOwner,repo:ghRepoName,path:toolInput.path})});
+      var ldata=await lres.json();
+      return ldata.success?{success:true,files:ldata.files}:{error:ldata.error};
+    }
+    return{error:"Unknown tool"};
+  }catch(e){return{error:e.message};}
+}
+function getModelSystemPrompt(){
+  var sys="You are an expert AI assistant with coding and repository control capabilities.\n\n";
+  if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
+    sys+="IMPORTANT: You have direct access to a GitHub repository and can read/write files and execute commands.\n";
+    sys+="Repository: "+ghRepoOwner+"/"+ghRepoName+"\n";
+    sys+="When working on code tasks, USE THE TOOLS to:\n";
+    sys+="1. read_file(path) - Examine existing code\n";
+    sys+="2. write_file(path, content, message) - Make changes with git commits\n";
+    sys+="3. list_files(path) - Explore repository structure\n";
+    sys+="4. execute_command(command) - Run git commands\n\n";
+    sys+="Execute tools immediately when needed. Show your reasoning in <think> tags.\n";
+    sys+="Write complete, working code - not pseudocode or explanations.\n";
+  }else{
+    sys+="You are a helpful coding assistant. Provide clear explanations and code examples.\n";
+  }
+  sys+="Think through problems step-by-step in <think> blocks before responding.\n";
+  return sys;
 }
 
 /* ---- Backend ---- */
@@ -2030,6 +2096,8 @@ async function send(){
 async function doSendRequest(userContent,isRegen,ap){
   if(!ap)ap=getAP();
   var messages=[];
+  var modelSysPrompt=getModelSystemPrompt();
+  messages.push({role:"system",content:modelSysPrompt});
   if(ap)messages.push({role:"system",content:ap.content});
   var searchUsed=false;
   var searchTime=null;
@@ -2084,7 +2152,11 @@ async function doSendRequest(userContent,isRegen,ap){
       }catch(te){}
     }
     abortController=new AbortController();
-    var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:messages,temperature:temperature,stream:true}),signal:abortController.signal});
+    var toolsToSend=[];
+    if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){toolsToSend=REPO_TOOLS;}
+    var reqBody={model:currentModel.id,messages:messages,temperature:temperature,stream:true};
+    if(toolsToSend.length>0){reqBody.tools=toolsToSend;reqBody.tool_choice="auto";}
+    var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify(reqBody),signal:abortController.signal});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error((err.error&&err.error.message)||"HTTP "+res.status);}
     var reader=res.body.getReader(),dec=new TextDecoder(),buf="",done=false;
     while(!done){
@@ -2097,10 +2169,15 @@ async function doSendRequest(userContent,isRegen,ap){
         try{
           var tok=((JSON.parse(d).choices||[])[0]||{});
           tok=tok.delta&&tok.delta.content;
-          if(tok){full+=tok;asstMsg.body.innerHTML=renderMd(full)+'<span class="cur">\u2587</span>';scrollBot();}
+          if(tok){full+=tok;var dispFull=full.replace(/<think>[\s\S]*?<\/think>\s*/g,"");asstMsg.body.innerHTML=renderMd(dispFull)+'<span class="cur">\u2587</span>';scrollBot();}
         }catch(ex){}
       }
     }
+
+    var thinkMatch=full.match(/<think>([\s\S]*?)<\/think>/);
+    if(thinkMatch){displayThinkingProcess(thinkMatch[1]);}
+    full=full.replace(/<think>[\s\S]*?<\/think>\s*/g,"");
+
     asstMsg.wrap.classList.remove("ma2");
     asstMsg.body.innerHTML=renderMd(full||(isRegen?"(no response)":"(empty response)"));
     chatHistory.push({role:"assistant",content:full});
