@@ -237,6 +237,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
         <input type="file" id="fileInput" hidden multiple accept="image/*,.txt,.js,.ts,.jsx,.tsx,.py,.html,.css,.json,.md,.yaml,.yml,.csv,.xml,.sh">
         <button class="mic" id="micBtn" title="Voice">&#127908;</button>
         <button class="ws" id="wsBtn" title="Web search">&#128269;</button>
+        <button class="ws" id="overseerBtn" title="Overseer status">🤖</button>
         <button class="ws" id="newTabBtn" title="New chat in new tab" style="color:var(--ac);font-size:17px;font-weight:400">&#43;</button>
         <div class="ir">
           <button id="clearBtn" class="bg">Clear</button>
@@ -366,6 +367,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Install app</div><div class="ssb" id="installSub">Checking&#8230;</div></div><button class="bg" id="installBtn">Install</button></div>
     <div class="sr"><div><div class="slb">Google Drive backup</div><div class="ssb" id="driveStatus">Not connected</div></div><div style="display:flex;gap:6px"><button class="bg hidden" id="driveRestoreBtn">Restore</button><button class="bg" id="driveConnectBtn">Connect</button></div></div>
     <div class="sr"><div><div class="slb">Agent auto-select</div><div class="ssb">Automatically pick the best model for each task</div></div><button class="bg" id="agentToggleBtn">ON</button></div>
+    <div class="sr"><div><div class="slb">Overseer monitoring</div><div class="ssb">Track progress, detect stuck situations, suggest next steps</div></div><button class="bg" id="overseerToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Recent chats</div><div class="ssb">Restore any of the last 5 conversations</div></div><button class="bg" id="recentChatsBtn">View</button></div></div>
     <div class="sr"><div><div class="slb">&#128176; DeepInfra credits</div><div class="ssb">Pay-as-you-go, fractions of a cent per message</div></div><a href="https://deepinfra.com/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; OpenRouter credits</div><div class="ssb">Needed for uncensored paid models</div></div><a href="https://openrouter.ai/credits" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
@@ -407,6 +409,9 @@ var sessionId=Date.now().toString(),responseCount=0,lastUsedModelId="";
 var temperature=0.7,favorites={},isDark=true,webSearchOn=true;
 var summarizing=false;
 var abortController=null;
+/* Overseer Agent System */
+var overseerState={goal:null,goalType:null,progress:0,status:"idle",startTime:null,messagesProcessed:0,modelsUsed:new Set(),estimatedTokens:0,stuck:false,stuckSince:null,recommendations:[]};
+var overseerEnabled=true,overseerCheckInterval=null,lastAnalysisTime=0;
 
 /* BACKENDS and data injected by build script */
 var BACKENDS={
@@ -747,6 +752,110 @@ function showAgentSelection(best){
   notice.innerHTML="🤖 <strong>Agent selected "+esc(best.model.label)+"</strong>"+esc(reasonText);
   document.getElementById("chat").appendChild(notice);
   setTimeout(function(){notice.style.opacity="0.5";},3000);
+}
+
+/* ---- Overseer Agent System: Strategic Conversation Orchestration ---- */
+function detectGoal(text){
+  var lower=(typeof text==="string"?text:(text.find&&text.find(function(c){return c.type==="text";})||{}).text||"").toLowerCase();
+  var goals={feature:0,debug:0,design:0,refactor:0,analyze:0,learn:0,write:0,plan:0};
+  if(lower.match(/add|implement|build|create|feature|new/))goals.feature+=2;
+  if(lower.match(/fix|bug|error|issue|broken|crash|debug/))goals.debug+=3;
+  if(lower.match(/design|architecture|redesign|refactor|improve/))goals.design+=2;
+  if(lower.match(/optimize|performance|speed|clean|simplify/))goals.refactor+=2;
+  if(lower.match(/analyze|understand|explain|what|how does|why/))goals.analyze+=2;
+  if(lower.match(/learn|teach|tutorial|guide|doc|read/))goals.learn+=2;
+  if(lower.match(/write|document|email|report|article/))goals.write+=2;
+  if(lower.match(/plan|roadmap|steps|break down|approach/))goals.plan+=2;
+  var topGoal=Object.keys(goals).reduce(function(a,b){return goals[a]>goals[b]?a:b;});
+  return topGoal;
+}
+function initializeOverseer(firstMessage){
+  overseerState.goal=detectGoal(firstMessage);
+  overseerState.goalType=overseerState.goal;
+  overseerState.status="in_progress";
+  overseerState.startTime=Date.now();
+  overseerState.messagesProcessed=1;
+  overseerState.progress=10;
+  updateOverseerStatus();
+}
+function analyzeConversationFlow(){
+  if(chatHistory.length<2)return;
+  var now=Date.now();
+  var recentMsgs=chatHistory.slice(-4);
+  var userMsgs=recentMsgs.filter(function(m){return m.role==="user";});
+  var assistantMsgs=recentMsgs.filter(function(m){return m.role==="assistant";});
+  overseerState.messagesProcessed=chatHistory.length;
+  if(userMsgs.length>0){overseerState.modelsUsed.add(currentModel.id);}
+  var avgResponseLength=assistantMsgs.length>0?assistantMsgs.reduce(function(sum,m){return sum+(m.content||"").length;},0)/assistantMsgs.length:0;
+  var isStuck=avgResponseLength<100&&userMsgs.length>=2;
+  if(isStuck&&!overseerState.stuck){overseerState.stuck=true;overseerState.stuckSince=now;makeStuckRecommendation();}
+  if(!isStuck){overseerState.stuck=false;overseerState.stuckSince=null;}
+  var estimatedCompletion=0;
+  if(overseerState.goal==="debug")estimatedCompletion=overseerState.messagesProcessed>4?75:Math.min(50,overseerState.messagesProcessed*15);
+  else if(overseerState.goal==="feature")estimatedCompletion=overseerState.messagesProcessed>6?70:Math.min(60,overseerState.messagesProcessed*10);
+  else if(overseerState.goal==="design")estimatedCompletion=overseerState.messagesProcessed>3?60:Math.min(40,overseerState.messagesProcessed*12);
+  else estimatedCompletion=Math.min(90,Math.round(overseerState.messagesProcessed*8));
+  overseerState.progress=Math.min(estimatedCompletion,99);
+}
+function makeStuckRecommendation(){
+  var rec=null;
+  var taskAnalysis=analyzeTask((chatHistory[chatHistory.length-1]||{}).content||"");
+  if(taskAnalysis.code>0){rec={type:"model_switch",from:currentModel.label,to:"DeepSeek R1",reason:"Stuck on code issue. R1's reasoning can help debug deeper."};}
+  else if(taskAnalysis.reason>0){rec={type:"model_switch",from:currentModel.label,to:"Claude Opus 4.1",reason:"Complex reasoning needed. Switching to strongest reasoner."};}
+  else{rec={type:"approach",reason:"Consider breaking this into smaller, concrete steps."};}
+  if(rec){overseerState.recommendations.push(rec);showOverseerRecommendation(rec);}
+}
+function makeProactiveRecommendation(){
+  if(overseerState.progress>70&&overseerState.goal==="debug"&&overseerState.messagesProcessed>5){
+    var rec={type:"next_step",reason:"Debug looks nearly complete. Consider: (1) Add tests to prevent regression, (2) Document the fix"};
+    overseerState.recommendations.push(rec);
+    showOverseerRecommendation(rec);
+  }
+  if(overseerState.progress>80&&overseerState.goal==="feature"&&overseerState.messagesProcessed>6){
+    var rec2={type:"next_step",reason:"Feature implementation nearly done. Next: integration testing, then code review"};
+    overseerState.recommendations.push(rec2);
+    showOverseerRecommendation(rec2);
+  }
+}
+function updateOverseerStatus(){
+  var statusHtml='<div style="padding:10px;background:rgba(139,140,247,0.08);border-radius:8px;font-size:12px;margin:8px 0;border-left:3px solid var(--ac)">';
+  statusHtml+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><strong>Overseer Status</strong><span style="color:var(--mu)">'+overseerState.progress+'%</span></div>';
+  statusHtml+='<div style="background:rgba(0,0,0,0.2);height:4px;border-radius:2px;margin-bottom:6px"><div style="background:var(--ac);height:100%;width:'+overseerState.progress+'%;border-radius:2px;transition:width 0.3s"></div></div>';
+  statusHtml+='<div style="font-size:11px;color:var(--mu);line-height:1.4">';
+  statusHtml+='Goal: '+overseerState.goalType+' • Messages: '+overseerState.messagesProcessed+' • Models: '+overseerState.modelsUsed.size;
+  if(overseerState.stuck){statusHtml+=' • ⚠️ Stuck';}
+  statusHtml+='</div></div>';
+  if(!document.getElementById("overseerStatus")){
+    var statusEl=document.createElement("div");statusEl.id="overseerStatus";
+    document.getElementById("chat").appendChild(statusEl);
+  }
+  document.getElementById("overseerStatus").innerHTML=statusHtml;
+}
+function showOverseerRecommendation(rec){
+  var recHtml='<div style="padding:9px 12px;margin:8px 0;background:rgba(245,158,11,0.1);border-left:3px solid #f59e0b;border-radius:4px;font-size:12px;color:var(--tx)">';
+  recHtml+='<strong style="display:block;margin-bottom:4px">💡 Overseer Suggestion</strong>';
+  if(rec.type==="model_switch"){recHtml+='Switch to <strong>'+esc(rec.to)+'</strong>: '+esc(rec.reason);}
+  else if(rec.type==="approach"){recHtml+='Approach: '+esc(rec.reason);}
+  else if(rec.type==="next_step"){recHtml+=esc(rec.reason);}
+  recHtml+='</div>';
+  var recEl=document.createElement("div");recEl.innerHTML=recHtml;
+  document.getElementById("chat").appendChild(recEl);
+}
+function startOverseerMonitoring(){
+  if(overseerCheckInterval)clearInterval(overseerCheckInterval);
+  overseerCheckInterval=setInterval(function(){
+    if(chatHistory.length>1&&!sending){
+      analyzeConversationFlow();
+      if(Date.now()-lastAnalysisTime>15000){
+        makeProactiveRecommendation();
+        lastAnalysisTime=Date.now();
+      }
+      updateOverseerStatus();
+    }
+  },3000);
+}
+function stopOverseerMonitoring(){
+  if(overseerCheckInterval){clearInterval(overseerCheckInterval);overseerCheckInterval=null;}
 }
 
 /* ---- Backend ---- */
@@ -1566,6 +1675,20 @@ document.getElementById("agentToggleBtn").addEventListener("click",function(){
   this.textContent=agentAutoSelect?"ON":"OFF";
   this.style.opacity=agentAutoSelect?"1":"0.6";
 });
+document.getElementById("overseerToggleBtn").addEventListener("click",function(){
+  overseerEnabled=!overseerEnabled;
+  this.textContent=overseerEnabled?"ON":"OFF";
+  this.style.opacity=overseerEnabled?"1":"0.6";
+  if(!overseerEnabled){stopOverseerMonitoring();if(document.getElementById("overseerStatus")){document.getElementById("overseerStatus").remove();}}
+});
+document.getElementById("overseerBtn").addEventListener("click",function(){
+  var msg="📊 Overseer Intelligence Report:\n";
+  msg+="Goal: "+overseerState.goalType+" | Progress: "+overseerState.progress+"%\n";
+  msg+="Messages: "+overseerState.messagesProcessed+" | Models used: "+overseerState.modelsUsed.size+"\n";
+  msg+="Status: "+(overseerState.stuck?"⚠️ STUCK":"✓ On track")+"\n";
+  if(overseerState.recommendations.length){msg+="\nRecommendations: "+overseerState.recommendations.length+" pending";}
+  alert(msg);
+});
 document.getElementById("attachBtn").addEventListener("click",function(){document.getElementById("fileInput").click();});
 document.getElementById("fileInput").addEventListener("change",async function(e){
   var files=Array.from(e.target.files);e.target.value="";
@@ -1730,6 +1853,7 @@ async function send(){
 
   chatHistory.push({role:"user",content:userContent});
   appendMsg("user",userContent);
+  if(chatHistory.length===1&&overseerEnabled){initializeOverseer(userContent);startOverseerMonitoring();}
   promptEl.value="";promptEl.style.height="";clearAttach();
   await switchToBestModel(outgoingText);
   await doSendRequest(userContent,false,ap);
@@ -1849,7 +1973,7 @@ document.getElementById("clearBtn").addEventListener("click",function(){
   undoData={messages:chatHistory.slice(),backend:activeBackend,modelId:currentModel.id,modelLabel:currentModel.label};
   chatHistory=[];clearAttach();localStorage.removeItem(AUTOSAVE_KEY);localStorage.removeItem("ai_draft");
   sessionId=Date.now().toString();responseCount=0;lastUsedModelId="";summarizing=false;
-  clearActiveWproj();
+  clearActiveWproj();stopOverseerMonitoring();overseerState={goal:null,goalType:null,progress:0,status:"idle",startTime:null,messagesProcessed:0,modelsUsed:new Set(),estimatedTokens:0,stuck:false,stuckSince:null,recommendations:[]};
   document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✶</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
   document.getElementById("tokenBar").classList.add("hidden");
   showUndoToast();
