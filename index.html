@@ -1566,7 +1566,7 @@ function importDefaults(){
 /* ---- Projects ---- */
 var GK="ai_projects";
 function loadProjects(){try{projects=JSON.parse(localStorage.getItem(GK)||"[]");}catch(e){projects=[];}}
-function saveProjects(){localStorage.setItem(GK,JSON.stringify(projects));}
+function saveProjects(){localStorage.setItem(GK,JSON.stringify(projects));driveAutoPush(true);}
 function renderProjectList(){
   var list=document.getElementById("projectList");list.innerHTML="";
   if(!projects.length){list.innerHTML='<p class="el">No folders yet.</p>';return;}
@@ -1669,7 +1669,7 @@ function delProject(){
 /* ---- Projects (dedicated, important-to-keep workspaces) ---- */
 var WPK="ai_workprojects";
 function loadWProjects(){try{wproj=JSON.parse(localStorage.getItem(WPK)||"[]");}catch(e){wproj=[];}}
-function saveWProjects(){localStorage.setItem(WPK,JSON.stringify(wproj));driveAutoPush();}
+function saveWProjects(){localStorage.setItem(WPK,JSON.stringify(wproj));driveAutoPush(true);}
 
 function renderWprojHub(){
   var list=document.getElementById("wprojList");list.innerHTML="";
@@ -2109,8 +2109,20 @@ async function driveRestore(){
    Covers the case where the browser/OS wiped localStorage but a Drive
    backup still exists from before. */
 async function driveAutoRestoreIfEmpty(){
-  if(chatHistory.length>0)return;
   if(!driveToken||driveTokenExpiry<=Date.now())return;
+  /* Only auto-restore when there is truly nothing local to lose - check
+     every data type we'd overwrite, not just the current conversation.
+     An earlier version only checked chatHistory.length, which meant simply
+     opening the app with an empty chat (e.g. right after clearing) could
+     silently overwrite newer local folders/projects with a stale Drive
+     backup. Never do that automatically - only fill in a genuinely empty
+     slate. */
+  var localProjects=[],localWproj=[],localPrompts={};
+  try{localProjects=JSON.parse(localStorage.getItem("ai_projects")||"[]");}catch(e){}
+  try{localWproj=JSON.parse(localStorage.getItem("ai_workprojects")||"[]");}catch(e){}
+  try{localPrompts=JSON.parse(localStorage.getItem("ai_prompts")||"{}");}catch(e){}
+  var hasLocalData=chatHistory.length>0||(localProjects&&localProjects.length>0)||(localWproj&&localWproj.length>0)||(localPrompts&&Object.keys(localPrompts).length>0);
+  if(hasLocalData)return;
   try{
     if(!driveFolderId)await driveEnsureFolder();
     if(!driveFileId)await driveFindFile();
