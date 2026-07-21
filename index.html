@@ -3094,8 +3094,16 @@ async function doSendRequest(userContent,isRegen,ap){
     /* Skip search entirely for code-heavy pastes - searching the web for raw
        code makes no sense and risks sending an oversized query downstream */
     var looksLikeCode=qtext.indexOf("```")>=0||qtext.length>800;
+    /* Overseer decides WHEN a search is actually warranted instead of
+       firing on almost every non-code message - reuses the same task
+       analysis already used for model selection (tasks.search), plus a
+       direct check for time-sensitivity language. Cuts needless search
+       API calls and avoids padding context with irrelevant "real-time
+       data" on messages that don't need it. */
+    var searchGateTasks=analyzeTask(qtext);
+    var seemsTimeSensitive=searchGateTasks.search>0||/\b(today|now|current|currently|latest|update|updated|recent|recently|this week|this month|this year|right now|breaking|happening)\b/i.test(qtext);
     var ctx=null;
-    if(!looksLikeCode){
+    if(!looksLikeCode&&seemsTimeSensitive){
       /* Pull in recent conversation context so search picks up topics discussed
          earlier even if the current message is just "any update?" or similar */
       var recentCtx=chatHistory.slice(-6).map(function(m){
