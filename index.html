@@ -2444,7 +2444,8 @@ async function doSendRequest(userContent,isRegen,ap){
 
   var injectedInstructions=null;
   if(!isRegen){
-    injectedInstructions=interceptAndEnhanceMessage(typeof userContent==="string"?userContent:userContent.find&&userContent.find(function(c){return c.type==="text";})||{}).text||"");
+    var interceptText=typeof userContent==="string"?userContent:((userContent.find&&userContent.find(function(c){return c.type==="text";}))||{}).text||"";
+    injectedInstructions=interceptAndEnhanceMessage(interceptText);
   }
   if(injectedInstructions){
     messages.push({role:"system",content:"TASK INSTRUCTIONS:\n"+injectedInstructions});
