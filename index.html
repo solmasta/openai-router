@@ -19,7 +19,7 @@
 .light .cb pre,.light .cb code{background:#1e1e2e!important;color:#cdd6f4!important}
 .light .cb,.light .ch{background:#1e1e2e;border-color:#313244}
 .light code.ic{background:#efeff4;border-color:transparent;color:var(--ac)}
-html,body{height:100%}
+html,body{height:100%;overscroll-behavior:none}
 body{background:var(--bg);color:var(--tx);font-family:-apple-system,system-ui,sans-serif;font-size:15.5px;line-height:1.65;display:flex;flex-direction:column;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
 .app{display:flex;flex-direction:column;height:100vh;max-width:820px;width:100%;margin:0 auto;padding:0 16px}
 header{display:flex;align-items:center;justify-content:space-between;padding:13px 0 12px;flex-shrink:0;gap:8px}
@@ -55,7 +55,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:13p
 .sd.on{background:var(--ac)}
 .sl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sa{font-size:16px;opacity:.35}
-.chat{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 0 14px;display:flex;flex-direction:column;gap:28px}
+.chat{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:10px 0 14px;display:flex;flex-direction:column;gap:28px}
 .chat::-webkit-scrollbar{width:3px}
 .chat::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px}
 .es{margin:auto;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 0}
