@@ -438,7 +438,8 @@ var overseerState={
   stuck:false,stuckSince:null,recommendations:[],
   attemptedApproaches:[],successProbability:0,efficiencyScore:100,
   qualityScore:0,steps:[],currentStep:0,contextHistory:[],
-  lastResponseLength:0,conversationQuality:"good"
+  lastResponseLength:0,conversationQuality:"good",
+  activeProject:null,activeProjectInstructions:null
 };
 var overseerEnabled=true,overseerCheckInterval=null,lastAnalysisTime=0;
 
@@ -870,7 +871,16 @@ function detectGoal(text){
   return topGoal;
 }
 function initializeOverseer(firstMessage){
-  overseerState.goal=detectGoal(firstMessage);
+  /* Fold the active project's instructions into goal detection too - a
+     project like "helping me write my novel" should steer the detected
+     goal even if the first message alone reads as something else. */
+  var ap=getAP();
+  var isProject=ap&&typeof ap.id==="string"&&ap.id.indexOf("wproj_")===0;
+  overseerState.activeProject=isProject?ap.name:null;
+  overseerState.activeProjectInstructions=isProject?ap.content:null;
+  var firstText=typeof firstMessage==="string"?firstMessage:((firstMessage&&firstMessage.find&&firstMessage.find(function(c){return c.type==="text";})||{}).text||"");
+  var goalInput=isProject?(ap.content+"\n"+firstText):firstMessage;
+  overseerState.goal=detectGoal(goalInput);
   overseerState.goalType=overseerState.goal;
   overseerState.status="in_progress";
   overseerState.startTime=Date.now();
@@ -1033,6 +1043,10 @@ function updateOverseerStatus(){
 
   statusHtml+='<div style="background:rgba(0,0,0,0.2);height:4px;border-radius:2px;margin-bottom:8px">';
   statusHtml+='<div style="background:'+progressColor+';height:100%;width:'+overseerState.progress+'%;border-radius:2px;transition:width 0.3s"></div></div>';
+
+  if(overseerState.activeProject){
+    statusHtml+='<div style="font-size:11px;color:var(--ac);margin-bottom:8px">📌 Project: '+esc(overseerState.activeProject)+'</div>';
+  }
 
   var stepDisplay="";
   if(overseerState.steps.length>0&&overseerState.currentStep<overseerState.steps.length){
@@ -1238,6 +1252,19 @@ function generateOptimalInstructions(userMessage,selectedModel){
   var instructions="";
   var taskAnalysis=analyzeTask(userMessage);
   var modelName=(selectedModel.label||selectedModel.id).toLowerCase();
+
+  /* Read the currently active project live, not just whatever was set at
+     conversation start - the user can switch projects mid-conversation. */
+  var curAp=getAP();
+  var curProject=(curAp&&typeof curAp.id==="string"&&curAp.id.indexOf("wproj_")===0)?curAp:null;
+  if(curProject){
+    overseerState.activeProject=curProject.name;
+    overseerState.activeProjectInstructions=curProject.content;
+    instructions+="PROJECT: "+curProject.name+"\n";
+    instructions+="Stay consistent with this project's stated purpose and instructions:\n"+(curProject.content||"").slice(0,500)+"\n\n";
+  }else if(overseerState.activeProject){
+    overseerState.activeProject=null;overseerState.activeProjectInstructions=null;
+  }
 
   if(taskAnalysis.code>0){
     instructions+="CODING TASK - Approach:\n";
