@@ -178,6 +178,19 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 .mi{display:block;max-width:100%;border-radius:10px;margin-top:8px}
 .hidden{display:none!important}
 @media(max-width:520px){.app{padding:0 12px}.sheet{max-height:93vh}}
+/* Undo toast */
+.undo-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e2028;border:1px solid var(--br);border-radius:14px;padding:10px 16px;display:flex;align-items:center;gap:12px;font-size:13px;color:var(--tx);box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:9999;animation:toastIn .2s ease-out;white-space:nowrap}
+.undo-toast.hidden{display:none!important}
+.undo-toast button{background:var(--ac);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;padding:4px 12px;cursor:pointer}
+.undo-toast .td{width:40px;height:3px;background:var(--br);border-radius:2px;overflow:hidden;flex-shrink:0}
+.undo-toast .tf{height:100%;background:var(--ac);border-radius:2px;width:100%;transition:width linear}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+/* Recent chats list */
+.rc{display:flex;flex-direction:column;gap:4px}
+.ri{background:var(--up);border:none;border-radius:10px;padding:10px 14px;cursor:pointer;text-align:left;width:100%;transition:background .15s}
+.ri:hover{background:var(--brs)}
+.rit{font-size:13px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rid{font-size:11px;color:var(--mu);font-family:var(--mn);margin-top:2px}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -342,8 +355,25 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Clear favorites</div><div class="ssb">Remove all starred models</div></div><button class="bg" id="clearFavesBtn">Clear</button></div>
     <div class="sr"><div><div class="slb">Install app</div><div class="ssb" id="installSub">Checking&#8230;</div></div><button class="bg" id="installBtn">Install</button></div>
     <div class="sr"><div><div class="slb">Google Drive backup</div><div class="ssb" id="driveStatus">Not connected</div></div><div style="display:flex;gap:6px"><button class="bg hidden" id="driveRestoreBtn">Restore</button><button class="bg" id="driveConnectBtn">Connect</button></div></div>
+    <div class="sr"><div><div class="slb">Recent chats</div><div class="ssb">Restore any of the last 5 conversations</div></div><button class="bg" id="recentChatsBtn">View</button></div>
     <div class="sr"><div><div class="slb">&#128176; DeepInfra credits</div><div class="ssb">Pay-as-you-go, fractions of a cent per message</div></div><a href="https://deepinfra.com/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; OpenRouter credits</div><div class="ssb">Needed for uncensored paid models</div></div><a href="https://openrouter.ai/credits" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
+    <div class="sr"><div><div class="slb">&#128176; Anthropic credits</div><div class="ssb">For Claude models (Opus, Sonnet, Haiku)</div></div><a href="https://console.anthropic.com/settings/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
+  </div>
+</div></div>
+
+<!-- Undo toast -->
+<div class="undo-toast hidden" id="undoToast">
+  <span>Chat cleared</span>
+  <div class="td"><div class="tf" id="undoProgress"></div></div>
+  <button id="undoBtn">Undo</button>
+</div>
+
+<!-- Recent Chats modal -->
+<div class="modal hidden" id="recentModal"><div class="sheet">
+  <div class="sh"><span>Recent Chats</span><button class="sc" id="closeRecentModal">&#10005;</button></div>
+  <div class="sbody">
+    <div class="rc" id="recentList"></div>
   </div>
 </div></div>
 
@@ -355,6 +385,8 @@ var CLAUDE_URL="https://claude-worker.lukedorsett.workers.dev";
 /* Must match the APP_SECRET secret set on ALL Workers (see README) */
 var APP_SECRET="847df0f4489d8e95b59d4a8dc0afdbe7b53c4ead960a1450b2b0dc1e711ae1db";
 var AUTOSAVE_KEY="ai_autosave";
+var RECENT_KEY="ai_recent";
+var undoTimer=null,undoData=null;
 var activeBackend="deepinfra",workerUrl="",allModels=[],currentModel={id:"",label:""};
 var chatHistory=[],sending=false,attachedFiles=[];
 var activePromptId=null,editingId=null,editingProjId=null,viewingProjId=null;
@@ -537,6 +569,93 @@ function toggleMic(){
 var FK="ai_favorites";
 function loadFavs(){try{favorites=JSON.parse(localStorage.getItem(FK)||"{}");}catch(e){favorites={};}}
 function saveFavs(){localStorage.setItem(FK,JSON.stringify(favorites));}
+
+/* ---- Recent chats (rolling last 5 for undo/recovery) ---- */
+function saveToRecent(){
+  if(!chatHistory.length)return;
+  try{
+    var recent=JSON.parse(localStorage.getItem(RECENT_KEY)||"[]");
+    var firstUser=chatHistory.find(function(m){return m.role==="user";});
+    var title=firstUser?(typeof firstUser.content==="string"?firstUser.content:((firstUser.content&&firstUser.content.find&&firstUser.content.find(function(x){return x.type==="text";})||{}).text||"Chat")):"Chat";
+    recent.unshift({
+      savedAt:Date.now(),
+      title:title.slice(0,80),
+      modelId:currentModel.id,modelLabel:currentModel.label,
+      backend:activeBackend,
+      messages:chatHistory.map(function(m){return{role:m.role,content:typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(x){return x.type==="text";})||{}).text||"")};})
+    });
+    if(recent.length>5)recent=recent.slice(0,5);
+    localStorage.setItem(RECENT_KEY,JSON.stringify(recent));
+  }catch(e){}
+}
+function showUndoToast(){
+  var toast=document.getElementById("undoToast");
+  var bar=document.getElementById("undoProgress");
+  toast.classList.remove("hidden");
+  bar.style.transition="none";bar.style.width="100%";
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      bar.style.transition="width 10s linear";
+      bar.style.width="0%";
+    });
+  });
+  if(undoTimer)clearTimeout(undoTimer);
+  undoTimer=setTimeout(function(){
+    toast.classList.add("hidden");
+    undoData=null;
+  },10000);
+}
+function undoClear(){
+  if(!undoData)return;
+  if(undoTimer){clearTimeout(undoTimer);undoTimer=null;}
+  document.getElementById("undoToast").classList.add("hidden");
+  chatHistory=undoData.messages;
+  activeBackend=undoData.backend;
+  var B=BACKENDS[activeBackend];
+  if(B){workerUrl=B.url;allModels=B.models;}
+  var def=allModels.find(function(m){return m.id===undoData.modelId;});
+  if(def){setModel(def);}else{currentModel={id:undoData.modelId,label:undoData.modelLabel||undoData.modelId};document.getElementById("modelBtnLabel").textContent=currentModel.label;document.getElementById("modelBtn").disabled=false;}
+  document.getElementById("chat").innerHTML="";
+  document.getElementById("emptyState")&&document.getElementById("emptyState").remove();
+  chatHistory.forEach(function(m){appendMsg(m.role,m.content);});
+  setTimeout(function(){var c=document.getElementById("chat");c.scrollTop=c.scrollHeight;},100);
+  autoSave();updTokenBar();
+  undoData=null;
+}
+function renderRecent(){
+  var list=document.getElementById("recentList");
+  try{
+    var recent=JSON.parse(localStorage.getItem(RECENT_KEY)||"[]");
+    if(!recent.length){list.innerHTML='<p class="el">No recent chats. They appear here after you clear or start a new conversation.</p>';return;}
+    list.innerHTML="";
+    recent.forEach(function(r,i){
+      var btn=document.createElement("button");
+      btn.className="ri";
+      var d=new Date(r.savedAt);
+      var timeStr=d.toLocaleDateString()+" "+d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+      btn.innerHTML='<div class="rit">'+esc(r.title)+'</div><div class="rid">'+esc(r.modelLabel||r.modelId)+" &middot; "+esc(timeStr)+'</div>';
+      btn.addEventListener("click",function(){
+        if(chatHistory.length&&!confirm("Load this recent chat? Current chat will be cleared."))return;
+        saveToRecent();
+        chatHistory=r.messages;
+        if(r.backend&&BACKENDS[r.backend]){
+          activeBackend=r.backend;var B=BACKENDS[activeBackend];workerUrl=B.url;allModels=B.models;
+          document.getElementById("deepinfraBtn").className="btab"+(activeBackend==="deepinfra"?" act":"");
+          document.getElementById("openrouterBtn").className="btab"+(activeBackend==="openrouter"?" act or":"");
+          document.getElementById("claudeBtn").className="btab"+(activeBackend==="claude"?" act":"");
+        }
+        var def=allModels.find(function(m){return m.id===r.modelId;});
+        if(def){setModel(def);}else{currentModel={id:r.modelId,label:r.modelLabel||r.modelId};document.getElementById("modelBtnLabel").textContent=currentModel.label;document.getElementById("modelBtn").disabled=false;}
+        document.getElementById("chat").innerHTML="";
+        chatHistory.forEach(function(m){appendMsg(m.role,m.content);});
+        setTimeout(function(){var c=document.getElementById("chat");c.scrollTop=c.scrollHeight;},100);
+        autoSave();updTokenBar();
+        document.getElementById("recentModal").classList.add("hidden");
+      });
+      list.appendChild(btn);
+    });
+  }catch(e){list.innerHTML='<p class="el">Could not load recent chats.</p>';}
+}
 
 /* ---- Backend ---- */
 async function loadBackend(){
@@ -790,6 +909,7 @@ function saveCurrentChat(projId){
 }
 function loadConv(conv){
   if(chatHistory.length&&!confirm("Load this chat? Current chat will be cleared."))return;
+  saveToRecent();
   chatHistory=conv.messages.map(function(m){return{role:m.role,content:m.content};});
   document.getElementById("chat").innerHTML="";lastUsedModelId="";
   var def=allModels.find(function(m){return m.id===conv.modelId;});if(def)setModel(def);
@@ -905,6 +1025,7 @@ function renderWprojConvs(p){
 }
 function loadWprojConv(conv,p){
   if(chatHistory.length&&!confirm("Load this chat? Current chat will be cleared."))return;
+  saveToRecent();
   chatHistory=conv.messages.map(function(m){return{role:m.role,content:m.content};});
   document.getElementById("chat").innerHTML="";lastUsedModelId="";
   sessionId=conv.sessionId||Date.now().toString();
@@ -918,6 +1039,7 @@ function startWprojChat(){
   var p=wproj.find(function(x){return x.id===viewingWProjId;});
   if(!p)return;
   if(chatHistory.length&&!confirm("Start a new chat in this project? Current chat will be cleared."))return;
+  saveToRecent();
   chatHistory=[];document.getElementById("chat").innerHTML='<div class="es" id="emptyState">Select a model and start chatting.</div>';
   lastUsedModelId="";sessionId=Date.now().toString();responseCount=0;
   document.getElementById("tokenBar").classList.add("hidden");
@@ -1619,11 +1741,23 @@ document.getElementById("sendBtn").addEventListener("click",function(){
 /* Enter = new line, no auto-send */
 document.getElementById("prompt").addEventListener("input",function(){this.style.height="auto";this.style.height=Math.min(this.scrollHeight,150)+"px";});
 document.getElementById("clearBtn").addEventListener("click",function(){
+  if(!chatHistory.length)return;
+  /* Save to recent history and stash for undo before wiping anything */
+  saveToRecent();
+  undoData={messages:chatHistory.slice(),backend:activeBackend,modelId:currentModel.id,modelLabel:currentModel.label};
   chatHistory=[];clearAttach();localStorage.removeItem(AUTOSAVE_KEY);localStorage.removeItem("ai_draft");
   sessionId=Date.now().toString();responseCount=0;lastUsedModelId="";summarizing=false;
   clearActiveWproj();
   document.getElementById("chat").innerHTML='<div class="es" id="emptyState">Select a model and start chatting.</div>';
   document.getElementById("tokenBar").classList.add("hidden");
+  showUndoToast();
+});
+document.getElementById("undoBtn").addEventListener("click",undoClear);
+bindM("recentModal","closeRecentModal");
+document.getElementById("recentChatsBtn").addEventListener("click",function(){
+  document.getElementById("settingsModal").classList.add("hidden");
+  renderRecent();
+  document.getElementById("recentModal").classList.remove("hidden");
 });
 
 /* ---- Init ---- */

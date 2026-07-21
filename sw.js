@@ -1,4 +1,4 @@
-var CACHE = 'ai-router-v43';
+var CACHE = 'ai-router-v44';
 /* Relative (no leading slash) so these resolve against this script's own
    location. The app is served from a subpath (e.g. /openai-router/), and
    an absolute '/index.html' would resolve to the site ROOT, not the app -
