@@ -2616,17 +2616,25 @@ document.getElementById("recentChatsBtn").addEventListener("click",function(){
 });
 
 /* ---- Init ---- */
-/* Fetch APP_SECRET from worker on page load - required for authenticated requests */
+/* Fetch APP_SECRET from worker on page load - non-blocking with timeout */
 (function(){
+  var controller=new AbortController();
+  var timeout=setTimeout(function(){controller.abort();},3000);
   fetch(CLAUDE_URL+"/secret",{
     method:"GET",
     headers:{"Content-Type":"application/json"},
-    mode:"cors"
+    mode:"cors",
+    signal:controller.signal
   }).then(function(r){
-    return r.json();
+    clearTimeout(timeout);
+    if(r.ok)return r.json();
+    throw new Error("HTTP "+r.status);
   }).then(function(d){
-    if(d.secret){APP_SECRET=d.secret;}
-  }).catch(function(e){console.error("Failed to fetch APP_SECRET:",e);});
+    if(d&&d.secret){APP_SECRET=d.secret;console.log("✓ APP_SECRET loaded");}
+  }).catch(function(e){
+    clearTimeout(timeout);
+    console.warn("APP_SECRET fetch failed (will retry on first API call):",e.message);
+  });
 })();
 
 loadFavs();
