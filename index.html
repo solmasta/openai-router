@@ -2225,6 +2225,28 @@ function overseerSelectRelevantMemories(contextText,maxCount){
   var relevant=scored.slice(0,Math.max(0,cap-always.length)).map(function(s){return s.mem;});
   return always.concat(relevant).slice(0,cap);
 }
+/* Same idea for the document library - the Overseer's "knowledge base"
+   isn't just memory facts, it's everything you've saved. Only pulls in
+   docs that actually match the current message (by keyword overlap),
+   and only a short snippet per doc, so having 30 saved documents doesn't
+   mean every message drags all of them into context. Images aren't
+   text-searchable this way, so only text-type library entries qualify. */
+function overseerSelectRelevantDocs(contextText,maxCount,snippetChars){
+  var textDocs=docLibrary.filter(function(d){return d.type==="text"&&d.content;});
+  if(!textDocs.length)return[];
+  var words=(contextText||"").toLowerCase().match(/[a-z0-9']{3,}/g)||[];
+  var wordSet={};words.forEach(function(w){wordSet[w]=true;});
+  var scored=textDocs.map(function(d){
+    var dwords=d.content.toLowerCase().match(/[a-z0-9']{3,}/g)||[];
+    var overlap=0;dwords.forEach(function(w){if(wordSet[w])overlap++;});
+    return{doc:d,score:overlap};
+  }).filter(function(s){return s.score>0;});
+  scored.sort(function(a,b){return b.score-a.score;});
+  var cap=maxCount||3;var snipLen=snippetChars||800;
+  return scored.slice(0,cap).map(function(s){
+    return{name:s.doc.name,snippet:s.doc.content.slice(0,snipLen)+(s.doc.content.length>snipLen?"...":"")};
+  });
+}
 /* Parse <memory>fact</memory> tags the AI includes in its own response
    text (per system prompt instruction) and show an approve/dismiss note
    per suggestion - never auto-saved. */
@@ -2982,6 +3004,10 @@ async function doSendRequest(userContent,isRegen,ap){
   var relevantMemories=overseerSelectRelevantMemories(msgText,6);
   if(relevantMemories.length){
     messages.push({role:"system",content:"MEMORY (persistent facts about the user, selected as relevant to this message):\n"+relevantMemories.map(function(m){return "- "+m.text;}).join("\n")});
+  }
+  var relevantDocs=overseerSelectRelevantDocs(msgText,3,800);
+  if(relevantDocs.length){
+    messages.push({role:"system",content:"FROM YOUR SAVED DOCUMENT LIBRARY (relevant excerpts):\n"+relevantDocs.map(function(d){return "--- "+d.name+" ---\n"+d.snippet;}).join("\n\n")});
   }
   var searchUsed=false;
   var searchTime=null;
