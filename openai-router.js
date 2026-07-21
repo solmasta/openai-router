@@ -155,7 +155,41 @@ async function handleSearch(query, env) {
     }
   }
 
-  // General fallback - DuckDuckGo Instant Answer API, free, zero setup, no key
+  // General web search via Tavily (if configured) - real any-topic web
+  // results, not just topics with a Wikipedia-style summary. Only called
+  // when the free structured checks above (crypto/weather/stock/sports)
+  // didn't already answer the query, to keep free-tier quota usage
+  // proportional to how often a search was actually needed.
+  if (results.length === 0 && env.TAVILY_API_KEY) {
+    try {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 5000);
+      const tRes = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: env.TAVILY_API_KEY,
+          query: query,
+          max_results: 4,
+          search_depth: 'basic'
+        }),
+        signal: ac.signal
+      });
+      clearTimeout(timer);
+      const tData = await tRes.json();
+      if (tData.answer) {
+        results.push(`Answer: ${tData.answer}`);
+      }
+      if (tData.results && tData.results.length) {
+        tData.results.slice(0, 4).forEach(r => {
+          results.push(`${r.title}: ${(r.content || '').slice(0, 300)} (source: ${r.url})`);
+        });
+      }
+    } catch(e) {}
+  }
+
+  // Fallback - DuckDuckGo Instant Answer API, free, zero setup, no key.
+  // Used when Tavily isn't configured or didn't return anything useful.
   if (results.length === 0) {
     try {
       const ac = new AbortController();

@@ -2318,13 +2318,26 @@ setInterval(function(){try{var t=document.getElementById("prompt");if(t&&t.value
 /* ---- Google Drive Sync ---- */
 var GOOGLE_CLIENT_ID="899534056653-eb854ngfhontj1v370l0luj6fd1s6hcj.apps.googleusercontent.com";
 var DRIVE_SCOPE="https://www.googleapis.com/auth/drive.file";
-var driveToken=null,driveTokenExpiry=0,driveFolderId=null,driveFileId=null;
+var driveToken=null,driveTokenExpiry=0,driveFolderId=null;
+/* Keyed by filename instead of one combined blob, so opening the
+   "ai-router-backups" folder in the actual Drive app shows meaningful
+   separate files (prompts.json, memories.json, etc.) instead of one
+   opaque autosave blob. */
+var driveFileIds={};
 var driveTokenClient=null,driveLastPush=0,driveBusy=false;
+var DRIVE_FILES={
+  prompts:"prompts.json",
+  projects:"folders.json",
+  workprojects:"projects.json",
+  autosave:"current-chat.json",
+  memories:"memories.json",
+  doclibrary:"documents.json"
+};
 
 function driveLoadCache(){
   try{
     driveFolderId=localStorage.getItem("drive_folder_id")||null;
-    driveFileId=localStorage.getItem("drive_file_id")||null;
+    driveFileIds=JSON.parse(localStorage.getItem("drive_file_ids")||"{}");
     var t=JSON.parse(localStorage.getItem("drive_token")||"null");
     if(t&&t.expiry>Date.now()){driveToken=t.token;driveTokenExpiry=t.expiry;}
   }catch(e){}
@@ -2364,10 +2377,11 @@ function driveSilentRenew(){
   try{driveTokenClient.requestAccessToken({prompt:""});}catch(e){}
 }
 function driveDisconnect(){
-  driveToken=null;driveTokenExpiry=0;driveFolderId=null;driveFileId=null;
+  driveToken=null;driveTokenExpiry=0;driveFolderId=null;driveFileIds={};
   localStorage.removeItem("drive_token");
   localStorage.removeItem("drive_folder_id");
   localStorage.removeItem("drive_file_id");
+  localStorage.removeItem("drive_file_ids");
   localStorage.removeItem("drive_connected");
   updateDriveUI(false);
 }
@@ -2389,13 +2403,52 @@ async function driveEnsureFolder(){
     return driveFolderId;
   }catch(e){return null;}
 }
-async function driveFindFile(){
+async function driveFindFileByName(name){
+  if(driveFileIds[name])return driveFileIds[name];
+  if(!driveToken||!driveFolderId)return null;
+  try{
+    var q=encodeURIComponent("name='"+name+"' and '"+driveFolderId+"' in parents and trashed=false");
+    var res=await fetch("https://www.googleapis.com/drive/v3/files?q="+q+"&fields=files(id,name)",{headers:{Authorization:"Bearer "+driveToken}});
+    var data=await res.json();
+    if(data.files&&data.files.length){
+      driveFileIds[name]=data.files[0].id;
+      localStorage.setItem("drive_file_ids",JSON.stringify(driveFileIds));
+      return driveFileIds[name];
+    }
+  }catch(e){}
+  return null;
+}
+async function driveUploadNamedFile(name,value){
+  var fileId=await driveFindFileByName(name);
+  var blob=new Blob([JSON.stringify(value,null,2)],{type:"application/json"});
+  var metadata={name:name,mimeType:"application/json"};
+  if(!fileId)metadata.parents=[driveFolderId];
+  var form=new FormData();
+  form.append("metadata",new Blob([JSON.stringify(metadata)],{type:"application/json"}));
+  form.append("file",blob);
+  var url=fileId?("https://www.googleapis.com/upload/drive/v3/files/"+fileId+"?uploadType=multipart"):("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart");
+  var res=await fetch(url,{method:fileId?"PATCH":"POST",headers:{Authorization:"Bearer "+driveToken},body:form});
+  var data=await res.json();
+  if(data.id){driveFileIds[name]=data.id;localStorage.setItem("drive_file_ids",JSON.stringify(driveFileIds));}
+}
+async function driveDownloadNamedFile(name){
+  var fileId=await driveFindFileByName(name);
+  if(!fileId)return null;
+  try{
+    var res=await fetch("https://www.googleapis.com/drive/v3/files/"+fileId+"?alt=media",{headers:{Authorization:"Bearer "+driveToken}});
+    return await res.json();
+  }catch(e){return null;}
+}
+/* One legacy file from before the multi-file split - only read for a
+   one-time migration if none of the new named files exist yet, never
+   written to again. */
+async function driveFindLegacyFile(){
   if(!driveToken||!driveFolderId)return null;
   try{
     var q=encodeURIComponent("name='ai-router-autosave.json' and '"+driveFolderId+"' in parents and trashed=false");
     var res=await fetch("https://www.googleapis.com/drive/v3/files?q="+q+"&fields=files(id,name)",{headers:{Authorization:"Bearer "+driveToken}});
     var data=await res.json();
-    if(data.files&&data.files.length){driveFileId=data.files[0].id;localStorage.setItem("drive_file_id",driveFileId);return driveFileId;}
+    if(data.files&&data.files.length)return data.files[0].id;
   }catch(e){}
   return null;
 }
@@ -2407,36 +2460,51 @@ async function driveAutoPush(force){
   try{
     if(!driveFolderId)await driveEnsureFolder();
     if(!driveFolderId){driveBusy=false;return;}
-    if(!driveFileId)await driveFindFile();
-    var payload={version:1,syncedAt:new Date().toISOString(),prompts:JSON.parse(localStorage.getItem("ai_prompts")||"{}"),projects:JSON.parse(localStorage.getItem("ai_projects")||"[]"),workprojects:JSON.parse(localStorage.getItem("ai_workprojects")||"[]"),autosave:localStorage.getItem("ai_autosave")||null,memories:JSON.parse(localStorage.getItem("ai_memories")||"[]"),doclibrary:JSON.parse(localStorage.getItem("ai_doclibrary")||"[]")};
-    var blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
-    var metadata={name:"ai-router-autosave.json",mimeType:"application/json"};
-    if(!driveFileId)metadata.parents=[driveFolderId];
-    var form=new FormData();
-    form.append("metadata",new Blob([JSON.stringify(metadata)],{type:"application/json"}));
-    form.append("file",blob);
-    var url=driveFileId?("https://www.googleapis.com/upload/drive/v3/files/"+driveFileId+"?uploadType=multipart"):("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart");
-    var res=await fetch(url,{method:driveFileId?"PATCH":"POST",headers:{Authorization:"Bearer "+driveToken},body:form});
-    var data=await res.json();
-    if(data.id){driveFileId=data.id;localStorage.setItem("drive_file_id",driveFileId);}
+    await Promise.all([
+      driveUploadNamedFile(DRIVE_FILES.prompts,JSON.parse(localStorage.getItem("ai_prompts")||"{}")),
+      driveUploadNamedFile(DRIVE_FILES.projects,JSON.parse(localStorage.getItem("ai_projects")||"[]")),
+      driveUploadNamedFile(DRIVE_FILES.workprojects,JSON.parse(localStorage.getItem("ai_workprojects")||"[]")),
+      driveUploadNamedFile(DRIVE_FILES.autosave,{autosave:localStorage.getItem("ai_autosave")||null}),
+      driveUploadNamedFile(DRIVE_FILES.memories,JSON.parse(localStorage.getItem("ai_memories")||"[]")),
+      driveUploadNamedFile(DRIVE_FILES.doclibrary,JSON.parse(localStorage.getItem("ai_doclibrary")||"[]"))
+    ]);
     updateDriveStatus("Synced "+new Date().toLocaleTimeString());
   }catch(e){updateDriveStatus("Sync error - will retry");}
   driveBusy=false;
 }
+async function driveApplyRestoredData(data){
+  if(data.prompts)localStorage.setItem("ai_prompts",JSON.stringify(data.prompts));
+  if(data.projects)localStorage.setItem("ai_projects",JSON.stringify(data.projects));
+  if(data.workprojects)localStorage.setItem("ai_workprojects",JSON.stringify(data.workprojects));
+  if(data.autosave)localStorage.setItem("ai_autosave",data.autosave);
+  if(data.memories)localStorage.setItem("ai_memories",JSON.stringify(data.memories));
+  if(data.doclibrary)localStorage.setItem("ai_doclibrary",JSON.stringify(data.doclibrary));
+}
 async function driveRestore(){
   if(!driveToken||driveTokenExpiry<=Date.now()){driveConnect();return;}
   if(!driveFolderId)await driveEnsureFolder();
-  if(!driveFileId)await driveFindFile();
-  if(!driveFileId){alert("No backup found in Drive yet.");return;}
   try{
-    var res=await fetch("https://www.googleapis.com/drive/v3/files/"+driveFileId+"?alt=media",{headers:{Authorization:"Bearer "+driveToken}});
-    var data=await res.json();
-    if(data.prompts)localStorage.setItem("ai_prompts",JSON.stringify(data.prompts));
-    if(data.projects)localStorage.setItem("ai_projects",JSON.stringify(data.projects));
-    if(data.workprojects)localStorage.setItem("ai_workprojects",JSON.stringify(data.workprojects));
-    if(data.autosave)localStorage.setItem("ai_autosave",data.autosave);
-    if(data.memories)localStorage.setItem("ai_memories",JSON.stringify(data.memories));
-    if(data.doclibrary)localStorage.setItem("ai_doclibrary",JSON.stringify(data.doclibrary));
+    var results=await Promise.all([
+      driveDownloadNamedFile(DRIVE_FILES.prompts),
+      driveDownloadNamedFile(DRIVE_FILES.projects),
+      driveDownloadNamedFile(DRIVE_FILES.workprojects),
+      driveDownloadNamedFile(DRIVE_FILES.autosave),
+      driveDownloadNamedFile(DRIVE_FILES.memories),
+      driveDownloadNamedFile(DRIVE_FILES.doclibrary)
+    ]);
+    var anyFound=results.some(function(r){return r!==null;});
+    if(!anyFound){
+      var legacyId=await driveFindLegacyFile();
+      if(!legacyId){alert("No backup found in Drive yet.");return;}
+      var lres=await fetch("https://www.googleapis.com/drive/v3/files/"+legacyId+"?alt=media",{headers:{Authorization:"Bearer "+driveToken}});
+      var ldata=await lres.json();
+      await driveApplyRestoredData(ldata);
+    }else{
+      await driveApplyRestoredData({
+        prompts:results[0],projects:results[1],workprojects:results[2],
+        autosave:results[3]&&results[3].autosave,memories:results[4],doclibrary:results[5]
+      });
+    }
     alert("Restored from Google Drive!");
     location.reload();
   }catch(e){alert("Restore failed: "+e.message);}
@@ -2464,17 +2532,27 @@ async function driveAutoRestoreIfEmpty(){
   if(hasLocalData)return;
   try{
     if(!driveFolderId)await driveEnsureFolder();
-    if(!driveFileId)await driveFindFile();
-    if(!driveFileId)return;
-    var res=await fetch("https://www.googleapis.com/drive/v3/files/"+driveFileId+"?alt=media",{headers:{Authorization:"Bearer "+driveToken}});
-    var data=await res.json();
+    if(!driveFolderId)return;
+    var results=await Promise.all([
+      driveDownloadNamedFile(DRIVE_FILES.prompts),
+      driveDownloadNamedFile(DRIVE_FILES.projects),
+      driveDownloadNamedFile(DRIVE_FILES.workprojects),
+      driveDownloadNamedFile(DRIVE_FILES.autosave),
+      driveDownloadNamedFile(DRIVE_FILES.memories),
+      driveDownloadNamedFile(DRIVE_FILES.doclibrary)
+    ]);
+    var anyFound=results.some(function(r){return r!==null;});
+    var data;
+    if(!anyFound){
+      var legacyId=await driveFindLegacyFile();
+      if(!legacyId)return;
+      var lres=await fetch("https://www.googleapis.com/drive/v3/files/"+legacyId+"?alt=media",{headers:{Authorization:"Bearer "+driveToken}});
+      data=await lres.json();
+    }else{
+      data={prompts:results[0],projects:results[1],workprojects:results[2],autosave:results[3]&&results[3].autosave,memories:results[4],doclibrary:results[5]};
+    }
     if(!data||(!data.autosave&&!data.prompts&&!data.projects&&!data.workprojects&&!data.memories&&!data.doclibrary))return;
-    if(data.prompts)localStorage.setItem("ai_prompts",JSON.stringify(data.prompts));
-    if(data.projects)localStorage.setItem("ai_projects",JSON.stringify(data.projects));
-    if(data.workprojects)localStorage.setItem("ai_workprojects",JSON.stringify(data.workprojects));
-    if(data.autosave)localStorage.setItem("ai_autosave",data.autosave);
-    if(data.memories)localStorage.setItem("ai_memories",JSON.stringify(data.memories));
-    if(data.doclibrary)localStorage.setItem("ai_doclibrary",JSON.stringify(data.doclibrary));
+    await driveApplyRestoredData(data);
     updateDriveStatus("Restored from backup "+new Date().toLocaleTimeString());
     location.reload();
   }catch(e){}
