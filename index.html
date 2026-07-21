@@ -908,6 +908,7 @@ async function switchToBestModel(text){
   var tasks=analyzeTask(text);
   var best=selectBestModel(tasks);
   if(!best)return;
+  best.reason=tasks;
   var confirmed=await confirmModelSwitch(best);
   if(!confirmed)return;
   lastAgentSelection={model:best.model,backend:best.backend,reason:tasks,score:best.score};
