@@ -250,7 +250,6 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
         <button class="ib" id="attachBtn" title="Attach">&#128206;</button>
         <input type="file" id="fileInput" hidden multiple accept="image/*,.txt,.js,.ts,.jsx,.tsx,.py,.html,.css,.json,.md,.yaml,.yml,.csv,.xml,.sh">
         <button class="mic" id="micBtn" title="Voice">&#127908;</button>
-        <button class="ws" id="wsBtn" title="Web search">&#128269;</button>
         <button class="ws" id="overseerBtn" title="Overseer status">🤖</button>
         <button class="ws" id="brainstormBtn" title="Brainstorming suggestions">💭</button>
         <button class="ws" id="newTabBtn" title="New conversation tab" style="color:var(--ac);font-size:17px;font-weight:400">&#43;</button>
@@ -465,7 +464,7 @@ var activePromptId=null,editingId=null,editingProjId=null,viewingProjId=null;
 var prompts=[],projects=[];
 var wproj=[],activeWProjId=null,editingWProjId=null,viewingWProjId=null;
 var sessionId=Date.now().toString(),responseCount=0,lastUsedModelId="";
-var temperature=0.7,favorites={},isDark=true,webSearchOn=true;
+var temperature=0.7,favorites={},isDark=true;
 var summarizing=false;
 var abortController=null;
 /* Overseer Agent System - Enhanced */
@@ -2761,11 +2760,6 @@ document.getElementById("convSearch").addEventListener("input",function(){
   if(proj)renderConvsList(proj,this.value);
 });
 document.getElementById("micBtn").addEventListener("click",toggleMic);
-document.getElementById("wsBtn").addEventListener("click",function(){
-  webSearchOn=!webSearchOn;
-  this.classList.toggle("on",webSearchOn);
-  this.title=webSearchOn?"Web search ON":"Web search OFF";
-});
 document.getElementById("agentToggleBtn").addEventListener("click",function(){
   agentAutoSelect=!agentAutoSelect;
   this.textContent=agentAutoSelect?"ON":"OFF";
@@ -3089,38 +3083,33 @@ async function doSendRequest(userContent,isRegen,ap){
   }
   var searchUsed=false;
   var searchTime=null;
-  if(webSearchOn){
-    var qtext=typeof userContent==="string"?userContent:((userContent&&userContent.find&&userContent.find(function(c){return c.type==="text";})||{}).text||"");
-    /* Skip search entirely for code-heavy pastes - searching the web for raw
-       code makes no sense and risks sending an oversized query downstream */
-    var looksLikeCode=qtext.indexOf("```")>=0||qtext.length>800;
-    /* Overseer decides WHEN a search is actually warranted instead of
-       firing on almost every non-code message - reuses the same task
-       analysis already used for model selection (tasks.search), plus a
-       direct check for time-sensitivity language. Cuts needless search
-       API calls and avoids padding context with irrelevant "real-time
-       data" on messages that don't need it. */
-    var searchGateTasks=analyzeTask(qtext);
-    var seemsTimeSensitive=searchGateTasks.search>0||/\b(today|now|current|currently|latest|update|updated|recent|recently|this week|this month|this year|right now|breaking|happening)\b/i.test(qtext);
-    var ctx=null;
-    if(!looksLikeCode&&seemsTimeSensitive){
-      /* Pull in recent conversation context so search picks up topics discussed
-         earlier even if the current message is just "any update?" or similar */
-      var recentCtx=chatHistory.slice(-6).map(function(m){
-        return typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(x){return x.type==="text";})||{}).text||"");
-      }).join(" ");
-      var searchQuery=(recentCtx+" "+qtext).trim().slice(0,300);
-      ctx=await doSearch(searchQuery);
-    }
-    if(ctx){
-      searchUsed=true;
-      searchTime=new Date().toLocaleTimeString();
-      var searchNote="A web search was just performed by the app on your behalf. When asked if you searched the web, say yes - the app searched and provided you these real-time results:\n\n"+ctx+"\n\nUse this data to answer accurately.";
-      if(messages.length>0&&messages[0].role==="system"){
-        messages[0].content+="\n\n"+searchNote;
-      }else{
-        messages.unshift({role:"system",content:searchNote});
-      }
+  /* Web search is fully automatic - no user toggle. The Overseer's own
+     task analysis (same system used for model selection) decides whether
+     a message actually needs current information; no manual on/off. */
+  var qtext=typeof userContent==="string"?userContent:((userContent&&userContent.find&&userContent.find(function(c){return c.type==="text";})||{}).text||"");
+  /* Skip search entirely for code-heavy pastes - searching the web for raw
+     code makes no sense and risks sending an oversized query downstream */
+  var looksLikeCode=qtext.indexOf("```")>=0||qtext.length>800;
+  var searchGateTasks=analyzeTask(qtext);
+  var seemsTimeSensitive=searchGateTasks.search>0||/\b(today|now|current|currently|latest|update|updated|recent|recently|this week|this month|this year|right now|breaking|happening)\b/i.test(qtext);
+  var ctx=null;
+  if(!looksLikeCode&&seemsTimeSensitive){
+    /* Pull in recent conversation context so search picks up topics discussed
+       earlier even if the current message is just "any update?" or similar */
+    var recentCtx=chatHistory.slice(-6).map(function(m){
+      return typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(x){return x.type==="text";})||{}).text||"");
+    }).join(" ");
+    var searchQuery=(recentCtx+" "+qtext).trim().slice(0,300);
+    ctx=await doSearch(searchQuery);
+  }
+  if(ctx){
+    searchUsed=true;
+    searchTime=new Date().toLocaleTimeString();
+    var searchNote="A web search was just performed by the app on your behalf. When asked if you searched the web, say yes - the app searched and provided you these real-time results:\n\n"+ctx+"\n\nUse this data to answer accurately.";
+    if(messages.length>0&&messages[0].role==="system"){
+      messages[0].content+="\n\n"+searchNote;
+    }else{
+      messages.unshift({role:"system",content:searchNote});
     }
   }
   messages=messages.concat(chatHistory.slice(0,-1));
@@ -3131,7 +3120,6 @@ async function doSendRequest(userContent,isRegen,ap){
     if(TOOL_MODELS.indexOf(currentModel.id)>=0){
       try{
         var initTools=[];
-        if(!webSearchOn){initTools.push({type:"function","function":{name:"web_search",description:"Search for real-time data: crypto prices, weather, news.",parameters:{type:"object",properties:{query:{type:"string"}},required:["query"]}}});}
         if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){initTools=initTools.concat(REPO_TOOLS);}
         if(initTools.length>0){
           var p1res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:messages,tools:initTools,tool_choice:"auto",temperature:temperature,stream:false,max_tokens:1000})});
@@ -3310,8 +3298,6 @@ loadFavs();
   var t=localStorage.getItem("ai_theme");
   if(t==="light"){isDark=false;document.body.classList.add("light");document.getElementById("themeBtn").textContent="\u2600 Dark";}
   syncThemeColor();
-  document.getElementById("wsBtn").classList.add("on");
-  document.getElementById("wsBtn").title="Web search ON";
 })();
 loadBackend();loadPrompts();loadProjects();loadWProjects();loadAutoSave();loadDraft();initTabs();loadMemories();renderMemoryList();loadDocLibrary();renderDocLibraryList();
 
