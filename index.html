@@ -409,8 +409,15 @@ var sessionId=Date.now().toString(),responseCount=0,lastUsedModelId="";
 var temperature=0.7,favorites={},isDark=true,webSearchOn=true;
 var summarizing=false;
 var abortController=null;
-/* Overseer Agent System */
-var overseerState={goal:null,goalType:null,progress:0,status:"idle",startTime:null,messagesProcessed:0,modelsUsed:new Set(),estimatedTokens:0,stuck:false,stuckSince:null,recommendations:[]};
+/* Overseer Agent System - Enhanced */
+var overseerState={
+  goal:null,goalType:null,progress:0,status:"idle",startTime:null,
+  messagesProcessed:0,modelsUsed:new Set(),estimatedTokens:0,
+  stuck:false,stuckSince:null,recommendations:[],
+  attemptedApproaches:[],successProbability:0,efficiencyScore:100,
+  qualityScore:0,steps:[],currentStep:0,contextHistory:[],
+  lastResponseLength:0,conversationQuality:"good"
+};
 var overseerEnabled=true,overseerCheckInterval=null,lastAnalysisTime=0;
 
 /* BACKENDS and data injected by build script */
@@ -776,7 +783,26 @@ function initializeOverseer(firstMessage){
   overseerState.startTime=Date.now();
   overseerState.messagesProcessed=1;
   overseerState.progress=10;
+  overseerState.successProbability=70;
+  planTaskSteps();
+  trackApproach("initial");
   updateOverseerStatus();
+}
+function planTaskSteps(){
+  overseerState.steps=[];
+  if(overseerState.goal==="debug"){
+    overseerState.steps=["Understand error","Identify root cause","Develop fix","Test fix","Verify no regression"];
+  }else if(overseerState.goal==="feature"){
+    overseerState.steps=["Plan approach","Design implementation","Write code","Test","Documentation"];
+  }else if(overseerState.goal==="design"){
+    overseerState.steps=["Understand requirements","Map architecture","Design components","Review design"];
+  }else if(overseerState.goal==="analyze"){
+    overseerState.steps=["Gather data","Identify patterns","Draw conclusions","Validate findings"];
+  }else{overseerState.steps=["Understand task","Work on task","Verify results"];}
+  overseerState.currentStep=0;
+}
+function trackApproach(approach){
+  overseerState.attemptedApproaches.push({approach:approach,time:Date.now(),success:null});
 }
 function analyzeConversationFlow(){
   if(chatHistory.length<2)return;
@@ -786,57 +812,177 @@ function analyzeConversationFlow(){
   var assistantMsgs=recentMsgs.filter(function(m){return m.role==="assistant";});
   overseerState.messagesProcessed=chatHistory.length;
   if(userMsgs.length>0){overseerState.modelsUsed.add(currentModel.id);}
+
   var avgResponseLength=assistantMsgs.length>0?assistantMsgs.reduce(function(sum,m){return sum+(m.content||"").length;},0)/assistantMsgs.length:0;
+  overseerState.lastResponseLength=avgResponseLength;
+
   var isStuck=avgResponseLength<100&&userMsgs.length>=2;
-  if(isStuck&&!overseerState.stuck){overseerState.stuck=true;overseerState.stuckSince=now;makeStuckRecommendation();}
+  if(isStuck&&!overseerState.stuck){overseerState.stuck=true;overseerState.stuckSince=now;makeBetterRecommendation();}
   if(!isStuck){overseerState.stuck=false;overseerState.stuckSince=null;}
+
+  calculateQualityScore();calculateEfficiencyScore();calculateSuccessProbability();
+
   var estimatedCompletion=0;
   if(overseerState.goal==="debug")estimatedCompletion=overseerState.messagesProcessed>4?75:Math.min(50,overseerState.messagesProcessed*15);
   else if(overseerState.goal==="feature")estimatedCompletion=overseerState.messagesProcessed>6?70:Math.min(60,overseerState.messagesProcessed*10);
   else if(overseerState.goal==="design")estimatedCompletion=overseerState.messagesProcessed>3?60:Math.min(40,overseerState.messagesProcessed*12);
   else estimatedCompletion=Math.min(90,Math.round(overseerState.messagesProcessed*8));
   overseerState.progress=Math.min(estimatedCompletion,99);
+  updateStepProgress();
 }
-function makeStuckRecommendation(){
-  var rec=null;
+function calculateQualityScore(){
+  if(overseerState.lastResponseLength<50)overseerState.qualityScore=30;
+  else if(overseerState.lastResponseLength<200)overseerState.qualityScore=60;
+  else if(overseerState.lastResponseLength<500)overseerState.qualityScore=85;
+  else overseerState.qualityScore=95;
+  if(overseerState.qualityScore<70)overseerState.conversationQuality="poor";
+  else if(overseerState.qualityScore<85)overseerState.conversationQuality="good";
+  else overseerState.conversationQuality="excellent";
+}
+function calculateEfficiencyScore(){
+  var timeElapsed=(Date.now()-overseerState.startTime)/1000/60;
+  var msgsPerMinute=timeElapsed>0?overseerState.messagesProcessed/timeElapsed:overseerState.messagesProcessed;
+  var idealRate=overseerState.goal==="debug"?3:(overseerState.goal==="feature"?2.5:2);
+  overseerState.efficiencyScore=Math.min(100,Math.round((msgsPerMinute/idealRate)*100));
+}
+function calculateSuccessProbability(){
+  var base=70;
+  if(overseerState.qualityScore>80)base+=15;
+  if(overseerState.efficiencyScore>90)base+=10;
+  if(overseerState.modelsUsed.size>1)base+=5;
+  if(overseerState.stuck)base-=20;
+  overseerState.successProbability=Math.min(95,Math.max(20,base));
+}
+function updateStepProgress(){
+  if(overseerState.steps.length===0)return;
+  var newStep=Math.floor((overseerState.progress/100)*overseerState.steps.length);
+  if(newStep>overseerState.currentStep&&newStep<=overseerState.steps.length){
+    overseerState.currentStep=newStep;
+    if(overseerState.currentStep<overseerState.steps.length){
+      showStepUpdate(overseerState.steps[overseerState.currentStep-1],overseerState.steps[overseerState.currentStep]);
+    }
+  }
+}
+function makeBetterRecommendation(){
   var taskAnalysis=analyzeTask((chatHistory[chatHistory.length-1]||{}).content||"");
-  if(taskAnalysis.code>0){rec={type:"model_switch",from:currentModel.label,to:"DeepSeek R1",reason:"Stuck on code issue. R1's reasoning can help debug deeper."};}
-  else if(taskAnalysis.reason>0){rec={type:"model_switch",from:currentModel.label,to:"Claude Opus 4.1",reason:"Complex reasoning needed. Switching to strongest reasoner."};}
-  else{rec={type:"approach",reason:"Consider breaking this into smaller, concrete steps."};}
-  if(rec){overseerState.recommendations.push(rec);showOverseerRecommendation(rec);}
+  var recs=[];
+
+  if(taskAnalysis.code>0){
+    recs.push({type:"model_switch",model:"DeepSeek R1",reason:"Stuck on code. R1's step-by-step reasoning can debug deeper.",confidence:90});
+    recs.push({type:"model_switch",model:"Claude Opus 4.1",reason:"Try higher reasoning power for complex logic issues.",confidence:75});
+    recs.push({type:"approach",reason:"Try: Print debug statements, isolate the exact line causing the issue.",confidence:70});
+  }else if(taskAnalysis.reason>0){
+    recs.push({type:"model_switch",model:"Claude Opus 4.1",reason:"Complex reasoning. Switching to strongest analyzer.",confidence:85});
+    recs.push({type:"model_switch",model:"DeepSeek R1",reason:"Full reasoning model can think through the problem systematically.",confidence:80});
+    recs.push({type:"approach",reason:"Break down into smaller questions and solve each one separately.",confidence:75});
+  }else if(taskAnalysis.write>0){
+    recs.push({type:"model_switch",model:"Claude Sonnet 4",reason:"Better at clear writing. Opus overkill here.",confidence:75});
+    recs.push({type:"approach",reason:"Try: 'Explain this more clearly' or 'Make it more concise'",confidence:70});
+  }else{
+    recs.push({type:"approach",reason:"Ask a more specific follow-up question to get better results.",confidence:75});
+    recs.push({type:"approach",reason:"Try providing an example of what you want.",confidence:70});
+  }
+
+  if(recs.length>0){
+    var bestRec=recs[0];
+    overseerState.recommendations.push(bestRec);
+    showBetterRecommendation(bestRec,recs.slice(1,2));
+  }
+}
+function showStepUpdate(prevStep,nextStep){
+  if(!nextStep)return;
+  var notice=document.createElement("div");
+  notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(34,197,94,0.1);border-left:3px solid #22c55e;border-radius:4px;font-size:12px;color:var(--tx)";
+  notice.innerHTML="✓ <strong>Step completed:</strong> "+esc(prevStep)+"<br>→ <strong>Next:</strong> "+esc(nextStep);
+  document.getElementById("chat").appendChild(notice);
 }
 function makeProactiveRecommendation(){
-  if(overseerState.progress>70&&overseerState.goal==="debug"&&overseerState.messagesProcessed>5){
-    var rec={type:"next_step",reason:"Debug looks nearly complete. Consider: (1) Add tests to prevent regression, (2) Document the fix"};
+  if(overseerState.progress>75&&overseerState.goal==="debug"&&overseerState.messagesProcessed>5){
+    var recs=[
+      {type:"next_step",reason:"Add test case to verify fix works",confidence:85},
+      {type:"next_step",reason:"Document what caused the bug and solution",confidence:80}
+    ];
+    var rec={type:"next_step",reason:"Debug nearly complete. Next: write test + document fix",confidence:85};
     overseerState.recommendations.push(rec);
-    showOverseerRecommendation(rec);
+    showBetterRecommendation(rec,recs.slice(1));
   }
-  if(overseerState.progress>80&&overseerState.goal==="feature"&&overseerState.messagesProcessed>6){
-    var rec2={type:"next_step",reason:"Feature implementation nearly done. Next: integration testing, then code review"};
+  if(overseerState.progress>75&&overseerState.goal==="feature"&&overseerState.messagesProcessed>6){
+    var recs2=[
+      {type:"next_step",reason:"Run integration tests against main system",confidence:90},
+      {type:"next_step",reason:"Create PR for code review before merging",confidence:85}
+    ];
+    var rec2={type:"next_step",reason:"Feature nearly complete. Next: integration testing, then code review",confidence:90};
     overseerState.recommendations.push(rec2);
-    showOverseerRecommendation(rec2);
+    showBetterRecommendation(rec2,recs2.slice(1));
+  }
+  if(overseerState.progress>80&&overseerState.goal==="design"&&overseerState.messagesProcessed>4){
+    var recs3=[
+      {type:"next_step",reason:"Walk through each component to validate design",confidence:85},
+      {type:"next_step",reason:"Get feedback from team on proposed architecture",confidence:80}
+    ];
+    var rec3={type:"next_step",reason:"Design review nearly complete. Next: validate components, get team feedback",confidence:85};
+    overseerState.recommendations.push(rec3);
+    showBetterRecommendation(rec3,recs3.slice(1));
+  }
+  if(overseerState.efficiencyScore<50&&overseerState.messagesProcessed>3){
+    var rec4={type:"approach",reason:"Conversation pace is slow. Try asking for shorter, more focused responses.",confidence:70};
+    overseerState.recommendations.push(rec4);
+    showBetterRecommendation(rec4,[]);
   }
 }
 function updateOverseerStatus(){
+  var progressColor=overseerState.progress<40?"#ef4444":(overseerState.progress<70?"#f59e0b":"#22c55e");
   var statusHtml='<div style="padding:10px;background:rgba(139,140,247,0.08);border-radius:8px;font-size:12px;margin:8px 0;border-left:3px solid var(--ac)">';
-  statusHtml+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><strong>Overseer Status</strong><span style="color:var(--mu)">'+overseerState.progress+'%</span></div>';
-  statusHtml+='<div style="background:rgba(0,0,0,0.2);height:4px;border-radius:2px;margin-bottom:6px"><div style="background:var(--ac);height:100%;width:'+overseerState.progress+'%;border-radius:2px;transition:width 0.3s"></div></div>';
+  statusHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+  statusHtml+='<strong>Overseer Intelligence Report</strong>';
+  statusHtml+='<span style="font-size:11px;color:var(--mu)">'+overseerState.progress+'% • '+overseerState.conversationQuality+'</span>';
+  statusHtml+='</div>';
+
+  statusHtml+='<div style="background:rgba(0,0,0,0.2);height:4px;border-radius:2px;margin-bottom:8px">';
+  statusHtml+='<div style="background:'+progressColor+';height:100%;width:'+overseerState.progress+'%;border-radius:2px;transition:width 0.3s"></div></div>';
+
+  var stepDisplay="";
+  if(overseerState.steps.length>0&&overseerState.currentStep<overseerState.steps.length){
+    stepDisplay=' • Step: '+overseerState.currentStep+'/'+overseerState.steps.length;
+  }
+
+  statusHtml+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;font-size:11px;color:var(--mu)">';
+  statusHtml+='<div>Goal: '+overseerState.goalType+'</div>';
+  statusHtml+='<div>Success: '+overseerState.successProbability+'%</div>';
+  statusHtml+='<div>Quality: '+overseerState.qualityScore+'%</div>';
+  statusHtml+='<div>Efficiency: '+overseerState.efficiencyScore+'%</div>';
+  statusHtml+='</div>';
+
   statusHtml+='<div style="font-size:11px;color:var(--mu);line-height:1.4">';
-  statusHtml+='Goal: '+overseerState.goalType+' • Messages: '+overseerState.messagesProcessed+' • Models: '+overseerState.modelsUsed.size;
+  statusHtml+='Messages: '+overseerState.messagesProcessed+' • Models: '+overseerState.modelsUsed.size;
   if(overseerState.stuck){statusHtml+=' • ⚠️ Stuck';}
+  statusHtml+=stepDisplay;
   statusHtml+='</div></div>';
+
   if(!document.getElementById("overseerStatus")){
     var statusEl=document.createElement("div");statusEl.id="overseerStatus";
     document.getElementById("chat").appendChild(statusEl);
   }
   document.getElementById("overseerStatus").innerHTML=statusHtml;
 }
-function showOverseerRecommendation(rec){
-  var recHtml='<div style="padding:9px 12px;margin:8px 0;background:rgba(245,158,11,0.1);border-left:3px solid #f59e0b;border-radius:4px;font-size:12px;color:var(--tx)">';
-  recHtml+='<strong style="display:block;margin-bottom:4px">💡 Overseer Suggestion</strong>';
-  if(rec.type==="model_switch"){recHtml+='Switch to <strong>'+esc(rec.to)+'</strong>: '+esc(rec.reason);}
-  else if(rec.type==="approach"){recHtml+='Approach: '+esc(rec.reason);}
-  else if(rec.type==="next_step"){recHtml+=esc(rec.reason);}
+function showBetterRecommendation(rec,alternates){
+  var recHtml='<div style="padding:10px 12px;margin:8px 0;background:rgba(245,158,11,0.1);border-left:3px solid #f59e0b;border-radius:4px;font-size:12px;color:var(--tx)">';
+  recHtml+='<strong style="display:block;margin-bottom:6px">💡 Overseer Recommendation ('+rec.confidence+'% confidence)</strong>';
+  if(rec.type==="model_switch"){
+    recHtml+='<div style="padding:6px 0">Switch to <strong>'+esc(rec.model)+'</strong></div>';
+    recHtml+='<div style="color:var(--mu);font-size:11px;padding:4px 0">'+esc(rec.reason)+'</div>';
+  }else if(rec.type==="approach"){
+    recHtml+='<div style="padding:6px 0">'+esc(rec.reason)+'</div>';
+  }
+  if(alternates&&alternates.length>0){
+    recHtml+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.1);font-size:11px;color:var(--mu)">';
+    recHtml+='<strong>Alternatives:</strong><br>';
+    alternates.forEach(function(alt){
+      if(alt.type==="model_switch"){recHtml+='• '+esc(alt.model)+' ('+alt.confidence+'%)<br>';}
+      else{recHtml+='• '+esc(alt.reason.substring(0,50))+'... ('+alt.confidence+'%)<br>';}
+    });
+    recHtml+='</div>';
+  }
   recHtml+='</div>';
   var recEl=document.createElement("div");recEl.innerHTML=recHtml;
   document.getElementById("chat").appendChild(recEl);
@@ -1682,11 +1828,33 @@ document.getElementById("overseerToggleBtn").addEventListener("click",function()
   if(!overseerEnabled){stopOverseerMonitoring();if(document.getElementById("overseerStatus")){document.getElementById("overseerStatus").remove();}}
 });
 document.getElementById("overseerBtn").addEventListener("click",function(){
-  var msg="📊 Overseer Intelligence Report:\n";
-  msg+="Goal: "+overseerState.goalType+" | Progress: "+overseerState.progress+"%\n";
-  msg+="Messages: "+overseerState.messagesProcessed+" | Models used: "+overseerState.modelsUsed.size+"\n";
-  msg+="Status: "+(overseerState.stuck?"⚠️ STUCK":"✓ On track")+"\n";
-  if(overseerState.recommendations.length){msg+="\nRecommendations: "+overseerState.recommendations.length+" pending";}
+  var msg="📊 OVERSEER INTELLIGENCE REPORT\n";
+  msg+="═════════════════════════════════════\n\n";
+  msg+="📌 GOAL TRACKING:\n";
+  msg+="  Task: "+overseerState.goalType+"\n";
+  msg+="  Progress: "+overseerState.progress+"%\n";
+  msg+="  Status: "+(overseerState.stuck?"⚠️ STUCK":"✓ On track")+"\n\n";
+  msg+="📊 CONVERSATION METRICS:\n";
+  msg+="  Messages: "+overseerState.messagesProcessed+"\n";
+  msg+="  Models used: "+overseerState.modelsUsed.size+" ("+Array.from(overseerState.modelsUsed).map(function(m){return m.split("/").pop().substring(0,10);}).join(", ")+")\n";
+  msg+="  Time: "+Math.round((Date.now()-overseerState.startTime)/1000)+"s\n\n";
+  msg+="📈 QUALITY METRICS:\n";
+  msg+="  Quality Score: "+overseerState.qualityScore+"%\n";
+  msg+="  Efficiency Score: "+overseerState.efficiencyScore+"%\n";
+  msg+="  Success Probability: "+overseerState.successProbability+"%\n\n";
+  if(overseerState.steps.length>0){
+    msg+="🎯 TASK STEPS:\n";
+    overseerState.steps.forEach(function(s,i){
+      msg+="  "+(i<overseerState.currentStep?"✓":"○")+" "+s+"\n";
+    });
+    msg+="\n";
+  }
+  if(overseerState.recommendations.length){
+    msg+="💡 PENDING RECOMMENDATIONS: "+overseerState.recommendations.length+"\n";
+    overseerState.recommendations.slice(-3).forEach(function(r){
+      msg+="  • "+r.reason+"\n";
+    });
+  }else{msg+="💡 No recommendations at this time.\n";}
   alert(msg);
 });
 document.getElementById("attachBtn").addEventListener("click",function(){document.getElementById("fileInput").click();});
