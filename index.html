@@ -1550,6 +1550,18 @@ function mkCard(m){
 }
 
 /* ---- File attach ---- */
+/* WebP at the same quality setting is meaningfully smaller than JPEG
+   (typically 25-35%) with no visible quality loss, which matters here
+   since these images often need to stay legible for reading nameplates,
+   wiring labels, and error codes. Detected once and cached rather than
+   re-tested on every upload. */
+var WEBP_SUPPORTED=null;
+function supportsWebP(){
+  if(WEBP_SUPPORTED!==null)return WEBP_SUPPORTED;
+  var c=document.createElement("canvas");c.width=1;c.height=1;
+  WEBP_SUPPORTED=c.toDataURL("image/webp").indexOf("image/webp")===0;
+  return WEBP_SUPPORTED;
+}
 async function compressImg(file){
   return new Promise(function(resolve){
     var r=new FileReader();r.onload=function(e){
@@ -1557,7 +1569,8 @@ async function compressImg(file){
         var MAX=1024,w=img.width,h=img.height;
         if(w>MAX||h>MAX){var rat=Math.min(MAX/w,MAX/h);w=Math.round(w*rat);h=Math.round(h*rat);}
         var c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);
-        resolve(c.toDataURL("image/jpeg",0.75));
+        if(supportsWebP()){resolve(c.toDataURL("image/webp",0.8));}
+        else{resolve(c.toDataURL("image/jpeg",0.75));}
       };img.src=e.target.result;
     };r.readAsDataURL(file);
   });
