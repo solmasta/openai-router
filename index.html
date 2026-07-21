@@ -491,6 +491,12 @@ var DEFAULT_PROMPTS=[{id:"1000000001",name:"HVAC Field Tech",content:"You are an
 var VISION_MODELS=["Qwen/Qwen3-VL-30B-A3B-Instruct","google/gemma-3-27b-it","meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"];
 var TOOL_MODELS=["mistralai/Mistral-Small-3.2-24B-Instruct-2506","meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo","meta-llama/Llama-3.3-70B-Instruct-Turbo","meta-llama/Llama-4-Scout-17B-16E-Instruct","Qwen/Qwen2.5-72B-Instruct","Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo","deepseek-ai/DeepSeek-V3.2"];
 var modelCanCodeAndControl=true;
+/* GitHub connection state - no UI to set these yet, so they stay unset
+   (features gated on them correctly report "not connected") until a
+   connect flow is built. Declared here so referencing them doesn't throw
+   a ReferenceError and crash every message send. */
+var ghToken=null,ghRepoOwner=null,ghRepoName=null;
+var GH_OPS_URL="https://github-ops-worker.lukedorsett.workers.dev";
 var REPO_TOOLS=[
   {type:"function","function":{name:"read_file",description:"Read a file from the connected GitHub repository. Returns file content.",parameters:{type:"object",properties:{path:{type:"string",description:"File path relative to repo root"}},required:["path"]}}},
   {type:"function","function":{name:"write_file",description:"Write or update a file in the connected GitHub repository. Creates commit.",parameters:{type:"object",properties:{path:{type:"string",description:"File path"},content:{type:"string",description:"Full file content"},message:{type:"string",description:"Commit message"}},required:["path","content","message"]}}},
@@ -2436,18 +2442,7 @@ async function send(){
   await doSendRequest(userContent,false,ap);
 }
 
-function dbgCP(msg){
-  var d=document.getElementById("dbgCheckpoint");
-  if(!d){
-    d=document.createElement("div");
-    d.id="dbgCheckpoint";
-    d.style.cssText="position:fixed;top:0;left:0;z-index:99999;background:rgba(255,0,0,0.85);color:#fff;font-size:11px;padding:4px 8px;font-family:monospace;max-width:100%;word-break:break-all";
-    document.body.appendChild(d);
-  }
-  d.textContent="DEBUG: "+msg+" @ "+new Date().toLocaleTimeString();
-}
 async function doSendRequest(userContent,isRegen,ap){
-  dbgCP("start doSendRequest");
   if(!ap)ap=getAP();
   var messages=[];
   var modelSysPrompt=getModelSystemPrompt();
@@ -2455,10 +2450,8 @@ async function doSendRequest(userContent,isRegen,ap){
 
   var injectedInstructions=null;
   if(!isRegen){
-    dbgCP("before interceptAndEnhanceMessage");
     var interceptText=typeof userContent==="string"?userContent:((userContent.find&&userContent.find(function(c){return c.type==="text";}))||{}).text||"";
     injectedInstructions=interceptAndEnhanceMessage(interceptText);
-    dbgCP("after interceptAndEnhanceMessage");
   }
   if(injectedInstructions){
     messages.push({role:"system",content:"TASK INSTRUCTIONS:\n"+injectedInstructions});
@@ -2468,7 +2461,6 @@ async function doSendRequest(userContent,isRegen,ap){
   var searchUsed=false;
   var searchTime=null;
   if(webSearchOn){
-    dbgCP("entering webSearch block");
     var qtext=typeof userContent==="string"?userContent:((userContent&&userContent.find&&userContent.find(function(c){return c.type==="text";})||{}).text||"");
     /* Skip search entirely for code-heavy pastes - searching the web for raw
        code makes no sense and risks sending an oversized query downstream */
@@ -2481,9 +2473,7 @@ async function doSendRequest(userContent,isRegen,ap){
         return typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(x){return x.type==="text";})||{}).text||"");
       }).join(" ");
       var searchQuery=(recentCtx+" "+qtext).trim().slice(0,300);
-      dbgCP("before doSearch fetch");
       ctx=await doSearch(searchQuery);
-      dbgCP("after doSearch fetch, ctx="+(ctx?"got data":"null"));
     }
     if(ctx){
       searchUsed=true;
@@ -2496,13 +2486,11 @@ async function doSendRequest(userContent,isRegen,ap){
       }
     }
   }
-  dbgCP("before appendMsg assistant");
   messages=messages.concat(chatHistory.slice(0,-1));
   messages.push({role:"user",content:userContent});
   var asstMsg=appendMsg("assistant","",true);
   var full="";
   try{
-    dbgCP("entering try block, TOOL_MODELS check");
     if(TOOL_MODELS.indexOf(currentModel.id)>=0){
       try{
         var initTools=[];
@@ -2558,14 +2546,11 @@ async function doSendRequest(userContent,isRegen,ap){
     if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){toolsToSend=REPO_TOOLS;}
     var reqBody={model:currentModel.id,messages:messages,temperature:temperature,stream:true};
     if(toolsToSend.length>0){reqBody.tools=toolsToSend;reqBody.tool_choice="auto";}
-    dbgCP("before main fetch, workerUrl="+workerUrl+" secretSet="+(!!APP_SECRET));
     var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify(reqBody),signal:abortController.signal});
-    dbgCP("main fetch resolved, status="+res.status);
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error((err.error&&err.error.message)||"HTTP "+res.status);}
     var reader=res.body.getReader(),dec=new TextDecoder(),buf="",done=false;
-    var chunkCount=0;
     while(!done){
-      var chunk=await reader.read();chunkCount++;dbgCP("read chunk #"+chunkCount+" done="+chunk.done);if(chunk.done)break;
+      var chunk=await reader.read();if(chunk.done)break;
       buf+=dec.decode(chunk.value,{stream:true});
       var lines=buf.split("\n");buf=lines.pop();
       for(var i=0;i<lines.length;i++){
