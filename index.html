@@ -43,6 +43,14 @@ header{display:flex;align-items:center;justify-content:space-between;padding:13p
 .ib:focus-visible,.mb:focus-visible,.bp:focus-visible,.bg:focus-visible,.mic:focus-visible,.ws:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 .sb{display:flex;align-items:center;gap:8px;width:100%;padding:9px 2px;border:none;background:none;color:var(--mu);font-size:13px;cursor:pointer;text-align:left;flex-shrink:0;border-radius:10px;transition:background .15s}
 .sb:hover{color:var(--tx);background:var(--up)}
+.tabbar{display:flex;gap:6px;padding:6px 0;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabbar::-webkit-scrollbar{display:none}
+.tabpill{display:flex;align-items:center;gap:6px;background:var(--up);border-radius:14px;padding:6px 8px 6px 12px;font-size:12px;color:var(--mu);cursor:pointer;white-space:nowrap;flex-shrink:0;max-width:160px;transition:background .15s,color .15s}
+.tabpill.act{background:rgba(139,140,247,.18);color:var(--ac)}
+.tabpill .tpt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px}
+.tabpill .tpx{color:var(--mu);font-size:14px;line-height:1;padding:0 2px;border-radius:50%;flex-shrink:0}
+.tabpill .tpx:hover{color:var(--er)}
+.tabpill.act .tpx:hover{color:var(--er)}
 .sd{width:6px;height:6px;border-radius:50%;background:var(--br);flex-shrink:0}
 .sd.on{background:var(--ac)}
 .sl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -222,6 +230,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <span class="sl" id="activePromptName">System prompt</span>
     <span class="sa">&#8250;</span>
   </button>
+  <div class="tabbar hidden" id="tabBar"></div>
   <div class="chat" id="chat"><div class="es" id="emptyState"><div class="es-icon">✦</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div></div>
   <div class="tb hidden" id="tokenBar">
     <span id="tokenCount">0 tokens</span>
@@ -239,7 +248,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
         <button class="ws" id="wsBtn" title="Web search">&#128269;</button>
         <button class="ws" id="overseerBtn" title="Overseer status">🤖</button>
         <button class="ws" id="brainstormBtn" title="Brainstorming suggestions">💭</button>
-        <button class="ws" id="newTabBtn" title="New chat in new tab" style="color:var(--ac);font-size:17px;font-weight:400">&#43;</button>
+        <button class="ws" id="newTabBtn" title="New conversation tab" style="color:var(--ac);font-size:17px;font-weight:400">&#43;</button>
         <div class="ir">
           <button id="clearBtn" class="bg">Clear</button>
           <button id="sendBtn" class="bp">Send</button>
@@ -402,6 +411,8 @@ var CLAUDE_URL="https://claude-worker.lukedorsett.workers.dev";
 var APP_SECRET=null;
 var AUTOSAVE_KEY="ai_autosave";
 var RECENT_KEY="ai_recent";
+var TABS_KEY="ai_tabs";
+var openTabs=[],activeTabIndex=0;
 var undoTimer=null,undoData=null;
 var activeBackend="deepinfra",workerUrl="",allModels=[],currentModel={id:"",label:""};
 var chatHistory=[],sending=false,attachedFiles=[];
@@ -1829,6 +1840,11 @@ function autoSave(){
       messages:chatHistory.map(function(m){return{role:m.role,content:typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(c){return c.type==="text";})||{}).text||"")};})
     }));
   }catch(e){}
+  if(openTabs.length){
+    openTabs[activeTabIndex]=currentTabSnapshot();
+    if(openTabs.length>1)renderTabBar();
+    saveTabsToStorage();
+  }
   driveAutoPush();
 }
 function loadAutoSave(){
@@ -1850,6 +1866,112 @@ function loadAutoSave(){
     updTokenBar();
   }catch(e){}
 }
+
+/* ---- Multi-tab conversations ---- */
+function tabTitleFor(hist){
+  var firstUser=(hist||[]).find(function(m){return m.role==="user";});
+  if(!firstUser)return "New chat";
+  var raw=typeof firstUser.content==="string"?firstUser.content:((firstUser.content&&firstUser.content.find&&firstUser.content.find(function(c){return c.type==="text";})||{}).text||"New chat");
+  return raw.slice(0,24)+(raw.length>24?"...":"");
+}
+function currentTabSnapshot(){
+  return{title:tabTitleFor(chatHistory),chatHistory:chatHistory.slice(),modelId:currentModel.id,modelLabel:currentModel.label,backend:activeBackend,sessionId:sessionId};
+}
+function syncActiveTabFromLiveState(){
+  if(!openTabs.length)return;
+  openTabs[activeTabIndex]=currentTabSnapshot();
+}
+function saveTabsToStorage(){
+  try{localStorage.setItem(TABS_KEY,JSON.stringify({tabs:openTabs,active:activeTabIndex}));}catch(e){}
+}
+function renderChatFromHistory(hist){
+  document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✦</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
+  chatHistory=[];
+  (hist||[]).forEach(function(m){chatHistory.push({role:m.role,content:m.content});appendMsg(m.role,m.content);});
+  setTimeout(function(){var c=document.getElementById("chat");c.scrollTop=c.scrollHeight;},50);
+  updTokenBar();
+}
+function applyTabAsLiveState(t){
+  sessionId=t.sessionId||Date.now().toString();
+  if(t.backend&&t.backend!==activeBackend){
+    activeBackend=t.backend;var B=BACKENDS[activeBackend];workerUrl=B.url;allModels=B.models;
+    document.getElementById("deepinfraBtn").className="btab"+(activeBackend==="deepinfra"?" act":"");
+    document.getElementById("openrouterBtn").className="btab"+(activeBackend==="openrouter"?" act or":"");
+    document.getElementById("claudeBtn").className="btab"+(activeBackend==="claude"?" act":"");
+  }
+  var def=allModels.find(function(m){return m.id===t.modelId;});
+  if(def){setModel(def);}else if(t.modelId){currentModel={id:t.modelId,label:t.modelLabel||t.modelId};document.getElementById("modelBtnLabel").textContent=currentModel.label;document.getElementById("modelBtn").disabled=false;}
+  renderChatFromHistory(t.chatHistory||[]);
+}
+function renderTabBar(){
+  var bar=document.getElementById("tabBar");
+  if(openTabs.length<2){bar.classList.add("hidden");bar.innerHTML="";return;}
+  bar.classList.remove("hidden");
+  bar.innerHTML="";
+  openTabs.forEach(function(t,i){
+    var pill=document.createElement("div");
+    pill.className="tabpill"+(i===activeTabIndex?" act":"");
+    var span=document.createElement("span");
+    span.className="tpt";
+    span.textContent=t.title||"New chat";
+    pill.appendChild(span);
+    var x=document.createElement("span");
+    x.className="tpx";x.textContent="✕";
+    x.addEventListener("click",function(e){e.stopPropagation();closeTab(i);});
+    pill.appendChild(x);
+    pill.addEventListener("click",function(){switchToTab(i);});
+    bar.appendChild(pill);
+  });
+}
+function switchToTab(index){
+  if(index===activeTabIndex||sending)return;
+  syncActiveTabFromLiveState();
+  saveTabsToStorage();
+  activeTabIndex=index;
+  applyTabAsLiveState(openTabs[index]);
+  renderTabBar();
+  saveTabsToStorage();
+}
+function createNewTab(){
+  if(sending)return;
+  syncActiveTabFromLiveState();
+  saveTabsToStorage();
+  var newSessionId=Date.now().toString();
+  openTabs.push({title:"New chat",chatHistory:[],modelId:currentModel.id,modelLabel:currentModel.label,backend:activeBackend,sessionId:newSessionId});
+  activeTabIndex=openTabs.length-1;
+  sessionId=newSessionId;
+  renderChatFromHistory([]);
+  renderTabBar();
+  saveTabsToStorage();
+}
+function closeTab(index){
+  if(openTabs.length<=1)return;
+  var closingActive=(index===activeTabIndex);
+  openTabs.splice(index,1);
+  if(closingActive){
+    var newIndex=Math.min(index,openTabs.length-1);
+    activeTabIndex=newIndex;
+    applyTabAsLiveState(openTabs[newIndex]);
+  }else if(index<activeTabIndex){
+    activeTabIndex--;
+  }
+  renderTabBar();
+  saveTabsToStorage();
+}
+function initTabs(){
+  var raw=null;
+  try{raw=JSON.parse(localStorage.getItem(TABS_KEY)||"null");}catch(e){}
+  if(raw&&raw.tabs&&raw.tabs.length){
+    openTabs=raw.tabs;
+    activeTabIndex=Math.min(Math.max(raw.active||0,0),openTabs.length-1);
+    applyTabAsLiveState(openTabs[activeTabIndex]);
+  }else{
+    openTabs=[currentTabSnapshot()];
+    activeTabIndex=0;
+  }
+  renderTabBar();
+}
+
 function loadDraft(){
   try{
     var d=localStorage.getItem("ai_draft");
@@ -1887,7 +2009,11 @@ function driveInitClient(){
         driveSaveToken(resp.access_token,resp.expires_in);
         localStorage.setItem("drive_connected","1");
         updateDriveUI(true);
-        driveEnsureFolder().then(function(){driveAutoPush(true);});
+        if(chatHistory.length===0){
+          driveAutoRestoreIfEmpty();
+        }else{
+          driveEnsureFolder().then(function(){driveAutoPush(true);});
+        }
       }
     }
   });
@@ -1977,6 +2103,28 @@ async function driveRestore(){
     alert("Restored from Google Drive!");
     location.reload();
   }catch(e){alert("Restore failed: "+e.message);}
+}
+/* Silent auto-restore on load - only fires when there is nothing local to
+   lose (no current conversation), so it can never clobber unsaved work.
+   Covers the case where the browser/OS wiped localStorage but a Drive
+   backup still exists from before. */
+async function driveAutoRestoreIfEmpty(){
+  if(chatHistory.length>0)return;
+  if(!driveToken||driveTokenExpiry<=Date.now())return;
+  try{
+    if(!driveFolderId)await driveEnsureFolder();
+    if(!driveFileId)await driveFindFile();
+    if(!driveFileId)return;
+    var res=await fetch("https://www.googleapis.com/drive/v3/files/"+driveFileId+"?alt=media",{headers:{Authorization:"Bearer "+driveToken}});
+    var data=await res.json();
+    if(!data||(!data.autosave&&!data.prompts&&!data.projects&&!data.workprojects))return;
+    if(data.prompts)localStorage.setItem("ai_prompts",JSON.stringify(data.prompts));
+    if(data.projects)localStorage.setItem("ai_projects",JSON.stringify(data.projects));
+    if(data.workprojects)localStorage.setItem("ai_workprojects",JSON.stringify(data.workprojects));
+    if(data.autosave)localStorage.setItem("ai_autosave",data.autosave);
+    updateDriveStatus("Restored from backup "+new Date().toLocaleTimeString());
+    location.reload();
+  }catch(e){}
 }
 function updateDriveUI(connected){
   var btn=document.getElementById("driveConnectBtn");
@@ -2143,7 +2291,7 @@ document.getElementById("openrouterBtn").addEventListener("click",function(){if(
 document.getElementById("claudeBtn").addEventListener("click",function(){if(activeBackend!=="claude"){activeBackend="claude";loadBackend();}});
 document.getElementById("modelBtn").addEventListener("click",function(){renderModelList();openModal("modelModal");});
 document.getElementById("settingsBtn").addEventListener("click",function(){openModal("settingsModal");});
-document.getElementById("newTabBtn").addEventListener("click",function(){window.open(window.location.href,"_blank");});
+document.getElementById("newTabBtn").addEventListener("click",function(){createNewTab();});
 document.getElementById("systemToggle").addEventListener("click",function(){renderPromptList();openModal("promptModal");});
 document.getElementById("newPromptBtn").addEventListener("click",function(){closeModal("promptModal");openPE(null);});
 document.getElementById("importDefaultsBtn").addEventListener("click",importDefaults);
@@ -2192,11 +2340,16 @@ document.getElementById("agentToggleBtn").addEventListener("click",function(){
   this.textContent=agentAutoSelect?"ON":"OFF";
   this.style.opacity=agentAutoSelect?"1":"0.6";
 });
-document.getElementById("overseerToggleBtn").addEventListener("click",function(){
-  overseerEnabled=!overseerEnabled;
-  this.textContent=overseerEnabled?"ON":"OFF";
-  this.style.opacity=overseerEnabled?"1":"0.6";
+function setOverseerEnabled(val){
+  overseerEnabled=val;
+  var btn=document.getElementById("overseerToggleBtn");
+  if(btn){btn.textContent=overseerEnabled?"ON":"OFF";btn.style.opacity=overseerEnabled?"1":"0.6";}
+  var quick=document.getElementById("overseerBtn");
+  if(quick)quick.style.opacity=overseerEnabled?"1":"0.4";
   if(!overseerEnabled){stopOverseerMonitoring();if(document.getElementById("overseerStatus")){document.getElementById("overseerStatus").remove();}}
+}
+document.getElementById("overseerToggleBtn").addEventListener("click",function(){
+  setOverseerEnabled(!overseerEnabled);
 });
 document.getElementById("brainstormToggleBtn").addEventListener("click",function(){
   brainstormMode=!brainstormMode;
@@ -2223,7 +2376,7 @@ document.getElementById("brainstormBtn").addEventListener("click",function(){
   });
   alert(msg);
 });
-document.getElementById("overseerBtn").addEventListener("click",function(){
+function showOverseerReport(){
   var msg="📊 OVERSEER INTELLIGENCE REPORT\n";
   msg+="═════════════════════════════════════\n\n";
   msg+="📌 GOAL TRACKING:\n";
@@ -2271,7 +2424,31 @@ document.getElementById("overseerBtn").addEventListener("click",function(){
     }
   }
   alert(msg);
-});
+}
+/* Tap = quick ON/OFF toggle so Overseer can be gotten out of the way fast
+   mid-conversation. Long-press (500ms) = full report, same as the old
+   tap-only behavior. Covers both touch and mouse. */
+(function(){
+  var btn=document.getElementById("overseerBtn");
+  var pressTimer=null,longPressed=false;
+  function start(){longPressed=false;pressTimer=setTimeout(function(){longPressed=true;showOverseerReport();},500);}
+  function end(){
+    clearTimeout(pressTimer);
+    if(!longPressed){
+      setOverseerEnabled(!overseerEnabled);
+      var notice=document.createElement("div");
+      notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(139,140,247,0.08);border-left:3px solid var(--ac);border-radius:4px;font-size:11px;color:var(--mu)";
+      notice.textContent="🤖 Overseer turned "+(overseerEnabled?"ON":"OFF")+" (long-press for full report)";
+      document.getElementById("chat").appendChild(notice);
+      scrollBot();
+    }
+  }
+  btn.addEventListener("touchstart",start,{passive:true});
+  btn.addEventListener("touchend",end);
+  btn.addEventListener("mousedown",start);
+  btn.addEventListener("mouseup",end);
+  btn.addEventListener("mouseleave",function(){clearTimeout(pressTimer);});
+})();
 document.getElementById("attachBtn").addEventListener("click",function(){document.getElementById("fileInput").click();});
 document.getElementById("fileInput").addEventListener("change",async function(e){
   var files=Array.from(e.target.files);e.target.value="";
@@ -2612,6 +2789,7 @@ document.getElementById("clearBtn").addEventListener("click",function(){
   clearActiveWproj();stopOverseerMonitoring();overseerState={goal:null,goalType:null,progress:0,status:"idle",startTime:null,messagesProcessed:0,modelsUsed:new Set(),estimatedTokens:0,stuck:false,stuckSince:null,recommendations:[]};
   document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✶</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
   document.getElementById("tokenBar").classList.add("hidden");
+  if(openTabs.length){openTabs[activeTabIndex]=currentTabSnapshot();renderTabBar();saveTabsToStorage();}
   showUndoToast();
 });
 document.getElementById("undoBtn").addEventListener("click",undoClear);
@@ -2652,13 +2830,15 @@ loadFavs();
   document.getElementById("wsBtn").classList.add("on");
   document.getElementById("wsBtn").title="Web search ON";
 })();
-loadBackend();loadPrompts();loadProjects();loadWProjects();loadAutoSave();loadDraft();
+loadBackend();loadPrompts();loadProjects();loadWProjects();loadAutoSave();loadDraft();initTabs();
 
 /* Reconnect to Drive silently if previously connected, no popup if session still valid */
 if(localStorage.getItem("drive_connected")==="1"){
   updateDriveUI(true);
   if(!driveToken||driveTokenExpiry<=Date.now()){
     setTimeout(driveSilentRenew,1200);
+  }else{
+    driveAutoRestoreIfEmpty();
   }
 }else{
   updateDriveUI(false);
