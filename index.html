@@ -2679,6 +2679,14 @@ if ('serviceWorker' in navigator) {
         }
       });
     });
+    /* Force an update check right away and every time the installed app
+       is opened/resumed - browsers only auto-check occasionally otherwise,
+       which is why a fresh deploy can sit uninstalled for a while. */
+    reg.update();
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') reg.update();
+    });
+    window.addEventListener('focus', function() { reg.update(); });
   });
   navigator.serviceWorker.addEventListener('controllerchange', function() {
     window.location.reload();

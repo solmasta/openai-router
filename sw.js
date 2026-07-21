@@ -1,4 +1,4 @@
-var CACHE = 'ai-router-v44';
+var CACHE = 'ai-router-v45';
 /* Relative (no leading slash) so these resolve against this script's own
    location. The app is served from a subpath (e.g. /openai-router/), and
    an absolute '/index.html' would resolve to the site ROOT, not the app -
@@ -37,14 +37,17 @@ self.addEventListener('activate', function(e) {
   );
 });
 
-/* Fetch - network first, fall back to cache */
+/* Fetch - network first (bypassing HTTP cache entirely), fall back to
+   cache only when offline. 'no-store' means the browser's own HTTP cache
+   is skipped too, not just this service worker's cache - otherwise a
+   fresh deploy could still be served from HTTP cache for its max-age. */
 self.addEventListener('fetch', function(e) {
   /* Skip non-GET and cross-origin requests */
   if (e.request.method !== 'GET') return;
   if (!e.request.url.startsWith(self.location.origin)) return;
 
   e.respondWith(
-    fetch(e.request).then(function(res) {
+    fetch(e.request, { cache: 'no-store' }).then(function(res) {
       /* Clone and cache the fresh response */
       var copy = res.clone();
       caches.open(CACHE).then(function(cache) {
