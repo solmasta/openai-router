@@ -405,6 +405,18 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
   </div>
 </div></div>
 
+<div class="modal hidden" id="profileModal"><div class="sheet">
+  <div class="sh"><span>Profiles</span><button class="sc" id="closeProfileModal">&#10005;</button></div>
+  <div class="sbody">
+    <p class="el">Each profile keeps its own chats, memories, prompts, projects, and Google Drive connection - tap one to switch, all on this device. Good for separating Work from Personal.</p>
+    <div id="profileList"></div>
+  </div>
+  <div class="sf2" style="display:flex;gap:8px">
+    <input type="text" id="newProfileInput" class="fi" placeholder="e.g. Work" style="flex:2" autocomplete="off">
+    <button class="bp" id="addProfileBtn" style="flex:1">Create</button>
+  </div>
+</div></div>
+
 <div class="modal hidden" id="settingsModal"><div class="sheet">
   <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.0</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
@@ -420,7 +432,8 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Auto prompt injection</div><div class="ssb">Overseer auto-generates optimal instructions for each model</div></div><button class="bg" id="autoPropomptToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Recent chats</div><div class="ssb">Restore any of the last 5 conversations</div></div><button class="bg" id="recentChatsBtn">View</button></div>
     <div class="sr"><div><div class="slb">Memory</div><div class="ssb">Facts the AI remembers about you across all conversations</div></div><button class="bg" id="memoryBtn">View</button></div>
-    <div class="sr"><div><div class="slb">Document library</div><div class="ssb">Documents saved permanently, reusable in any conversation</div></div><button class="bg" id="docLibraryBtn">View</button></div></div>
+    <div class="sr"><div><div class="slb">Document library</div><div class="ssb">Documents saved permanently, reusable in any conversation</div></div><button class="bg" id="docLibraryBtn">View</button></div>
+    <div class="sr"><div><div class="slb">Profile</div><div class="ssb" id="activeProfileLabel">default</div></div><button class="bg" id="profileBtn">Switch</button></div></div>
     <div class="sr"><div><div class="slb">&#128176; DeepInfra credits</div><div class="ssb">Pay-as-you-go, fractions of a cent per message</div></div><a href="https://deepinfra.com/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; OpenRouter credits</div><div class="ssb">Needed for uncensored paid models</div></div><a href="https://openrouter.ai/credits" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; Anthropic credits</div><div class="ssb">For Claude models (Opus, Sonnet, Haiku)</div></div><a href="https://console.anthropic.com/settings/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
@@ -449,6 +462,76 @@ var OR_URL="https://openaiworker.lukedorsett.workers.dev";
 var CLAUDE_URL="https://claude-worker.lukedorsett.workers.dev";
 /* APP_SECRET is fetched from worker's /secret endpoint on page load */
 var APP_SECRET=null;
+/* ---- Profiles: separate namespaces for chats/memories/prompts/projects
+   and Drive connection, switchable on one device (e.g. Work vs Personal).
+   The "default" profile keeps unprefixed keys for full backward
+   compatibility with data that existed before profiles - only additional
+   profiles get a prefix, so nothing migrates or breaks for existing use. */
+var PROFILE_KEY="ai_active_profile";
+var PROFILES_LIST_KEY="ai_profiles_list";
+var activeProfile="default";
+try{activeProfile=localStorage.getItem(PROFILE_KEY)||"default";}catch(e){}
+function pk(key){return activeProfile==="default"?key:("prof_"+activeProfile+"__"+key);}
+var PROFILE_DATA_KEYS=["ai_autosave","ai_recent","ai_tabs","ai_memories","ai_doclibrary","ai_prompts","ai_projects","ai_workprojects","ai_draft","drive_connected","drive_file_id","drive_file_ids","drive_folder_id","drive_token"];
+function listProfiles(){
+  var names=["default"];
+  try{
+    var stored=JSON.parse(localStorage.getItem(PROFILES_LIST_KEY)||"[]");
+    stored.forEach(function(n){if(names.indexOf(n)<0)names.push(n);});
+  }catch(e){}
+  return names;
+}
+function saveProfilesList(names){
+  localStorage.setItem(PROFILES_LIST_KEY,JSON.stringify(names.filter(function(n){return n!=="default";})));
+}
+function flushCurrentProfileState(){
+  try{autoSave();}catch(e){}
+  try{if(openTabs.length){syncActiveTabFromLiveState();saveTabsToStorage();}}catch(e){}
+}
+function switchProfile(name){
+  if(name===activeProfile)return;
+  flushCurrentProfileState();
+  localStorage.setItem(PROFILE_KEY,name);
+  location.reload();
+}
+function createProfile(name){
+  name=(name||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,24);
+  if(!name){alert("Enter a valid name (letters/numbers).");return;}
+  var names=listProfiles();
+  if(names.indexOf(name)>=0){alert("A profile with that name already exists.");return;}
+  names.push(name);
+  saveProfilesList(names);
+  switchProfile(name);
+}
+function deleteProfile(name){
+  if(name==="default"){alert("Can't delete the default profile.");return;}
+  if(name===activeProfile){alert("Switch to a different profile before deleting this one.");return;}
+  if(!confirm("Delete profile \""+name+"\"? This removes its chats, memories, prompts, and Drive connection permanently."))return;
+  PROFILE_DATA_KEYS.forEach(function(k){localStorage.removeItem("prof_"+name+"__"+k);});
+  var names=listProfiles().filter(function(n){return n!==name;});
+  saveProfilesList(names);
+  renderProfileList();
+}
+function renderProfileList(){
+  var list=document.getElementById("profileList");if(!list)return;
+  list.innerHTML="";
+  listProfiles().forEach(function(name){
+    var card=document.createElement("div");card.className="pc"+(name===activeProfile?" act":"");
+    var top=document.createElement("div");top.className="ct2";
+    var nm=document.createElement("span");nm.className="cn";nm.textContent=(name==="default"?"Default":name)+(name===activeProfile?" (active)":"");
+    top.appendChild(nm);
+    if(name!=="default"&&name!==activeProfile){
+      var db=document.createElement("button");db.className="cdb";db.innerHTML="&#10005;";
+      db.addEventListener("click",function(e){e.stopPropagation();deleteProfile(name);});
+      top.appendChild(db);
+    }
+    card.appendChild(top);
+    if(name!==activeProfile){
+      card.addEventListener("click",function(){switchProfile(name);});
+    }
+    list.appendChild(card);
+  });
+}
 var AUTOSAVE_KEY="ai_autosave";
 var RECENT_KEY="ai_recent";
 var TABS_KEY="ai_tabs";
@@ -744,7 +827,7 @@ function saveFavs(){localStorage.setItem(FK,JSON.stringify(favorites));}
 function saveToRecent(){
   if(!chatHistory.length)return;
   try{
-    var recent=JSON.parse(localStorage.getItem(RECENT_KEY)||"[]");
+    var recent=JSON.parse(localStorage.getItem(pk(RECENT_KEY))||"[]");
     var firstUser=chatHistory.find(function(m){return m.role==="user";});
     var title=firstUser?(typeof firstUser.content==="string"?firstUser.content:((firstUser.content&&firstUser.content.find&&firstUser.content.find(function(x){return x.type==="text";})||{}).text||"Chat")):"Chat";
     recent.unshift({
@@ -755,7 +838,7 @@ function saveToRecent(){
       messages:chatHistory.map(function(m){return{role:m.role,content:typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(x){return x.type==="text";})||{}).text||"")};})
     });
     if(recent.length>5)recent=recent.slice(0,5);
-    localStorage.setItem(RECENT_KEY,JSON.stringify(recent));
+    localStorage.setItem(pk(RECENT_KEY),JSON.stringify(recent));
   }catch(e){}
 }
 function showUndoToast(){
@@ -795,7 +878,7 @@ function undoClear(){
 function renderRecent(){
   var list=document.getElementById("recentList");
   try{
-    var recent=JSON.parse(localStorage.getItem(RECENT_KEY)||"[]");
+    var recent=JSON.parse(localStorage.getItem(pk(RECENT_KEY))||"[]");
     if(!recent.length){list.innerHTML='<p class="el">No recent chats. They appear here after you clear or start a new conversation.</p>';return;}
     list.innerHTML="";
     recent.forEach(function(r,i){
@@ -1645,11 +1728,11 @@ function clearAttach(){attachedFiles=[];renderAttach();}
 /* ---- Prompts ---- */
 var PK="ai_prompts";
 function loadPrompts(){
-  try{var s=JSON.parse(localStorage.getItem(PK)||"{}");prompts=s.prompts||[];activePromptId=s.activeId||null;}
+  try{var s=JSON.parse(localStorage.getItem(pk(PK))||"{}");prompts=s.prompts||[];activePromptId=s.activeId||null;}
   catch(e){prompts=[];activePromptId=null;}
   refreshPL();
 }
-function savePrompts(){localStorage.setItem(PK,JSON.stringify({prompts:prompts,activeId:activePromptId}));}
+function savePrompts(){localStorage.setItem(pk(PK),JSON.stringify({prompts:prompts,activeId:activePromptId}));}
 function getAP(){
   if(activeWProjId){
     var p=wproj.find(function(x){return x.id===activeWProjId;});
@@ -1768,8 +1851,8 @@ function importDefaults(){
 
 /* ---- Projects ---- */
 var GK="ai_projects";
-function loadProjects(){try{projects=JSON.parse(localStorage.getItem(GK)||"[]");}catch(e){projects=[];}}
-function saveProjects(){localStorage.setItem(GK,JSON.stringify(projects));driveAutoPush(true);}
+function loadProjects(){try{projects=JSON.parse(localStorage.getItem(pk(GK))||"[]");}catch(e){projects=[];}}
+function saveProjects(){localStorage.setItem(pk(GK),JSON.stringify(projects));driveAutoPush(true);}
 function renderProjectList(){
   var list=document.getElementById("projectList");list.innerHTML="";
   if(!projects.length){list.innerHTML='<p class="el">No folders yet.</p>';return;}
@@ -1871,8 +1954,8 @@ function delProject(){
 
 /* ---- Projects (dedicated, important-to-keep workspaces) ---- */
 var WPK="ai_workprojects";
-function loadWProjects(){try{wproj=JSON.parse(localStorage.getItem(WPK)||"[]");}catch(e){wproj=[];}}
-function saveWProjects(){localStorage.setItem(WPK,JSON.stringify(wproj));driveAutoPush(true);}
+function loadWProjects(){try{wproj=JSON.parse(localStorage.getItem(pk(WPK))||"[]");}catch(e){wproj=[];}}
+function saveWProjects(){localStorage.setItem(pk(WPK),JSON.stringify(wproj));driveAutoPush(true);}
 
 function renderWprojHub(){
   var list=document.getElementById("wprojList");list.innerHTML="";
@@ -2037,7 +2120,7 @@ document.addEventListener("visibilitychange",function(){if(document.visibilitySt
 function autoSave(){
   if(!chatHistory.length)return;
   try{
-    localStorage.setItem(AUTOSAVE_KEY,JSON.stringify({
+    localStorage.setItem(pk(AUTOSAVE_KEY),JSON.stringify({
       modelId:currentModel.id,modelLabel:currentModel.label,
       backend:activeBackend,savedAt:Date.now(),
       messages:chatHistory.map(function(m){return{role:m.role,content:typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(c){return c.type==="text";})||{}).text||"")};})
@@ -2052,7 +2135,7 @@ function autoSave(){
 }
 function loadAutoSave(){
   try{
-    var saved=JSON.parse(localStorage.getItem(AUTOSAVE_KEY));
+    var saved=JSON.parse(localStorage.getItem(pk(AUTOSAVE_KEY)));
     if(!saved||!saved.messages||!saved.messages.length)return;
     /* No expiry - always restore last conversation */
     if(saved.backend&&saved.backend!==activeBackend){
@@ -2085,7 +2168,7 @@ function syncActiveTabFromLiveState(){
   openTabs[activeTabIndex]=currentTabSnapshot();
 }
 function saveTabsToStorage(){
-  try{localStorage.setItem(TABS_KEY,JSON.stringify({tabs:openTabs,active:activeTabIndex}));}catch(e){}
+  try{localStorage.setItem(pk(TABS_KEY),JSON.stringify({tabs:openTabs,active:activeTabIndex}));}catch(e){}
 }
 function renderChatFromHistory(hist){
   document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✦</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
@@ -2163,7 +2246,7 @@ function closeTab(index){
 }
 function initTabs(){
   var raw=null;
-  try{raw=JSON.parse(localStorage.getItem(TABS_KEY)||"null");}catch(e){}
+  try{raw=JSON.parse(localStorage.getItem(pk(TABS_KEY))||"null");}catch(e){}
   if(raw&&raw.tabs&&raw.tabs.length){
     openTabs=raw.tabs;
     activeTabIndex=Math.min(Math.max(raw.active||0,0),openTabs.length-1);
@@ -2180,8 +2263,8 @@ function initTabs(){
    never writes one without an explicit tap to approve. Retrieval is
    Overseer-mediated: only memories relevant to the current message get
    injected, not the whole list every time, to stay token-efficient. ---- */
-function loadMemories(){try{memories=JSON.parse(localStorage.getItem(MK)||"[]");}catch(e){memories=[];}}
-function saveMemories(){localStorage.setItem(MK,JSON.stringify(memories));driveAutoPush(true);}
+function loadMemories(){try{memories=JSON.parse(localStorage.getItem(pk(MK))||"[]");}catch(e){memories=[];}}
+function saveMemories(){localStorage.setItem(pk(MK),JSON.stringify(memories));driveAutoPush(true);}
 function addMemory(text,always){
   text=(text||"").trim();if(!text)return;
   memories.push({id:Date.now().toString()+Math.random().toString(36).slice(2,5),text:text,always:!!always,createdAt:Date.now()});
@@ -2275,8 +2358,8 @@ function showMemorySuggestion(text){
 /* ---- Document library: uploads saved permanently, reusable across any
    future conversation, unlike one-message-only attachments. ---- */
 var DOC_LIBRARY_CAP=30;
-function loadDocLibrary(){try{docLibrary=JSON.parse(localStorage.getItem(DLK)||"[]");}catch(e){docLibrary=[];}}
-function saveDocLibrary(){localStorage.setItem(DLK,JSON.stringify(docLibrary));driveAutoPush(true);}
+function loadDocLibrary(){try{docLibrary=JSON.parse(localStorage.getItem(pk(DLK))||"[]");}catch(e){docLibrary=[];}}
+function saveDocLibrary(){localStorage.setItem(pk(DLK),JSON.stringify(docLibrary));driveAutoPush(true);}
 function addToLibrary(file){
   docLibrary.push({id:Date.now().toString()+Math.random().toString(36).slice(2,5),name:file.name,type:file.type,content:file.content||null,dataUrl:file.dataUrl||null,addedAt:Date.now()});
   if(docLibrary.length>DOC_LIBRARY_CAP)docLibrary=docLibrary.slice(-DOC_LIBRARY_CAP);
@@ -2308,11 +2391,11 @@ function renderDocLibraryList(){
 
 function loadDraft(){
   try{
-    var d=localStorage.getItem("ai_draft");
+    var d=localStorage.getItem(pk("ai_draft"));
     if(d){var el=document.getElementById("prompt");if(el&&!el.value){el.value=d;el.style.height="auto";el.style.height=Math.min(el.scrollHeight,150)+"px";}}
   }catch(e){}
 }
-setInterval(function(){try{var t=document.getElementById("prompt");if(t&&t.value.trim())localStorage.setItem("ai_draft",t.value);}catch(e){}},15000);
+setInterval(function(){try{var t=document.getElementById("prompt");if(t&&t.value.trim())localStorage.setItem(pk("ai_draft"),t.value);}catch(e){}},15000);
 
 /* ---- Google Drive Sync ---- */
 var GOOGLE_CLIENT_ID="899534056653-eb854ngfhontj1v370l0luj6fd1s6hcj.apps.googleusercontent.com";
@@ -2335,16 +2418,16 @@ var DRIVE_FILES={
 
 function driveLoadCache(){
   try{
-    driveFolderId=localStorage.getItem("drive_folder_id")||null;
-    driveFileIds=JSON.parse(localStorage.getItem("drive_file_ids")||"{}");
-    var t=JSON.parse(localStorage.getItem("drive_token")||"null");
+    driveFolderId=localStorage.getItem(pk("drive_folder_id"))||null;
+    driveFileIds=JSON.parse(localStorage.getItem(pk("drive_file_ids"))||"{}");
+    var t=JSON.parse(localStorage.getItem(pk("drive_token"))||"null");
     if(t&&t.expiry>Date.now()){driveToken=t.token;driveTokenExpiry=t.expiry;}
   }catch(e){}
 }
 function driveSaveToken(token,expiresInSec){
   driveToken=token;
   driveTokenExpiry=Date.now()+((expiresInSec||3500)*1000)-60000;
-  try{localStorage.setItem("drive_token",JSON.stringify({token:token,expiry:driveTokenExpiry}));}catch(e){}
+  try{localStorage.setItem(pk("drive_token"),JSON.stringify({token:token,expiry:driveTokenExpiry}));}catch(e){}
 }
 function driveInitClient(){
   if(!window.google||!google.accounts||driveTokenClient)return;
@@ -2354,7 +2437,7 @@ function driveInitClient(){
     callback:function(resp){
       if(resp&&resp.access_token){
         driveSaveToken(resp.access_token,resp.expires_in);
-        localStorage.setItem("drive_connected","1");
+        localStorage.setItem(pk("drive_connected"),"1");
         updateDriveUI(true);
         if(chatHistory.length===0){
           driveAutoRestoreIfEmpty();
@@ -2377,11 +2460,11 @@ function driveSilentRenew(){
 }
 function driveDisconnect(){
   driveToken=null;driveTokenExpiry=0;driveFolderId=null;driveFileIds={};
-  localStorage.removeItem("drive_token");
-  localStorage.removeItem("drive_folder_id");
-  localStorage.removeItem("drive_file_id");
-  localStorage.removeItem("drive_file_ids");
-  localStorage.removeItem("drive_connected");
+  localStorage.removeItem(pk("drive_token"));
+  localStorage.removeItem(pk("drive_folder_id"));
+  localStorage.removeItem(pk("drive_file_id"));
+  localStorage.removeItem(pk("drive_file_ids"));
+  localStorage.removeItem(pk("drive_connected"));
   updateDriveUI(false);
 }
 async function driveEnsureFolder(){
@@ -2398,7 +2481,7 @@ async function driveEnsureFolder(){
       var created=await cr.json();
       driveFolderId=created.id;
     }
-    if(driveFolderId)localStorage.setItem("drive_folder_id",driveFolderId);
+    if(driveFolderId)localStorage.setItem(pk("drive_folder_id"),driveFolderId);
     return driveFolderId;
   }catch(e){return null;}
 }
@@ -2411,7 +2494,7 @@ async function driveFindFileByName(name){
     var data=await res.json();
     if(data.files&&data.files.length){
       driveFileIds[name]=data.files[0].id;
-      localStorage.setItem("drive_file_ids",JSON.stringify(driveFileIds));
+      localStorage.setItem(pk("drive_file_ids"),JSON.stringify(driveFileIds));
       return driveFileIds[name];
     }
   }catch(e){}
@@ -2428,7 +2511,7 @@ async function driveUploadNamedFile(name,value){
   var url=fileId?("https://www.googleapis.com/upload/drive/v3/files/"+fileId+"?uploadType=multipart"):("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart");
   var res=await fetch(url,{method:fileId?"PATCH":"POST",headers:{Authorization:"Bearer "+driveToken},body:form});
   var data=await res.json();
-  if(data.id){driveFileIds[name]=data.id;localStorage.setItem("drive_file_ids",JSON.stringify(driveFileIds));}
+  if(data.id){driveFileIds[name]=data.id;localStorage.setItem(pk("drive_file_ids"),JSON.stringify(driveFileIds));}
 }
 async function driveDownloadNamedFile(name){
   var fileId=await driveFindFileByName(name);
@@ -2460,24 +2543,24 @@ async function driveAutoPush(force){
     if(!driveFolderId)await driveEnsureFolder();
     if(!driveFolderId){driveBusy=false;return;}
     await Promise.all([
-      driveUploadNamedFile(DRIVE_FILES.prompts,JSON.parse(localStorage.getItem("ai_prompts")||"{}")),
-      driveUploadNamedFile(DRIVE_FILES.projects,JSON.parse(localStorage.getItem("ai_projects")||"[]")),
-      driveUploadNamedFile(DRIVE_FILES.workprojects,JSON.parse(localStorage.getItem("ai_workprojects")||"[]")),
-      driveUploadNamedFile(DRIVE_FILES.autosave,{autosave:localStorage.getItem("ai_autosave")||null}),
-      driveUploadNamedFile(DRIVE_FILES.memories,JSON.parse(localStorage.getItem("ai_memories")||"[]")),
-      driveUploadNamedFile(DRIVE_FILES.doclibrary,JSON.parse(localStorage.getItem("ai_doclibrary")||"[]"))
+      driveUploadNamedFile(DRIVE_FILES.prompts,JSON.parse(localStorage.getItem(pk("ai_prompts"))||"{}")),
+      driveUploadNamedFile(DRIVE_FILES.projects,JSON.parse(localStorage.getItem(pk("ai_projects"))||"[]")),
+      driveUploadNamedFile(DRIVE_FILES.workprojects,JSON.parse(localStorage.getItem(pk("ai_workprojects"))||"[]")),
+      driveUploadNamedFile(DRIVE_FILES.autosave,{autosave:localStorage.getItem(pk("ai_autosave"))||null}),
+      driveUploadNamedFile(DRIVE_FILES.memories,JSON.parse(localStorage.getItem(pk("ai_memories"))||"[]")),
+      driveUploadNamedFile(DRIVE_FILES.doclibrary,JSON.parse(localStorage.getItem(pk("ai_doclibrary"))||"[]"))
     ]);
     updateDriveStatus("Synced "+new Date().toLocaleTimeString());
   }catch(e){updateDriveStatus("Sync error - will retry");}
   driveBusy=false;
 }
 async function driveApplyRestoredData(data){
-  if(data.prompts)localStorage.setItem("ai_prompts",JSON.stringify(data.prompts));
-  if(data.projects)localStorage.setItem("ai_projects",JSON.stringify(data.projects));
-  if(data.workprojects)localStorage.setItem("ai_workprojects",JSON.stringify(data.workprojects));
-  if(data.autosave)localStorage.setItem("ai_autosave",data.autosave);
-  if(data.memories)localStorage.setItem("ai_memories",JSON.stringify(data.memories));
-  if(data.doclibrary)localStorage.setItem("ai_doclibrary",JSON.stringify(data.doclibrary));
+  if(data.prompts)localStorage.setItem(pk("ai_prompts"),JSON.stringify(data.prompts));
+  if(data.projects)localStorage.setItem(pk("ai_projects"),JSON.stringify(data.projects));
+  if(data.workprojects)localStorage.setItem(pk("ai_workprojects"),JSON.stringify(data.workprojects));
+  if(data.autosave)localStorage.setItem(pk("ai_autosave"),data.autosave);
+  if(data.memories)localStorage.setItem(pk("ai_memories"),JSON.stringify(data.memories));
+  if(data.doclibrary)localStorage.setItem(pk("ai_doclibrary"),JSON.stringify(data.doclibrary));
 }
 async function driveRestore(){
   if(!driveToken||driveTokenExpiry<=Date.now()){driveConnect();return;}
@@ -2522,11 +2605,11 @@ async function driveAutoRestoreIfEmpty(){
      backup. Never do that automatically - only fill in a genuinely empty
      slate. */
   var localProjects=[],localWproj=[],localPrompts={},localMemories=[],localDocLib=[];
-  try{localProjects=JSON.parse(localStorage.getItem("ai_projects")||"[]");}catch(e){}
-  try{localWproj=JSON.parse(localStorage.getItem("ai_workprojects")||"[]");}catch(e){}
-  try{localPrompts=JSON.parse(localStorage.getItem("ai_prompts")||"{}");}catch(e){}
-  try{localMemories=JSON.parse(localStorage.getItem("ai_memories")||"[]");}catch(e){}
-  try{localDocLib=JSON.parse(localStorage.getItem("ai_doclibrary")||"[]");}catch(e){}
+  try{localProjects=JSON.parse(localStorage.getItem(pk("ai_projects"))||"[]");}catch(e){}
+  try{localWproj=JSON.parse(localStorage.getItem(pk("ai_workprojects"))||"[]");}catch(e){}
+  try{localPrompts=JSON.parse(localStorage.getItem(pk("ai_prompts"))||"{}");}catch(e){}
+  try{localMemories=JSON.parse(localStorage.getItem(pk("ai_memories"))||"[]");}catch(e){}
+  try{localDocLib=JSON.parse(localStorage.getItem(pk("ai_doclibrary"))||"[]");}catch(e){}
   var hasLocalData=chatHistory.length>0||(localProjects&&localProjects.length>0)||(localWproj&&localWproj.length>0)||(localPrompts&&Object.keys(localPrompts).length>0)||(localMemories&&localMemories.length>0)||(localDocLib&&localDocLib.length>0);
   if(hasLocalData)return;
   try{
@@ -2639,7 +2722,7 @@ async function shareOrDownload(blob,filename,mime){
 }
 
 async function exportBackup(){
-  var data={version:1,exportedAt:new Date().toISOString(),prompts:JSON.parse(localStorage.getItem("ai_prompts")||"{}"),projects:JSON.parse(localStorage.getItem("ai_projects")||"[]"),workprojects:JSON.parse(localStorage.getItem("ai_workprojects")||"[]"),autosave:localStorage.getItem("ai_autosave")||null};
+  var data={version:1,exportedAt:new Date().toISOString(),prompts:JSON.parse(localStorage.getItem(pk("ai_prompts"))||"{}"),projects:JSON.parse(localStorage.getItem(pk("ai_projects"))||"[]"),workprojects:JSON.parse(localStorage.getItem(pk("ai_workprojects"))||"[]"),autosave:localStorage.getItem(pk("ai_autosave"))||null};
   var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   var filename="ai-router-backup-"+new Date().toISOString().slice(0,10)+".json";
   var outcome=await shareOrDownload(blob,filename,"application/json");
@@ -2650,10 +2733,10 @@ function importBackup(file){
   reader.onload=function(e){
     try{
       var data=JSON.parse(e.target.result);if(!data.version){alert("Invalid backup.");return;}
-      if(data.prompts&&Object.keys(data.prompts).length){localStorage.setItem("ai_prompts",JSON.stringify(data.prompts));loadPrompts();}
-      if(data.projects&&data.projects.length){localStorage.setItem("ai_projects",JSON.stringify(data.projects));loadProjects();}
-      if(data.workprojects&&data.workprojects.length){localStorage.setItem("ai_workprojects",JSON.stringify(data.workprojects));loadWProjects();}
-      if(data.autosave)localStorage.setItem("ai_autosave",data.autosave);
+      if(data.prompts&&Object.keys(data.prompts).length){localStorage.setItem(pk("ai_prompts"),JSON.stringify(data.prompts));loadPrompts();}
+      if(data.projects&&data.projects.length){localStorage.setItem(pk("ai_projects"),JSON.stringify(data.projects));loadProjects();}
+      if(data.workprojects&&data.workprojects.length){localStorage.setItem(pk("ai_workprojects"),JSON.stringify(data.workprojects));loadWProjects();}
+      if(data.autosave)localStorage.setItem(pk("ai_autosave"),data.autosave);
       alert("Backup restored!");renderProjectList();
     }catch(err){alert("Error: "+err.message);}
   };
@@ -3003,7 +3086,7 @@ async function send(){
   document.getElementById("sendBtn").disabled=false;
   document.getElementById("sendBtn").textContent="\u25A0 Stop";
   document.getElementById("sendBtn").style.background="var(--er)";
-  localStorage.removeItem("ai_draft");
+  localStorage.removeItem(pk("ai_draft"));
   var userContent=text;
   if(attachedFiles.length){
     var parts=[];
@@ -3236,7 +3319,7 @@ document.getElementById("clearBtn").addEventListener("click",function(){
   /* Save to recent history and stash for undo before wiping anything */
   saveToRecent();
   undoData={messages:chatHistory.slice(),backend:activeBackend,modelId:currentModel.id,modelLabel:currentModel.label};
-  chatHistory=[];clearAttach();localStorage.removeItem(AUTOSAVE_KEY);localStorage.removeItem("ai_draft");
+  chatHistory=[];clearAttach();localStorage.removeItem(pk(AUTOSAVE_KEY));localStorage.removeItem(pk("ai_draft"));
   sessionId=Date.now().toString();responseCount=0;lastUsedModelId="";summarizing=false;
   clearActiveWproj();stopOverseerMonitoring();overseerState={goal:null,goalType:null,progress:0,status:"idle",startTime:null,messagesProcessed:0,modelsUsed:new Set(),estimatedTokens:0,stuck:false,stuckSince:null,recommendations:[]};
   document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✶</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
@@ -3270,6 +3353,19 @@ document.getElementById("docLibraryBtn").addEventListener("click",function(){
   openModal("docLibraryModal");
 });
 document.getElementById("closeDocLibraryModal").addEventListener("click",function(){closeModal("docLibraryModal");});
+document.getElementById("profileBtn").addEventListener("click",function(){
+  document.getElementById("settingsModal").classList.add("hidden");
+  renderProfileList();
+  openModal("profileModal");
+});
+document.getElementById("closeProfileModal").addEventListener("click",function(){closeModal("profileModal");});
+document.getElementById("addProfileBtn").addEventListener("click",function(){
+  var el=document.getElementById("newProfileInput");
+  createProfile(el.value);el.value="";
+});
+document.getElementById("newProfileInput").addEventListener("keydown",function(e){
+  if(e.key==="Enter"){document.getElementById("addProfileBtn").click();}
+});
 
 /* ---- Init ---- */
 /* Fetch APP_SECRET from worker on page load - non-blocking with timeout */
@@ -3300,9 +3396,10 @@ loadFavs();
   syncThemeColor();
 })();
 loadBackend();loadPrompts();loadProjects();loadWProjects();loadAutoSave();loadDraft();initTabs();loadMemories();renderMemoryList();loadDocLibrary();renderDocLibraryList();
+document.getElementById("activeProfileLabel").textContent=activeProfile==="default"?"default":activeProfile;
 
 /* Reconnect to Drive silently if previously connected, no popup if session still valid */
-if(localStorage.getItem("drive_connected")==="1"){
+if(localStorage.getItem(pk("drive_connected"))==="1"){
   updateDriveUI(true);
   if(!driveToken||driveTokenExpiry<=Date.now()){
     setTimeout(driveSilentRenew,1200);
