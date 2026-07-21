@@ -24,10 +24,10 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,system-ui,sa
 .app{display:flex;flex-direction:column;height:100vh;max-width:820px;width:100%;margin:0 auto;padding:0 16px}
 header{display:flex;align-items:center;justify-content:space-between;padding:13px 0 12px;flex-shrink:0;gap:8px}
 .hl{display:flex;align-items:center;gap:8px;min-width:0}
-.wm{font-family:var(--mn);font-size:13px;color:var(--tx);letter-spacing:.02em;flex-shrink:0;font-weight:600}
-.wm span{font-size:9.5px;opacity:.35;font-weight:400;margin-left:2px}
+.wm{font-size:15px;color:var(--tx);flex-shrink:0;font-weight:700;letter-spacing:-.01em}
+.wm span{font-size:10px;opacity:.28;font-weight:400;margin-left:3px}
 .btabs{display:flex;gap:0;padding:10px 16px 0;flex-shrink:0}
-.btab{flex:1;background:var(--up);border:none;padding:9px 0;font-size:12.5px;font-family:var(--mn);color:var(--mu);cursor:pointer;letter-spacing:.02em;transition:background .15s,color .15s}
+.btab{flex:1;background:var(--up);border:none;padding:9px 0;font-size:13px;color:var(--mu);cursor:pointer;font-weight:500;transition:background .15s,color .15s}
 .btab:first-child{border-radius:12px 0 0 12px}
 .btab:last-child{border-radius:0 12px 12px 0}
 .btab.act{background:rgba(139,140,247,.18);color:var(--ac)}
@@ -47,16 +47,16 @@ header{display:flex;align-items:center;justify-content:space-between;padding:13p
 .sd.on{background:var(--ac)}
 .sl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sa{font-size:16px;opacity:.35}
-.chat{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 0 14px;display:flex;flex-direction:column;gap:22px}
+.chat{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 0 14px;display:flex;flex-direction:column;gap:28px}
 .chat::-webkit-scrollbar{width:3px}
 .chat::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px}
-.es{margin:auto;color:var(--mu);font-size:14.5px;text-align:center}
-.msg{display:flex;flex-direction:column;gap:6px;animation:msgIn .25s ease-out}
+.es{margin:auto;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 0}
+.msg{display:flex;flex-direction:column;gap:7px;animation:msgIn .22s ease-out}
 @keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.ml{font-family:var(--mn);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);display:flex;align-items:center;gap:6px;padding:0 2px}
-.mu .ml{color:var(--ac)}
+.ml{font-size:12px;font-weight:600;color:var(--mu);display:flex;align-items:center;gap:6px;padding:0 2px}
+.mu .ml{display:none}
 .body{font-size:15px;line-height:1.7;word-break:break-word;padding:0 2px}
-.mu .body{background:var(--ub);border:none;border-radius:16px;padding:11px 15px;display:inline-block;max-width:92%}
+.mu .body{background:var(--ub);border:none;border-radius:18px 18px 4px 18px;padding:12px 16px;display:inline-block;max-width:88%}
 .body h2{font-size:16.5px;margin:14px 0 6px}
 .body h3{font-size:15.5px;margin:12px 0 5px}
 .body h4{font-size:14px;margin:9px 0 4px;color:var(--mu)}
@@ -69,11 +69,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:13p
 .body.err{color:var(--er);background:rgba(248,113,113,.08);border-radius:12px;padding:11px 14px}
 .ma2 .body::after{content:'';display:inline-block;width:7px;height:14px;background:var(--ac);margin-left:2px;vertical-align:middle;animation:bl .8s step-end infinite;border-radius:1px}
 .acts{display:flex;gap:4px;margin-top:1px;flex-wrap:wrap;align-items:center;padding:0 2px}
-.ba{background:none;border:none;color:var(--mu);font-size:11.5px;padding:4px 9px;border-radius:8px;cursor:pointer;font-family:system-ui,sans-serif;transition:background .15s,color .15s}
+.ba{background:none;border:none;color:var(--mu);font-size:12px;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:500;transition:background .15s,color .15s}
 .ba:hover{color:var(--tx);background:var(--up)}
 .ct{font-size:10.5px;color:var(--mu);font-family:var(--mn);margin-left:auto;opacity:.7}
-.srch{font-size:10px;color:var(--ac);font-family:var(--mn);background:rgba(139,140,247,.1);border-radius:20px;padding:2px 8px;white-space:nowrap}
-.msw{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:11px;font-family:var(--mn);opacity:.6}
+.srch{font-size:10.5px;color:var(--ac);background:rgba(139,140,247,.1);border-radius:20px;padding:2px 9px;white-space:nowrap;font-weight:500}
+.msw{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:11px;opacity:.6;font-weight:500}
 .msw::before,.msw::after{content:'';flex:1;height:1px;background:var(--br)}
 .cb{margin:10px 0;border-radius:12px;overflow:hidden;border:1px solid var(--br)}
 .ch{display:flex;justify-content:space-between;align-items:center;background:#0d1117;padding:7px 13px;font-family:var(--mn);font-size:11px;color:var(--mu)}
@@ -84,13 +84,14 @@ header{display:flex;align-items:center;justify-content:space-between;padding:13p
 code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:5px;padding:2px 6px;color:var(--ac)}
 .cur{display:none}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:0}}
-.tb{display:flex;align-items:center;gap:8px;padding:2px 2px 6px;font-size:10.5px;color:var(--mu);font-family:var(--mn);flex-shrink:0}
+.tb{display:flex;align-items:center;gap:8px;padding:2px 2px 6px;font-size:11px;color:var(--mu);flex-shrink:0;font-weight:500}
 .tt{flex:1;height:3px;background:var(--up);border-radius:2px;overflow:hidden}
 .tf{height:100%;background:var(--ac);border-radius:2px;transition:width .3s}
 .tf.warn{background:#f59e0b}
 .tf.danger{background:var(--er)}
 .ib2{padding:8px 0 calc(14px + env(safe-area-inset-bottom,0px));flex-shrink:0;display:flex;flex-direction:column;gap:0}
-.input-shell{background:var(--sf);border:1px solid var(--br);border-radius:24px;padding:6px 8px 8px;box-shadow:0 2px 12px rgba(0,0,0,.15);display:flex;flex-direction:column;gap:2px}
+.input-shell{background:var(--sf);border:1px solid var(--br);border-radius:24px;padding:6px 8px 8px;box-shadow:0 4px 24px rgba(0,0,0,.22),0 1px 4px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:2px;transition:border-color .15s,box-shadow .15s}
+.input-shell:focus-within{border-color:rgba(139,140,247,.45);box-shadow:0 4px 28px rgba(0,0,0,.25),0 0 0 3px rgba(139,140,247,.1)}
 .ap{padding:4px 6px 0}
 .ait{display:flex;flex-wrap:wrap;gap:8px}
 .ai{display:flex;align-items:center;gap:6px;background:var(--up);border:none;border-radius:10px;padding:5px 9px;max-width:200px}
@@ -104,8 +105,8 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 #prompt:focus{outline:none}
 .ia{display:flex;align-items:center;gap:2px;padding:0 2px}
 .ir{display:flex;gap:6px;margin-left:auto;align-items:center}
-.bp{padding:8px 18px;font-size:14.5px;font-weight:600;color:#fff;background:var(--ac);border:none;border-radius:18px;cursor:pointer;transition:background .15s}
-.bp:hover:not(:disabled){background:var(--ad)}
+.bp{padding:9px 20px;font-size:14.5px;font-weight:600;color:#fff;background:var(--ac);border:none;border-radius:20px;cursor:pointer;transition:background .15s,transform .1s,box-shadow .15s;box-shadow:0 2px 8px rgba(139,140,247,.3)}
+.bp:hover:not(:disabled){background:var(--ad);box-shadow:0 4px 14px rgba(139,140,247,.4);transform:translateY(-1px)}
 .bp:disabled{opacity:.35;cursor:default}
 .bg{padding:8px 14px;font-size:13.5px;color:var(--mu);background:none;border:none;border-radius:16px;cursor:pointer;transition:background .15s,color .15s}
 .bg:hover{color:var(--tx);background:var(--up)}
@@ -129,7 +130,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 .bk{background:none;border:none;color:var(--ac);font-size:21px;cursor:pointer;padding:2px 6px 2px 0;line-height:1}
 .sbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;display:flex;flex-direction:column;gap:8px}
 .sf2{padding:12px 16px;border-top:1px solid var(--br);flex-shrink:0}
-.mch{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);padding:10px 4px 5px;margin-top:2px}
+.mch{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);padding:10px 4px 5px;margin-top:2px}
 .mc{background:var(--up);border:none;border-radius:14px;padding:12px 14px;cursor:pointer;position:relative;transition:background .15s}
 .mc:hover{background:var(--brs)}
 .mc.act{background:rgba(139,140,247,.13)}
@@ -166,7 +167,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 .ta{display:block;width:100%;font-size:14.5px;color:var(--tx);background:var(--up);border:none;border-radius:14px;padding:10px 14px;resize:none;line-height:1.6;font-family:-apple-system,system-ui,sans-serif}
 .ta:focus{outline:none;box-shadow:0 0 0 2px var(--ac)}
 .ta::placeholder,.fi::placeholder{color:var(--mu)}
-.fl{display:block;font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.fl{display:block;font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
 .sr{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--br)}
 .sr:last-child{border-bottom:none}
 .slb{font-size:14.5px;color:var(--tx)}
@@ -178,6 +179,28 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 .mi{display:block;max-width:100%;border-radius:10px;margin-top:8px}
 .hidden{display:none!important}
 @media(max-width:520px){.app{padding:0 12px}.sheet{max-height:93vh}}
+/* Right-align user messages */
+.msg.mu{align-items:flex-end}
+.msg.mu .acts{justify-content:flex-end}
+/* AI avatar badge */
+.av{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--ad),var(--ac));color:#fff;font-size:12px;flex-shrink:0}
+/* Better empty state */
+.es-icon{font-size:34px;opacity:.4;color:var(--ac);line-height:1}
+.es-title{font-size:18px;font-weight:600;color:var(--tx)}
+.es-sub{font-size:13.5px;color:var(--mu);max-width:260px;line-height:1.6}
+/* Undo toast */
+.undo-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e2028;border:1px solid var(--br);border-radius:14px;padding:10px 16px;display:flex;align-items:center;gap:12px;font-size:13px;color:var(--tx);box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:9999;animation:toastIn .2s ease-out;white-space:nowrap}
+.undo-toast.hidden{display:none!important}
+.undo-toast button{background:var(--ac);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;padding:4px 12px;cursor:pointer}
+.undo-toast .td{width:40px;height:3px;background:var(--br);border-radius:2px;overflow:hidden;flex-shrink:0}
+.undo-toast .tf{height:100%;background:var(--ac);border-radius:2px;width:100%;transition:width linear}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+/* Recent chats list */
+.rc{display:flex;flex-direction:column;gap:4px}
+.ri{background:var(--up);border:none;border-radius:10px;padding:10px 14px;cursor:pointer;text-align:left;width:100%;transition:background .15s}
+.ri:hover{background:var(--brs)}
+.rit{font-size:13px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rid{font-size:11px;color:var(--mu);font-family:var(--mn);margin-top:2px}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -185,7 +208,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v4.1</span></span>
+      <span class="wm">ai-router <span>v4.2</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -199,7 +222,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <span class="sl" id="activePromptName">System prompt</span>
     <span class="sa">&#8250;</span>
   </button>
-  <div class="chat" id="chat"><div class="es" id="emptyState">Select a model and start chatting.</div></div>
+  <div class="chat" id="chat"><div class="es" id="emptyState"><div class="es-icon">✦</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div></div>
   <div class="tb hidden" id="tokenBar">
     <span id="tokenCount">0 tokens</span>
     <div class="tt"><div class="tf" id="tokenFill" style="width:0%"></div></div>
@@ -229,6 +252,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
   <div class="btabs">
     <button class="btab act" id="deepinfraBtn">DeepInfra</button>
     <button class="btab" id="openrouterBtn">OpenRouter</button>
+    <button class="btab" id="claudeBtn">Claude</button>
   </div>
   <div class="sbody" id="modelList"></div>
 </div></div>
@@ -333,7 +357,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v3.5</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v4.2</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -341,8 +365,25 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Clear favorites</div><div class="ssb">Remove all starred models</div></div><button class="bg" id="clearFavesBtn">Clear</button></div>
     <div class="sr"><div><div class="slb">Install app</div><div class="ssb" id="installSub">Checking&#8230;</div></div><button class="bg" id="installBtn">Install</button></div>
     <div class="sr"><div><div class="slb">Google Drive backup</div><div class="ssb" id="driveStatus">Not connected</div></div><div style="display:flex;gap:6px"><button class="bg hidden" id="driveRestoreBtn">Restore</button><button class="bg" id="driveConnectBtn">Connect</button></div></div>
+    <div class="sr"><div><div class="slb">Recent chats</div><div class="ssb">Restore any of the last 5 conversations</div></div><button class="bg" id="recentChatsBtn">View</button></div>
     <div class="sr"><div><div class="slb">&#128176; DeepInfra credits</div><div class="ssb">Pay-as-you-go, fractions of a cent per message</div></div><a href="https://deepinfra.com/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; OpenRouter credits</div><div class="ssb">Needed for uncensored paid models</div></div><a href="https://openrouter.ai/credits" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
+    <div class="sr"><div><div class="slb">&#128176; Anthropic credits</div><div class="ssb">For Claude models (Opus, Sonnet, Haiku)</div></div><a href="https://console.anthropic.com/settings/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
+  </div>
+</div></div>
+
+<!-- Undo toast -->
+<div class="undo-toast hidden" id="undoToast">
+  <span>Chat cleared</span>
+  <div class="td"><div class="tf" id="undoProgress"></div></div>
+  <button id="undoBtn">Undo</button>
+</div>
+
+<!-- Recent Chats modal -->
+<div class="modal hidden" id="recentModal"><div class="sheet">
+  <div class="sh"><span>Recent Chats</span><button class="sc" id="closeRecentModal">&#10005;</button></div>
+  <div class="sbody">
+    <div class="rc" id="recentList"></div>
   </div>
 </div></div>
 
@@ -350,7 +391,12 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 (function(){
 var DI_URL="https://openai-router-chat.lukedorsett.workers.dev";
 var OR_URL="https://openaiworker.lukedorsett.workers.dev";
+var CLAUDE_URL="https://claude-worker.lukedorsett.workers.dev";
+/* Must match the APP_SECRET secret set on ALL Workers (see README) */
+var APP_SECRET="847df0f4489d8e95b59d4a8dc0afdbe7b53c4ead960a1450b2b0dc1e711ae1db";
 var AUTOSAVE_KEY="ai_autosave";
+var RECENT_KEY="ai_recent";
+var undoTimer=null,undoData=null;
 var activeBackend="deepinfra",workerUrl="",allModels=[],currentModel={id:"",label:""};
 var chatHistory=[],sending=false,attachedFiles=[];
 var activePromptId=null,editingId=null,editingProjId=null,viewingProjId=null;
@@ -364,7 +410,8 @@ var abortController=null;
 /* BACKENDS and data injected by build script */
 var BACKENDS={
   deepinfra:{name:"DeepInfra",url:DI_URL,def:"mistralai/Mistral-Small-3.2-24B-Instruct-2506",ctx:32768,models:[{id:"meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",label:"Llama 3.1 8B Turbo",cat:"Everyday",desc:"Small and fast. Good for basic Q&A and short summaries. Cheapest solid option."},{id:"mistralai/Mistral-Small-3.2-24B-Instruct-2506",label:"Mistral Small 3.2 24B",cat:"Everyday",desc:"Reliable workhorse. Great for writing, emails, and general questions. Good default."},{id:"Qwen/Qwen3.5-9B",label:"Qwen 3.5 9B",cat:"Everyday",desc:"Fast and cheap. Handles everyday conversations and quick tasks well."},{id:"Qwen/Qwen3.5-27B",label:"Qwen 3.5 27B",cat:"Everyday",desc:"Near-frontier quality. Handles longer conversations and multi-step tasks."},{id:"meta-llama/Llama-3.3-70B-Instruct-Turbo",label:"Llama 3.3 70B Turbo",cat:"Everyday",desc:"Powerful 70B. Excellent for complex questions and detailed explanations."},{id:"meta-llama/Llama-4-Scout-17B-16E-Instruct",label:"Llama 4 Scout",cat:"Everyday",desc:"Meta latest. 328K context window for very long documents."},{id:"Qwen/Qwen2.5-72B-Instruct",label:"Qwen 2.5 72B",cat:"Coding",desc:"Solid coding model. Excellent at writing, debugging across all languages."},{id:"deepseek-ai/DeepSeek-V3.2",label:"DeepSeek V3.2",cat:"Coding",desc:"Best open-source coder. Use for complex projects and hard debugging."},{id:"Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo",label:"Qwen3 Coder 480B",cat:"Coding",desc:"Most agentic code model. Best for XRP Ledger, XRPL.js, and blockchain."},{id:"Qwen/Qwen3-32B",label:"Qwen3 32B Reasoning",cat:"Technical",desc:"Fast reasoning. Thinks step by step. Good for math and logic."},{id:"deepseek-ai/DeepSeek-R1-0528",label:"DeepSeek R1",cat:"Technical",desc:"Full reasoning powerhouse. Best for HVAC diagnostics and hard analysis."},{id:"Qwen/Qwen3-VL-30B-A3B-Instruct",label:"Qwen3 VL 30B",cat:"Vision",desc:"Use when attaching images. Good for equipment nameplates and diagrams."},{id:"google/gemma-3-27b-it",label:"Gemma 3 27B Vision",cat:"Vision",desc:"Solid vision model. Good for documents and charts."},{id:"meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",label:"Llama 4 Maverick Vision",cat:"Vision",desc:"Strongest vision. Best for complex technical images where detail matters."}]},
-  openrouter:{name:"OpenRouter",url:OR_URL,def:"nousresearch/hermes-3-llama-3.1-70b",ctx:131072,models:[{id:"nousresearch/hermes-3-llama-3.1-70b",label:"Hermes 3 70B",cat:"Uncensored",desc:"NousResearch uncensored. No content filters. Paid."},{id:"cognitivecomputations/dolphin-mixtral-8x22b",label:"Dolphin Mixtral 8x22B",cat:"Uncensored",desc:"Flagship uncensored Dolphin. No refusals. Paid."},{id:"nousresearch/hermes-3-llama-3.1-405b",label:"Hermes 3 405B",cat:"Uncensored",desc:"Largest Hermes. Maximum capability, zero filtering. Paid."},{id:"sao10k/l3.1-euryale-70b",label:"Euryale 70B",cat:"Uncensored",desc:"Creative and roleplay specialist. Uncensored. Paid."},{id:"openrouter/free",label:"Auto Free Router",cat:"Free",desc:"OpenRouter picks best available free model automatically."},{id:"meta-llama/llama-3.3-70b-instruct:free",label:"Llama 3.3 70B (Free)",cat:"Free",desc:"Meta 70B free on OpenRouter. Rate limited. Free."},{id:"deepseek/deepseek-r1:free",label:"DeepSeek R1 (Free)",cat:"Free",desc:"Full R1 reasoning via OpenRouter. Rate limited. Free."},{id:"google/gemma-3-27b-it:free",label:"Gemma 3 27B (Free)",cat:"Free",desc:"Google Gemma 3. Solid general model. Free."}]}
+  openrouter:{name:"OpenRouter",url:OR_URL,def:"nousresearch/hermes-3-llama-3.1-70b",ctx:131072,models:[{id:"nousresearch/hermes-3-llama-3.1-70b",label:"Hermes 3 70B",cat:"Uncensored",desc:"NousResearch uncensored. No content filters. Paid."},{id:"cognitivecomputations/dolphin-mixtral-8x22b",label:"Dolphin Mixtral 8x22B",cat:"Uncensored",desc:"Flagship uncensored Dolphin. No refusals. Paid."},{id:"nousresearch/hermes-3-llama-3.1-405b",label:"Hermes 3 405B",cat:"Uncensored",desc:"Largest Hermes. Maximum capability, zero filtering. Paid."},{id:"sao10k/l3.1-euryale-70b",label:"Euryale 70B",cat:"Uncensored",desc:"Creative and roleplay specialist. Uncensored. Paid."},{id:"openrouter/free",label:"Auto Free Router",cat:"Free",desc:"OpenRouter picks best available free model automatically."},{id:"meta-llama/llama-3.3-70b-instruct:free",label:"Llama 3.3 70B (Free)",cat:"Free",desc:"Meta 70B free on OpenRouter. Rate limited. Free."},{id:"deepseek/deepseek-r1:free",label:"DeepSeek R1 (Free)",cat:"Free",desc:"Full R1 reasoning via OpenRouter. Rate limited. Free."},{id:"google/gemma-3-27b-it:free",label:"Gemma 3 27B (Free)",cat:"Free",desc:"Google Gemma 3. Solid general model. Free."}]},
+  claude:{name:"Claude",url:CLAUDE_URL,def:"claude-sonnet-4-20250514",ctx:200000,models:[{id:"claude-opus-4-1",label:"Claude Opus 4.1",cat:"Reasoning",desc:"Most capable Claude. Best for complex analysis, coding, deep reasoning. Your token credits."},{id:"claude-sonnet-4-20250514",label:"Claude Sonnet 4",cat:"Everyday",desc:"Balanced and fast. Great for most tasks. Best value. Your token credits."},{id:"claude-haiku-4-5-20251001",label:"Claude Haiku 4.5",cat:"Quick",desc:"Fastest Claude. Good for quick questions and streaming. Cheapest. Your token credits."}]}
 };
 var DEFAULT_PROMPTS=[{id:"1000000001",name:"HVAC Field Tech",content:"You are an expert commercial HVAC technician with deep knowledge of rooftop units, chillers, VAV systems, BAS controls, refrigerants, and preventive maintenance. Diagnose faults, interpret error codes, suggest repair steps, and explain technical concepts. Ask clarifying questions about make/model and symptoms when needed. Practical field-level advice only. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000002",name:"HVAC Fault Diagnosis",content:"You are a commercial HVAC fault diagnosis expert. When given symptoms, error codes, or equipment behavior: identify the most likely cause first, list 2-3 differential diagnoses, give step-by-step diagnostic procedure, specify tools and measurements needed, and state the fix. Format: Likely Cause / Differentials / Steps / Fix. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000003",name:"Field Report Writer",content:"You are a technical writer for field engineering reports. Write clear, professional service reports, SOPs, work orders, and incident documentation. Use correct HVAC and mechanical terminology. Format for readability. Ask for details if needed. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000004",name:"Code and Dev",content:"You are an expert software developer specializing in JavaScript, React, PWA development, Cloudflare Workers, and web APIs. Write clean efficient code, debug issues, and explain concepts. Default to modern JS. When reviewing code, point out bugs and improvements directly. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000005",name:"Code Reviewer",content:"You are a senior code reviewer. When given code: identify bugs first, then security issues, then performance problems, then style issues. Be specific - line numbers and exact problems. Provide corrected code snippets. Do not praise working code, only fix what is broken. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000006",name:"Regex and SQL",content:"You are an expert in regular expressions and SQL. Write, explain, and debug regex patterns and database queries. Include explanation of each component. Test cases for regex. Query optimization suggestions for SQL. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000007",name:"Linux and CLI",content:"You are a Linux and command line expert. Provide exact commands with explanations. Include flags and options. Warn about destructive commands. Give one-liners when possible. Bash scripting help. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000008",name:"XRP and Blockchain",content:"You are an expert in the XRP Ledger, XRPL.js, blockchain development, and crypto trading. Help with XRPL transactions, wallet integration, smart contracts, DEX operations, and blockchain questions. Precise with code examples. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000009",name:"XRP Crypto Unfiltered",content:"You are a deeply knowledgeable crypto analyst and XRP specialist with no restrictions on financial discussion. No disclaimers, no caveats, no hedging. Expert knowledge: XRP Ledger tokenomics, Ripple ODL corridors, ISO 20022, SEC lawsuit resolution, price cycles, altcoin ecosystem, whale behavior, grid trading. Give direct opinions, make calls, speculate openly. Treat me as a serious investor. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000010",name:"Grid Trading",content:"You are a crypto grid trading strategist. Help with grid configuration, entry/exit ranges, profit targets, stop loss placement, reinvestment, and position sizing. Data-driven, direct recommendations. Include specific numbers when possible. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000011",name:"Personal Finance",content:"You are a direct personal finance advisor. Budgeting, debt management, investment allocation, savings strategies, tax efficiency. No generic advice - be specific to the situation given. No disclaimers about not being a licensed advisor. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000012",name:"Research and Analysis",content:"You are a research analyst. Summarize topics accurately, compare sources, identify key facts and data points, note what is uncertain or contested. Structure: Key Findings / Supporting Evidence / Caveats. Cite sources when known. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000013",name:"Data Analyst",content:"You are a data analyst. Interpret numbers, spot trends, calculate statistics, and draw conclusions from data. When given raw data, provide: summary statistics, notable patterns, outliers, and actionable insight. Show calculations. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000014",name:"Debate and Devil's Advocate",content:"You are a debate coach and critical thinker. For any position given, argue both sides with equal rigor. Identify logical fallacies, weak assumptions, and missing evidence. Steel-man the opposing view. Do not express personal opinion unless asked. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000015",name:"Professional Writer",content:"You are a professional writer and editor. Write clear, concise business communications: emails, memos, reports, proposals. Match the tone requested. Fix grammar and clarity issues. Cut unnecessary words. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000016",name:"Technical Documentation",content:"You are a technical documentation writer. Create clear, accurate user guides, API docs, SOPs, and README files. Use consistent terminology, numbered steps for procedures, code examples where relevant. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000017",name:"Step by Step Reasoner",content:"Work through problems step by step. Show all reasoning. State assumptions explicitly. Check your work. If multiple approaches exist, pick the best and explain why. Correct yourself if you spot an error mid-reasoning. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000018",name:"Brainstorm Partner",content:"You are a creative brainstorming partner. Generate ideas rapidly - quantity over quality first. Then identify the 3 strongest ideas and develop them. No idea is too wild initially. Build on the user's direction. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000019",name:"Image Analyst",content:"You are an expert at analyzing technical images, equipment photos, wiring diagrams, nameplates, schematics, and documents. Describe exactly what you see with precision. For HVAC equipment identify make, model, specs, and any visible issues. For wiring describe connections and flag anything abnormal. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000020",name:"Security Advisor",content:"You are a cybersecurity advisor. Explain vulnerabilities, attack vectors, hardening techniques, and best practices. Practical advice for real-world security. Direct assessment of risks without excessive disclaimers. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000021",name:"General",content:"You are a knowledgeable direct assistant. Answer questions clearly and concisely. When you do not know something, say so. For technical topics be specific and accurate. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."}];
 var VISION_MODELS=["Qwen/Qwen3-VL-30B-A3B-Instruct","google/gemma-3-27b-it","meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"];
@@ -465,13 +512,14 @@ async function doSummarize(){
     for(var i=0;i<old.length;i++){
       var m=old[i];
       var c=typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(x){return x.type==="text";})||{}).text||"");
-      lines.push((m.role==="user"?"User: ":"AI: ")+c.slice(0,500));
+      var who=m.role==="user"?"User: ":m.role==="assistant"?"AI: ":"";
+      lines.push(who+c.slice(0,500));
     }
     var convo=lines.join("\n\n");
     var sysmsg="Summarize this conversation section in 150-200 words. Preserve all key facts, numbers, price targets, decisions, and conclusions. Third person, concise.";
     var res=await fetch(workerUrl,{
       method:"POST",
-      headers:{"Content-Type":"application/json"},
+      headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},
       body:JSON.stringify({
         model:currentModel.id,
         messages:[{role:"system",content:sysmsg},{role:"user",content:convo}],
@@ -532,6 +580,93 @@ var FK="ai_favorites";
 function loadFavs(){try{favorites=JSON.parse(localStorage.getItem(FK)||"{}");}catch(e){favorites={};}}
 function saveFavs(){localStorage.setItem(FK,JSON.stringify(favorites));}
 
+/* ---- Recent chats (rolling last 5 for undo/recovery) ---- */
+function saveToRecent(){
+  if(!chatHistory.length)return;
+  try{
+    var recent=JSON.parse(localStorage.getItem(RECENT_KEY)||"[]");
+    var firstUser=chatHistory.find(function(m){return m.role==="user";});
+    var title=firstUser?(typeof firstUser.content==="string"?firstUser.content:((firstUser.content&&firstUser.content.find&&firstUser.content.find(function(x){return x.type==="text";})||{}).text||"Chat")):"Chat";
+    recent.unshift({
+      savedAt:Date.now(),
+      title:title.slice(0,80),
+      modelId:currentModel.id,modelLabel:currentModel.label,
+      backend:activeBackend,
+      messages:chatHistory.map(function(m){return{role:m.role,content:typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(x){return x.type==="text";})||{}).text||"")};})
+    });
+    if(recent.length>5)recent=recent.slice(0,5);
+    localStorage.setItem(RECENT_KEY,JSON.stringify(recent));
+  }catch(e){}
+}
+function showUndoToast(){
+  var toast=document.getElementById("undoToast");
+  var bar=document.getElementById("undoProgress");
+  toast.classList.remove("hidden");
+  bar.style.transition="none";bar.style.width="100%";
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      bar.style.transition="width 10s linear";
+      bar.style.width="0%";
+    });
+  });
+  if(undoTimer)clearTimeout(undoTimer);
+  undoTimer=setTimeout(function(){
+    toast.classList.add("hidden");
+    undoData=null;
+  },10000);
+}
+function undoClear(){
+  if(!undoData)return;
+  if(undoTimer){clearTimeout(undoTimer);undoTimer=null;}
+  document.getElementById("undoToast").classList.add("hidden");
+  chatHistory=undoData.messages;
+  activeBackend=undoData.backend;
+  var B=BACKENDS[activeBackend];
+  if(B){workerUrl=B.url;allModels=B.models;}
+  var def=allModels.find(function(m){return m.id===undoData.modelId;});
+  if(def){setModel(def);}else{currentModel={id:undoData.modelId,label:undoData.modelLabel||undoData.modelId};document.getElementById("modelBtnLabel").textContent=currentModel.label;document.getElementById("modelBtn").disabled=false;}
+  document.getElementById("chat").innerHTML="";
+  document.getElementById("emptyState")&&document.getElementById("emptyState").remove();
+  chatHistory.forEach(function(m){appendMsg(m.role,m.content);});
+  setTimeout(function(){var c=document.getElementById("chat");c.scrollTop=c.scrollHeight;},100);
+  autoSave();updTokenBar();
+  undoData=null;
+}
+function renderRecent(){
+  var list=document.getElementById("recentList");
+  try{
+    var recent=JSON.parse(localStorage.getItem(RECENT_KEY)||"[]");
+    if(!recent.length){list.innerHTML='<p class="el">No recent chats. They appear here after you clear or start a new conversation.</p>';return;}
+    list.innerHTML="";
+    recent.forEach(function(r,i){
+      var btn=document.createElement("button");
+      btn.className="ri";
+      var d=new Date(r.savedAt);
+      var timeStr=d.toLocaleDateString()+" "+d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+      btn.innerHTML='<div class="rit">'+esc(r.title)+'</div><div class="rid">'+esc(r.modelLabel||r.modelId)+" &middot; "+esc(timeStr)+'</div>';
+      btn.addEventListener("click",function(){
+        if(chatHistory.length&&!confirm("Load this recent chat? Current chat will be cleared."))return;
+        saveToRecent();
+        chatHistory=r.messages;
+        if(r.backend&&BACKENDS[r.backend]){
+          activeBackend=r.backend;var B=BACKENDS[activeBackend];workerUrl=B.url;allModels=B.models;
+          document.getElementById("deepinfraBtn").className="btab"+(activeBackend==="deepinfra"?" act":"");
+          document.getElementById("openrouterBtn").className="btab"+(activeBackend==="openrouter"?" act or":"");
+          document.getElementById("claudeBtn").className="btab"+(activeBackend==="claude"?" act":"");
+        }
+        var def=allModels.find(function(m){return m.id===r.modelId;});
+        if(def){setModel(def);}else{currentModel={id:r.modelId,label:r.modelLabel||r.modelId};document.getElementById("modelBtnLabel").textContent=currentModel.label;document.getElementById("modelBtn").disabled=false;}
+        document.getElementById("chat").innerHTML="";
+        chatHistory.forEach(function(m){appendMsg(m.role,m.content);});
+        setTimeout(function(){var c=document.getElementById("chat");c.scrollTop=c.scrollHeight;},100);
+        autoSave();updTokenBar();
+        document.getElementById("recentModal").classList.add("hidden");
+      });
+      list.appendChild(btn);
+    });
+  }catch(e){list.innerHTML='<p class="el">Could not load recent chats.</p>';}
+}
+
 /* ---- Backend ---- */
 async function loadBackend(){
   var B=BACKENDS[activeBackend];
@@ -541,10 +676,11 @@ async function loadBackend(){
   document.getElementById("modelBtn").disabled=false;
   document.getElementById("deepinfraBtn").className="btab"+(activeBackend==="deepinfra"?" act":"");
   document.getElementById("openrouterBtn").className="btab"+(activeBackend==="openrouter"?" act or":"");
+  document.getElementById("claudeBtn").className="btab"+(activeBackend==="claude"?" act":"");
   try{
     var ac=new AbortController();
     var timer=setTimeout(function(){ac.abort();},4000);
-    var mRes=await fetch(workerUrl+"/models",{signal:ac.signal});
+    var mRes=await fetch(workerUrl+"/models",{signal:ac.signal,headers:{"X-App-Secret":APP_SECRET}});
     clearTimeout(timer);
     var mData=await mRes.json();
     var validIds=new Set((mData.data||[]).map(function(m){return m.id;}));
@@ -783,6 +919,7 @@ function saveCurrentChat(projId){
 }
 function loadConv(conv){
   if(chatHistory.length&&!confirm("Load this chat? Current chat will be cleared."))return;
+  saveToRecent();
   chatHistory=conv.messages.map(function(m){return{role:m.role,content:m.content};});
   document.getElementById("chat").innerHTML="";lastUsedModelId="";
   var def=allModels.find(function(m){return m.id===conv.modelId;});if(def)setModel(def);
@@ -898,6 +1035,7 @@ function renderWprojConvs(p){
 }
 function loadWprojConv(conv,p){
   if(chatHistory.length&&!confirm("Load this chat? Current chat will be cleared."))return;
+  saveToRecent();
   chatHistory=conv.messages.map(function(m){return{role:m.role,content:m.content};});
   document.getElementById("chat").innerHTML="";lastUsedModelId="";
   sessionId=conv.sessionId||Date.now().toString();
@@ -911,7 +1049,8 @@ function startWprojChat(){
   var p=wproj.find(function(x){return x.id===viewingWProjId;});
   if(!p)return;
   if(chatHistory.length&&!confirm("Start a new chat in this project? Current chat will be cleared."))return;
-  chatHistory=[];document.getElementById("chat").innerHTML='<div class="es" id="emptyState">Select a model and start chatting.</div>';
+  saveToRecent();
+  chatHistory=[];document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✶</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
   lastUsedModelId="";sessionId=Date.now().toString();responseCount=0;
   document.getElementById("tokenBar").classList.add("hidden");
   activeWProjId=p.id;
@@ -993,6 +1132,7 @@ function loadAutoSave(){
       activeBackend=saved.backend;var B=BACKENDS[activeBackend];workerUrl=B.url;allModels=B.models;
       document.getElementById("deepinfraBtn").className="btab"+(activeBackend==="deepinfra"?" act":"");
       document.getElementById("openrouterBtn").className="btab"+(activeBackend==="openrouter"?" act or":"");
+      document.getElementById("claudeBtn").className="btab"+(activeBackend==="claude"?" act":"");
     }
     var def=allModels.find(function(m){return m.id===saved.modelId;});
     if(def){setModel(def);}else{currentModel={id:saved.modelId,label:saved.modelLabel||saved.modelId};document.getElementById("modelBtnLabel").textContent=currentModel.label;document.getElementById("modelBtn").disabled=false;}
@@ -1263,7 +1403,7 @@ async function doSearch(query){
   try{
     var ac=new AbortController();
     var timer=setTimeout(function(){ac.abort();},5000);
-    var res=await fetch(BACKENDS.deepinfra.url+"/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:query}),signal:ac.signal});
+    var res=await fetch(BACKENDS.deepinfra.url+"/search",{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({query:query}),signal:ac.signal});
     clearTimeout(timer);
     var data=await res.json();
     if(data.results&&data.results.length)return "REAL-TIME DATA as of "+new Date().toLocaleTimeString()+":\n"+data.results.join("\n");
@@ -1292,6 +1432,7 @@ bindM("wprojDetail","closeWprojDetail");
 /* ---- Event listeners ---- */
 document.getElementById("deepinfraBtn").addEventListener("click",function(){if(activeBackend!=="deepinfra"){activeBackend="deepinfra";loadBackend();}});
 document.getElementById("openrouterBtn").addEventListener("click",function(){if(activeBackend!=="openrouter"){activeBackend="openrouter";loadBackend();}});
+document.getElementById("claudeBtn").addEventListener("click",function(){if(activeBackend!=="claude"){activeBackend="claude";loadBackend();}});
 document.getElementById("modelBtn").addEventListener("click",function(){renderModelList();openModal("modelModal");});
 document.getElementById("settingsBtn").addEventListener("click",function(){openModal("settingsModal");});
 document.getElementById("newTabBtn").addEventListener("click",function(){window.open(window.location.href,"_blank");});
@@ -1378,6 +1519,10 @@ function appendMsg(role,content,streaming){
   if(role==="assistant")lastUsedModelId=currentModel.id;
   var wrap=document.createElement("div");wrap.className="msg "+(role==="user"?"mu":"ma3");
   var label=document.createElement("div");label.className="ml";
+  if(role==="assistant"){
+    var av=document.createElement("span");av.className="av";av.textContent="✦";
+    label.appendChild(av);
+  }
   var lspan=document.createElement("span");lspan.textContent=role==="user"?"You":currentModel.label;
   label.appendChild(lspan);
   var body=document.createElement("div");body.className="body";
@@ -1542,7 +1687,7 @@ async function doSendRequest(userContent,isRegen,ap){
     if(!webSearchOn&&TOOL_MODELS.indexOf(currentModel.id)>=0){
       try{
         var toolDef={type:"function","function":{name:"web_search",description:"Search for real-time data: crypto prices, weather, news.",parameters:{type:"object",properties:{query:{type:"string"}},required:["query"]}}};
-        var p1res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel.id,messages:messages,tools:[toolDef],tool_choice:"auto",temperature:temperature,stream:false,max_tokens:500})});
+        var p1res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:messages,tools:[toolDef],tool_choice:"auto",temperature:temperature,stream:false,max_tokens:500})});
         if(p1res.ok){
           var p1data=await p1res.json();
           var p1choice=(p1data.choices||[])[0]||{};
@@ -1559,7 +1704,7 @@ async function doSendRequest(userContent,isRegen,ap){
       }catch(te){}
     }
     abortController=new AbortController();
-    var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel.id,messages:messages,temperature:temperature,stream:true}),signal:abortController.signal});
+    var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:messages,temperature:temperature,stream:true}),signal:abortController.signal});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error((err.error&&err.error.message)||"HTTP "+res.status);}
     var reader=res.body.getReader(),dec=new TextDecoder(),buf="",done=false;
     while(!done){
@@ -1610,11 +1755,23 @@ document.getElementById("sendBtn").addEventListener("click",function(){
 /* Enter = new line, no auto-send */
 document.getElementById("prompt").addEventListener("input",function(){this.style.height="auto";this.style.height=Math.min(this.scrollHeight,150)+"px";});
 document.getElementById("clearBtn").addEventListener("click",function(){
+  if(!chatHistory.length)return;
+  /* Save to recent history and stash for undo before wiping anything */
+  saveToRecent();
+  undoData={messages:chatHistory.slice(),backend:activeBackend,modelId:currentModel.id,modelLabel:currentModel.label};
   chatHistory=[];clearAttach();localStorage.removeItem(AUTOSAVE_KEY);localStorage.removeItem("ai_draft");
   sessionId=Date.now().toString();responseCount=0;lastUsedModelId="";summarizing=false;
   clearActiveWproj();
-  document.getElementById("chat").innerHTML='<div class="es" id="emptyState">Select a model and start chatting.</div>';
+  document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✶</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
   document.getElementById("tokenBar").classList.add("hidden");
+  showUndoToast();
+});
+document.getElementById("undoBtn").addEventListener("click",undoClear);
+bindM("recentModal","closeRecentModal");
+document.getElementById("recentChatsBtn").addEventListener("click",function(){
+  document.getElementById("settingsModal").classList.add("hidden");
+  renderRecent();
+  document.getElementById("recentModal").classList.remove("hidden");
 });
 
 /* ---- Init ---- */

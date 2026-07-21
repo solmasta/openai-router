@@ -1,8 +1,17 @@
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, X-App-Secret",
 };
+
+// Shared-secret check so a bare Worker URL (visible in the page source) can't
+// be hit directly by scanners/bots to spend the OPENROUTER_KEY budget. Not a
+// substitute for real auth - the secret ships in client JS - but it stops
+// casual/automated abuse of the raw URL.
+function checkAuth(request, env) {
+  const provided = request.headers.get("X-App-Secret");
+  return !!env.APP_SECRET && provided === env.APP_SECRET;
+}
 
 export default {
   async fetch(request, env) {
@@ -10,6 +19,12 @@ export default {
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS });
+    }
+
+    if (!checkAuth(request, env)) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { "Content-Type": "application/json", ...CORS }
+      });
     }
 
     // Live model list endpoint

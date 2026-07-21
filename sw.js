@@ -1,11 +1,16 @@
-var CACHE = 'ai-router-v42';
+var CACHE = 'ai-router-v44';
+/* Relative (no leading slash) so these resolve against this script's own
+   location. The app is served from a subpath (e.g. /openai-router/), and
+   an absolute '/index.html' would resolve to the site ROOT, not the app -
+   causing cache.addAll() to fail on a 404 and the install step to abort
+   with nothing cached at all. */
 var FILES = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-32.png',
-  '/icon-192.png',
-  '/icon-512.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-32.png',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 /* Install - cache core files */
