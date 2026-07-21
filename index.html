@@ -386,6 +386,26 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
   </div>
 </div></div>
 
+<div class="modal hidden" id="memoryModal"><div class="sheet">
+  <div class="sh"><span>Memory</span><button class="sc" id="closeMemoryModal">&#10005;</button></div>
+  <div class="sbody">
+    <p class="el" id="memoryEmptyMsg">No memories yet. Add one below, or approve a suggestion the AI offers during a chat.</p>
+    <div id="memoryList"></div>
+  </div>
+  <div class="sf2" style="display:flex;gap:8px">
+    <input type="text" id="newMemoryInput" class="fi" placeholder="e.g. I'm an HVAC field tech" style="flex:2" autocomplete="off">
+    <button class="bp" id="addMemoryBtn" style="flex:1">Add</button>
+  </div>
+</div></div>
+
+<div class="modal hidden" id="docLibraryModal"><div class="sheet">
+  <div class="sh"><span>Document Library</span><button class="sc" id="closeDocLibraryModal">&#10005;</button></div>
+  <div class="sbody">
+    <p class="el" id="docLibraryEmptyMsg">No saved documents yet. Files you upload in chat are saved here automatically.</p>
+    <div id="docLibraryList"></div>
+  </div>
+</div></div>
+
 <div class="modal hidden" id="settingsModal"><div class="sheet">
   <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v4.2</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
@@ -399,7 +419,9 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Overseer monitoring</div><div class="ssb">Track progress, detect stuck situations, suggest next steps</div></div><button class="bg" id="overseerToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Brainstorming mode</div><div class="ssb">Generate prompts and suggestions during conversation</div></div><button class="bg" id="brainstormToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Auto prompt injection</div><div class="ssb">Overseer auto-generates optimal instructions for each model</div></div><button class="bg" id="autoPropomptToggleBtn">ON</button></div>
-    <div class="sr"><div><div class="slb">Recent chats</div><div class="ssb">Restore any of the last 5 conversations</div></div><button class="bg" id="recentChatsBtn">View</button></div></div>
+    <div class="sr"><div><div class="slb">Recent chats</div><div class="ssb">Restore any of the last 5 conversations</div></div><button class="bg" id="recentChatsBtn">View</button></div>
+    <div class="sr"><div><div class="slb">Memory</div><div class="ssb">Facts the AI remembers about you across all conversations</div></div><button class="bg" id="memoryBtn">View</button></div>
+    <div class="sr"><div><div class="slb">Document library</div><div class="ssb">Documents saved permanently, reusable in any conversation</div></div><button class="bg" id="docLibraryBtn">View</button></div></div>
     <div class="sr"><div><div class="slb">&#128176; DeepInfra credits</div><div class="ssb">Pay-as-you-go, fractions of a cent per message</div></div><a href="https://deepinfra.com/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; OpenRouter credits</div><div class="ssb">Needed for uncensored paid models</div></div><a href="https://openrouter.ai/credits" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; Anthropic credits</div><div class="ssb">For Claude models (Opus, Sonnet, Haiku)</div></div><a href="https://console.anthropic.com/settings/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
@@ -432,6 +454,10 @@ var AUTOSAVE_KEY="ai_autosave";
 var RECENT_KEY="ai_recent";
 var TABS_KEY="ai_tabs";
 var openTabs=[],activeTabIndex=0;
+var MK="ai_memories";
+var memories=[];
+var DLK="ai_doclibrary";
+var docLibrary=[];
 var undoTimer=null,undoData=null;
 var activeBackend="deepinfra",workerUrl="",allModels=[],currentModel={id:"",label:""};
 var chatHistory=[],sending=false,attachedFiles=[];
@@ -1492,6 +1518,7 @@ function getModelSystemPrompt(){
     sys+="For coding tasks, write complete, working code examples.\n";
   }
   sys+="Always use <think> tags to show reasoning before acting.\n";
+  sys+="\nIf you notice a durable fact about the user worth remembering for future conversations (a preference, an ongoing project, important context) - not something only relevant to this one message - wrap it in <memory>fact here</memory> tags. Use this sparingly, only for things genuinely worth remembering long-term. The user will be asked to approve before it's actually saved.\n";
   return sys;
 }
 
@@ -2149,6 +2176,115 @@ function initTabs(){
   renderTabBar();
 }
 
+/* ---- Memory: persistent facts across ALL conversations, user-controlled.
+   The AI can suggest additions via <memory> tags in its response, but
+   never writes one without an explicit tap to approve. Retrieval is
+   Overseer-mediated: only memories relevant to the current message get
+   injected, not the whole list every time, to stay token-efficient. ---- */
+function loadMemories(){try{memories=JSON.parse(localStorage.getItem(MK)||"[]");}catch(e){memories=[];}}
+function saveMemories(){localStorage.setItem(MK,JSON.stringify(memories));driveAutoPush(true);}
+function addMemory(text,always){
+  text=(text||"").trim();if(!text)return;
+  memories.push({id:Date.now().toString()+Math.random().toString(36).slice(2,5),text:text,always:!!always,createdAt:Date.now()});
+  saveMemories();renderMemoryList();
+}
+function deleteMemory(id){memories=memories.filter(function(m){return m.id!==id;});saveMemories();renderMemoryList();}
+function renderMemoryList(){
+  var list=document.getElementById("memoryList");if(!list)return;
+  list.innerHTML="";
+  document.getElementById("memoryEmptyMsg").classList.toggle("hidden",memories.length>0);
+  memories.slice().reverse().forEach(function(m){
+    var card=document.createElement("div");card.className="pc";
+    var top=document.createElement("div");top.className="ct2";
+    var nm=document.createElement("span");nm.className="cn";nm.textContent=(m.always?"📌 ":"")+m.text;
+    var db=document.createElement("button");db.className="cdb";db.innerHTML="&#10005;";
+    top.appendChild(nm);top.appendChild(db);
+    card.appendChild(top);
+    db.addEventListener("click",function(){deleteMemory(m.id);});
+    list.appendChild(card);
+  });
+}
+/* Overseer's job: pick which stored memories actually matter for the
+   current message instead of always injecting everything. Keyword
+   overlap is a simple, zero-cost heuristic - no extra API call needed.
+   Memories marked "always" (style/tone preferences etc.) are included
+   regardless of topic match. */
+function overseerSelectRelevantMemories(contextText,maxCount){
+  if(!memories.length)return[];
+  var words=(contextText||"").toLowerCase().match(/[a-z0-9']{3,}/g)||[];
+  var wordSet={};words.forEach(function(w){wordSet[w]=true;});
+  var always=memories.filter(function(m){return m.always;});
+  var rest=memories.filter(function(m){return !m.always;});
+  var scored=rest.map(function(m){
+    var mwords=m.text.toLowerCase().match(/[a-z0-9']{3,}/g)||[];
+    var overlap=0;mwords.forEach(function(w){if(wordSet[w])overlap++;});
+    return{mem:m,score:overlap};
+  }).filter(function(s){return s.score>0;});
+  scored.sort(function(a,b){return b.score-a.score;});
+  var cap=maxCount||6;
+  var relevant=scored.slice(0,Math.max(0,cap-always.length)).map(function(s){return s.mem;});
+  return always.concat(relevant).slice(0,cap);
+}
+/* Parse <memory>fact</memory> tags the AI includes in its own response
+   text (per system prompt instruction) and show an approve/dismiss note
+   per suggestion - never auto-saved. */
+function extractMemorySuggestions(responseText){
+  var out=[];var re=/<memory>([\s\S]*?)<\/memory>/g;var m;
+  while((m=re.exec(responseText))!==null){
+    var t=m[1].trim();if(t)out.push(t);
+  }
+  return out;
+}
+function stripMemoryTags(text){return text.replace(/<memory>[\s\S]*?<\/memory>\s*/g,"");}
+function showMemorySuggestion(text){
+  var notice=document.createElement("div");
+  notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(139,140,247,0.08);border-left:3px solid var(--ac);border-radius:4px;font-size:12px;color:var(--tx)";
+  notice.innerHTML="💾 <strong>Save to memory?</strong><br><span style='color:var(--mu)'>"+esc(text)+"</span>";
+  var actions=document.createElement("div");actions.style.cssText="margin-top:6px;display:flex;gap:8px";
+  var save=document.createElement("button");save.className="bp";save.style.cssText="font-size:11px;padding:4px 10px";save.textContent="Save";
+  var dismiss=document.createElement("button");dismiss.className="bg";dismiss.style.cssText="font-size:11px;padding:4px 10px";dismiss.textContent="Dismiss";
+  save.addEventListener("click",function(){addMemory(text);actions.remove();notice.style.opacity="0.6";notice.innerHTML+="<div style='margin-top:4px;color:var(--ac)'>Saved.</div>";});
+  dismiss.addEventListener("click",function(){notice.remove();});
+  actions.appendChild(save);actions.appendChild(dismiss);
+  notice.appendChild(actions);
+  document.getElementById("chat").appendChild(notice);
+  scrollBot();
+}
+
+/* ---- Document library: uploads saved permanently, reusable across any
+   future conversation, unlike one-message-only attachments. ---- */
+var DOC_LIBRARY_CAP=30;
+function loadDocLibrary(){try{docLibrary=JSON.parse(localStorage.getItem(DLK)||"[]");}catch(e){docLibrary=[];}}
+function saveDocLibrary(){localStorage.setItem(DLK,JSON.stringify(docLibrary));driveAutoPush(true);}
+function addToLibrary(file){
+  docLibrary.push({id:Date.now().toString()+Math.random().toString(36).slice(2,5),name:file.name,type:file.type,content:file.content||null,dataUrl:file.dataUrl||null,addedAt:Date.now()});
+  if(docLibrary.length>DOC_LIBRARY_CAP)docLibrary=docLibrary.slice(-DOC_LIBRARY_CAP);
+  saveDocLibrary();
+}
+function removeFromLibrary(id){docLibrary=docLibrary.filter(function(d){return d.id!==id;});saveDocLibrary();renderDocLibraryList();}
+function renderDocLibraryList(){
+  var list=document.getElementById("docLibraryList");if(!list)return;
+  list.innerHTML="";
+  document.getElementById("docLibraryEmptyMsg").classList.toggle("hidden",docLibrary.length>0);
+  docLibrary.slice().reverse().forEach(function(d){
+    var card=document.createElement("div");card.className="pc";
+    var top=document.createElement("div");top.className="ct2";
+    var nm=document.createElement("span");nm.className="cn";nm.textContent=(d.type==="image"?"🖼️ ":"📄 ")+d.name;
+    var db=document.createElement("button");db.className="cdb";db.innerHTML="&#10005;";
+    top.appendChild(nm);top.appendChild(db);
+    var sub=document.createElement("div");sub.className="cs";
+    var attachBtn=document.createElement("button");attachBtn.className="ceb";attachBtn.textContent="Attach to chat";
+    sub.appendChild(attachBtn);
+    card.appendChild(top);card.appendChild(sub);
+    db.addEventListener("click",function(){removeFromLibrary(d.id);});
+    attachBtn.addEventListener("click",function(){
+      attachedFiles.push({type:d.type,name:d.name,content:d.content,dataUrl:d.dataUrl});
+      renderAttach();closeModal("docLibraryModal");
+    });
+    list.appendChild(card);
+  });
+}
+
 function loadDraft(){
   try{
     var d=localStorage.getItem("ai_draft");
@@ -2250,7 +2386,7 @@ async function driveAutoPush(force){
     if(!driveFolderId)await driveEnsureFolder();
     if(!driveFolderId){driveBusy=false;return;}
     if(!driveFileId)await driveFindFile();
-    var payload={version:1,syncedAt:new Date().toISOString(),prompts:JSON.parse(localStorage.getItem("ai_prompts")||"{}"),projects:JSON.parse(localStorage.getItem("ai_projects")||"[]"),workprojects:JSON.parse(localStorage.getItem("ai_workprojects")||"[]"),autosave:localStorage.getItem("ai_autosave")||null};
+    var payload={version:1,syncedAt:new Date().toISOString(),prompts:JSON.parse(localStorage.getItem("ai_prompts")||"{}"),projects:JSON.parse(localStorage.getItem("ai_projects")||"[]"),workprojects:JSON.parse(localStorage.getItem("ai_workprojects")||"[]"),autosave:localStorage.getItem("ai_autosave")||null,memories:JSON.parse(localStorage.getItem("ai_memories")||"[]"),doclibrary:JSON.parse(localStorage.getItem("ai_doclibrary")||"[]")};
     var blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
     var metadata={name:"ai-router-autosave.json",mimeType:"application/json"};
     if(!driveFileId)metadata.parents=[driveFolderId];
@@ -2277,6 +2413,8 @@ async function driveRestore(){
     if(data.projects)localStorage.setItem("ai_projects",JSON.stringify(data.projects));
     if(data.workprojects)localStorage.setItem("ai_workprojects",JSON.stringify(data.workprojects));
     if(data.autosave)localStorage.setItem("ai_autosave",data.autosave);
+    if(data.memories)localStorage.setItem("ai_memories",JSON.stringify(data.memories));
+    if(data.doclibrary)localStorage.setItem("ai_doclibrary",JSON.stringify(data.doclibrary));
     alert("Restored from Google Drive!");
     location.reload();
   }catch(e){alert("Restore failed: "+e.message);}
@@ -2294,11 +2432,13 @@ async function driveAutoRestoreIfEmpty(){
      silently overwrite newer local folders/projects with a stale Drive
      backup. Never do that automatically - only fill in a genuinely empty
      slate. */
-  var localProjects=[],localWproj=[],localPrompts={};
+  var localProjects=[],localWproj=[],localPrompts={},localMemories=[],localDocLib=[];
   try{localProjects=JSON.parse(localStorage.getItem("ai_projects")||"[]");}catch(e){}
   try{localWproj=JSON.parse(localStorage.getItem("ai_workprojects")||"[]");}catch(e){}
   try{localPrompts=JSON.parse(localStorage.getItem("ai_prompts")||"{}");}catch(e){}
-  var hasLocalData=chatHistory.length>0||(localProjects&&localProjects.length>0)||(localWproj&&localWproj.length>0)||(localPrompts&&Object.keys(localPrompts).length>0);
+  try{localMemories=JSON.parse(localStorage.getItem("ai_memories")||"[]");}catch(e){}
+  try{localDocLib=JSON.parse(localStorage.getItem("ai_doclibrary")||"[]");}catch(e){}
+  var hasLocalData=chatHistory.length>0||(localProjects&&localProjects.length>0)||(localWproj&&localWproj.length>0)||(localPrompts&&Object.keys(localPrompts).length>0)||(localMemories&&localMemories.length>0)||(localDocLib&&localDocLib.length>0);
   if(hasLocalData)return;
   try{
     if(!driveFolderId)await driveEnsureFolder();
@@ -2306,11 +2446,13 @@ async function driveAutoRestoreIfEmpty(){
     if(!driveFileId)return;
     var res=await fetch("https://www.googleapis.com/drive/v3/files/"+driveFileId+"?alt=media",{headers:{Authorization:"Bearer "+driveToken}});
     var data=await res.json();
-    if(!data||(!data.autosave&&!data.prompts&&!data.projects&&!data.workprojects))return;
+    if(!data||(!data.autosave&&!data.prompts&&!data.projects&&!data.workprojects&&!data.memories&&!data.doclibrary))return;
     if(data.prompts)localStorage.setItem("ai_prompts",JSON.stringify(data.prompts));
     if(data.projects)localStorage.setItem("ai_projects",JSON.stringify(data.projects));
     if(data.workprojects)localStorage.setItem("ai_workprojects",JSON.stringify(data.workprojects));
     if(data.autosave)localStorage.setItem("ai_autosave",data.autosave);
+    if(data.memories)localStorage.setItem("ai_memories",JSON.stringify(data.memories));
+    if(data.doclibrary)localStorage.setItem("ai_doclibrary",JSON.stringify(data.doclibrary));
     updateDriveStatus("Restored from backup "+new Date().toLocaleTimeString());
     location.reload();
   }catch(e){}
@@ -2643,8 +2785,15 @@ document.getElementById("fileInput").addEventListener("change",async function(e)
   var files=Array.from(e.target.files);e.target.value="";
   for(var i=0;i<files.length;i++){
     var file=files[i];
-    if(file.type.startsWith("image/")){var du=await compressImg(file);attachedFiles.push({type:"image",dataUrl:du,name:file.name});}
-    else{var ct=await readTxt(file);attachedFiles.push({type:"text",content:ct,name:file.name});}
+    if(file.type.startsWith("image/")){
+      var du=await compressImg(file);
+      attachedFiles.push({type:"image",dataUrl:du,name:file.name});
+      addToLibrary({type:"image",dataUrl:du,name:file.name});
+    }else{
+      var ct=await readTxt(file);
+      attachedFiles.push({type:"text",content:ct,name:file.name});
+      addToLibrary({type:"text",content:ct,name:file.name});
+    }
   }
   renderAttach();
 });
@@ -2819,16 +2968,21 @@ async function doSendRequest(userContent,isRegen,ap){
   var modelSysPrompt=getModelSystemPrompt();
   messages.push({role:"system",content:modelSysPrompt});
 
+  var msgText=typeof userContent==="string"?userContent:((userContent&&userContent.find&&userContent.find(function(c){return c.type==="text";}))||{}).text||"";
   var injectedInstructions=null;
   if(!isRegen){
-    var interceptText=typeof userContent==="string"?userContent:((userContent.find&&userContent.find(function(c){return c.type==="text";}))||{}).text||"";
-    injectedInstructions=interceptAndEnhanceMessage(interceptText);
+    injectedInstructions=interceptAndEnhanceMessage(msgText);
   }
   if(injectedInstructions){
     messages.push({role:"system",content:"TASK INSTRUCTIONS:\n"+injectedInstructions});
   }
 
   if(ap)messages.push({role:"system",content:ap.content});
+
+  var relevantMemories=overseerSelectRelevantMemories(msgText,6);
+  if(relevantMemories.length){
+    messages.push({role:"system",content:"MEMORY (persistent facts about the user, selected as relevant to this message):\n"+relevantMemories.map(function(m){return "- "+m.text;}).join("\n")});
+  }
   var searchUsed=false;
   var searchTime=null;
   if(webSearchOn){
@@ -2939,9 +3093,13 @@ async function doSendRequest(userContent,isRegen,ap){
     if(thinkMatch){displayThinkingProcess(thinkMatch[1]);}
     full=full.replace(/<think>[\s\S]*?<\/think>\s*/g,"");
 
+    var memSuggestions=extractMemorySuggestions(full);
+    full=stripMemoryTags(full);
+
     asstMsg.wrap.classList.remove("ma2");
     asstMsg.body.innerHTML=renderMd(full||(isRegen?"(no response)":"(empty response)"));
     chatHistory.push({role:"assistant",content:full});
+    memSuggestions.forEach(function(t){showMemorySuggestion(t);});
     if(searchUsed){var sb=document.createElement("span");sb.className="srch";sb.textContent="\uD83D\uDD0D searched "+searchTime;asstMsg.label.appendChild(sb);}
     if(messages.some(function(m){return m.role==="tool";})){var tb=document.createElement("span");tb.className="srch";tb.textContent="\uD83D\uDEE0\uFE0F used tools";asstMsg.label.appendChild(tb);}
     var cost=calcCost(full);
@@ -2993,6 +3151,25 @@ document.getElementById("recentChatsBtn").addEventListener("click",function(){
   renderRecent();
   document.getElementById("recentModal").classList.remove("hidden");
 });
+document.getElementById("memoryBtn").addEventListener("click",function(){
+  document.getElementById("settingsModal").classList.add("hidden");
+  renderMemoryList();
+  openModal("memoryModal");
+});
+document.getElementById("closeMemoryModal").addEventListener("click",function(){closeModal("memoryModal");});
+document.getElementById("addMemoryBtn").addEventListener("click",function(){
+  var el=document.getElementById("newMemoryInput");
+  addMemory(el.value);el.value="";
+});
+document.getElementById("newMemoryInput").addEventListener("keydown",function(e){
+  if(e.key==="Enter"){document.getElementById("addMemoryBtn").click();}
+});
+document.getElementById("docLibraryBtn").addEventListener("click",function(){
+  document.getElementById("settingsModal").classList.add("hidden");
+  renderDocLibraryList();
+  openModal("docLibraryModal");
+});
+document.getElementById("closeDocLibraryModal").addEventListener("click",function(){closeModal("docLibraryModal");});
 
 /* ---- Init ---- */
 /* Fetch APP_SECRET from worker on page load - non-blocking with timeout */
@@ -3024,7 +3201,7 @@ loadFavs();
   document.getElementById("wsBtn").classList.add("on");
   document.getElementById("wsBtn").title="Web search ON";
 })();
-loadBackend();loadPrompts();loadProjects();loadWProjects();loadAutoSave();loadDraft();initTabs();
+loadBackend();loadPrompts();loadProjects();loadWProjects();loadAutoSave();loadDraft();initTabs();loadMemories();renderMemoryList();loadDocLibrary();renderDocLibraryList();
 
 /* Reconnect to Drive silently if previously connected, no popup if session still valid */
 if(localStorage.getItem("drive_connected")==="1"){
