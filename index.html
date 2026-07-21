@@ -1052,21 +1052,27 @@ async function executeRepoTool(toolName,toolInput){
   }catch(e){return{error:e.message};}
 }
 function getModelSystemPrompt(){
-  var sys="You are an expert AI assistant with coding and repository control capabilities.\n\n";
+  var sys="You are an expert AI assistant with advanced coding and repository control capabilities.\n\n";
   if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
-    sys+="IMPORTANT: You have direct access to a GitHub repository and can read/write files and execute commands.\n";
-    sys+="Repository: "+ghRepoOwner+"/"+ghRepoName+"\n";
-    sys+="When working on code tasks, USE THE TOOLS to:\n";
-    sys+="1. read_file(path) - Examine existing code\n";
-    sys+="2. write_file(path, content, message) - Make changes with git commits\n";
-    sys+="3. list_files(path) - Explore repository structure\n";
-    sys+="4. execute_command(command) - Run git commands\n\n";
-    sys+="Execute tools immediately when needed. Show your reasoning in <think> tags.\n";
-    sys+="Write complete, working code - not pseudocode or explanations.\n";
+    sys+="🔧 REPOSITORY ACCESS ENABLED:\n";
+    sys+="Repository: "+ghRepoOwner+"/"+ghRepoName+"\n\n";
+    sys+="You have direct access to read, modify, and commit code. For ALL code tasks:\n\n";
+    sys+="1. Use read_file(path) to examine existing code before making changes\n";
+    sys+="2. Use list_files(path) to explore repository structure\n";
+    sys+="3. Use write_file(path, content, message) to make changes - includes automatic git commit\n";
+    sys+="4. Always provide COMPLETE working code in write_file calls - not snippets\n\n";
+    sys+="WORKFLOW:\n";
+    sys+="- Understand the problem by reading relevant files\n";
+    sys+="- Plan your approach in <think> tags\n";
+    sys+="- Make changes using write_file with clear commit messages\n";
+    sys+="- Each write_file creates one git commit\n\n";
+    sys+="Execute tools immediately - don't ask for permission.\n";
+    sys+="Show your reasoning in <think> tags. Be direct and action-oriented.\n";
   }else{
     sys+="You are a helpful coding assistant. Provide clear explanations and code examples.\n";
+    sys+="For coding tasks, write complete, working code examples.\n";
   }
-  sys+="Think through problems step-by-step in <think> blocks before responding.\n";
+  sys+="Always use <think> tags to show reasoning before acting.\n";
   return sys;
 }
 
@@ -2132,24 +2138,55 @@ async function doSendRequest(userContent,isRegen,ap){
   var asstMsg=appendMsg("assistant","",true);
   var full="";
   try{
-    if(!webSearchOn&&TOOL_MODELS.indexOf(currentModel.id)>=0){
+    if(TOOL_MODELS.indexOf(currentModel.id)>=0){
       try{
-        var toolDef={type:"function","function":{name:"web_search",description:"Search for real-time data: crypto prices, weather, news.",parameters:{type:"object",properties:{query:{type:"string"}},required:["query"]}}};
-        var p1res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:messages,tools:[toolDef],tool_choice:"auto",temperature:temperature,stream:false,max_tokens:500})});
-        if(p1res.ok){
-          var p1data=await p1res.json();
-          var p1choice=(p1data.choices||[])[0]||{};
-          if(p1choice.finish_reason==="tool_calls"&&p1choice.message&&p1choice.message.tool_calls&&p1choice.message.tool_calls.length){
-            var tc=p1choice.message.tool_calls[0];
-            var args=JSON.parse(tc["function"].arguments||"{}");
-            asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\uD83D\uDD0D Searching: '+esc(args.query||"")+'&#8230;</span>';
-            var sr=await doSearch(args.query||"");
-            if(sr){searchUsed=true;searchTime=new Date().toLocaleTimeString();}
-            messages=messages.concat([p1choice.message,{role:"tool",tool_call_id:tc.id,content:sr||"No results found"}]);
-            asstMsg.body.innerHTML='<span class="cur">\u2587</span>';
+        var initTools=[];
+        if(!webSearchOn){initTools.push({type:"function","function":{name:"web_search",description:"Search for real-time data: crypto prices, weather, news.",parameters:{type:"object",properties:{query:{type:"string"}},required:["query"]}}});}
+        if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){initTools=initTools.concat(REPO_TOOLS);}
+        if(initTools.length>0){
+          var p1res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:messages,tools:initTools,tool_choice:"auto",temperature:temperature,stream:false,max_tokens:1000})});
+          if(p1res.ok){
+            var p1data=await p1res.json();
+            var p1choice=(p1data.choices||[])[0]||{};
+            if(p1choice.finish_reason==="tool_calls"&&p1choice.message&&p1choice.message.tool_calls&&p1choice.message.tool_calls.length){
+              messages.push(p1choice.message);
+              for(var ti=0;ti<p1choice.message.tool_calls.length;ti++){
+                var tc=p1choice.message.tool_calls[ti];
+                var toolName=tc["function"].name;
+                var toolArgs=JSON.parse(tc["function"].arguments||"{}");
+                var toolResult=null;
+                if(toolName==="web_search"){
+                  asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\uD83D\uDD0D Searching: '+esc(toolArgs.query||"")+'&#8230;</span>';
+                  toolResult=await doSearch(toolArgs.query||"");
+                  if(toolResult){searchUsed=true;searchTime=new Date().toLocaleTimeString();}
+                  displayToolExecution("web_search",toolArgs,{success:true});
+                  toolResult=toolResult||"No results found";
+                }else if(toolName==="read_file"){
+                  asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\uD83D\uDCD6 Reading: '+esc(toolArgs.path||"")+'&#8230;</span>';
+                  var readRes=await executeRepoTool("read_file",toolArgs);
+                  displayToolExecution("read_file",toolArgs,readRes);
+                  toolResult=readRes.success?readRes.content:(readRes.error||"Failed to read file");
+                }else if(toolName==="write_file"){
+                  asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\u270F\uFE0F Writing: '+esc(toolArgs.path||"")+'&#8230;</span>';
+                  var writeRes=await executeRepoTool("write_file",toolArgs);
+                  displayToolExecution("write_file",toolArgs,writeRes);
+                  toolResult=writeRes.success?("File written. Commit: "+writeRes.commit):(writeRes.error||"Failed to write file");
+                }else if(toolName==="list_files"){
+                  var listRes=await executeRepoTool("list_files",toolArgs);
+                  displayToolExecution("list_files",toolArgs,listRes);
+                  toolResult=listRes.success?JSON.stringify(listRes.files):(listRes.error||"Failed to list files");
+                }else if(toolName==="execute_command"){
+                  asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\u2699\uFE0F Executing: '+esc(toolArgs.command||"")+'&#8230;</span>';
+                  displayToolExecution("execute_command",toolArgs,{success:true});
+                  toolResult="Command execution not yet implemented via browser. Model should use read_file/write_file for changes.";
+                }
+                messages.push({role:"tool",tool_call_id:tc.id,content:toolResult||"No result"});
+              }
+              asstMsg.body.innerHTML='<span class="cur">\u2587</span>';
+            }
           }
         }
-      }catch(te){}
+      }catch(te){console.error("Tool error:",te);}
     }
     abortController=new AbortController();
     var toolsToSend=[];
@@ -2182,6 +2219,7 @@ async function doSendRequest(userContent,isRegen,ap){
     asstMsg.body.innerHTML=renderMd(full||(isRegen?"(no response)":"(empty response)"));
     chatHistory.push({role:"assistant",content:full});
     if(searchUsed){var sb=document.createElement("span");sb.className="srch";sb.textContent="\uD83D\uDD0D searched "+searchTime;asstMsg.label.appendChild(sb);}
+    if(messages.some(function(m){return m.role==="tool";})){var tb=document.createElement("span");tb.className="srch";tb.textContent="\uD83D\uDEE0\uFE0F used tools";asstMsg.label.appendChild(tb);}
     var cost=calcCost(full);
     if(cost){var ct=document.createElement("span");ct.className="ct";ct.textContent=cost;asstMsg.label.appendChild(ct);}
     autoSave();responseCount++;if(responseCount%5===0)autoSnap();saveChatToActiveWproj();updTokenBar();
