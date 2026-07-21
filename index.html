@@ -24,10 +24,10 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,system-ui,sa
 .app{display:flex;flex-direction:column;height:100vh;max-width:820px;width:100%;margin:0 auto;padding:0 16px}
 header{display:flex;align-items:center;justify-content:space-between;padding:13px 0 12px;flex-shrink:0;gap:8px}
 .hl{display:flex;align-items:center;gap:8px;min-width:0}
-.wm{font-family:var(--mn);font-size:13px;color:var(--tx);letter-spacing:.02em;flex-shrink:0;font-weight:600}
-.wm span{font-size:9.5px;opacity:.35;font-weight:400;margin-left:2px}
+.wm{font-size:15px;color:var(--tx);flex-shrink:0;font-weight:700;letter-spacing:-.01em}
+.wm span{font-size:10px;opacity:.28;font-weight:400;margin-left:3px}
 .btabs{display:flex;gap:0;padding:10px 16px 0;flex-shrink:0}
-.btab{flex:1;background:var(--up);border:none;padding:9px 0;font-size:12.5px;font-family:var(--mn);color:var(--mu);cursor:pointer;letter-spacing:.02em;transition:background .15s,color .15s}
+.btab{flex:1;background:var(--up);border:none;padding:9px 0;font-size:13px;color:var(--mu);cursor:pointer;font-weight:500;transition:background .15s,color .15s}
 .btab:first-child{border-radius:12px 0 0 12px}
 .btab:last-child{border-radius:0 12px 12px 0}
 .btab.act{background:rgba(139,140,247,.18);color:var(--ac)}
@@ -47,16 +47,16 @@ header{display:flex;align-items:center;justify-content:space-between;padding:13p
 .sd.on{background:var(--ac)}
 .sl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sa{font-size:16px;opacity:.35}
-.chat{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 0 14px;display:flex;flex-direction:column;gap:22px}
+.chat{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 0 14px;display:flex;flex-direction:column;gap:28px}
 .chat::-webkit-scrollbar{width:3px}
 .chat::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px}
-.es{margin:auto;color:var(--mu);font-size:14.5px;text-align:center}
-.msg{display:flex;flex-direction:column;gap:6px;animation:msgIn .25s ease-out}
+.es{margin:auto;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 0}
+.msg{display:flex;flex-direction:column;gap:7px;animation:msgIn .22s ease-out}
 @keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.ml{font-family:var(--mn);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);display:flex;align-items:center;gap:6px;padding:0 2px}
-.mu .ml{color:var(--ac)}
+.ml{font-size:12px;font-weight:600;color:var(--mu);display:flex;align-items:center;gap:6px;padding:0 2px}
+.mu .ml{display:none}
 .body{font-size:15px;line-height:1.7;word-break:break-word;padding:0 2px}
-.mu .body{background:var(--ub);border:none;border-radius:16px;padding:11px 15px;display:inline-block;max-width:92%}
+.mu .body{background:var(--ub);border:none;border-radius:18px 18px 4px 18px;padding:12px 16px;display:inline-block;max-width:88%}
 .body h2{font-size:16.5px;margin:14px 0 6px}
 .body h3{font-size:15.5px;margin:12px 0 5px}
 .body h4{font-size:14px;margin:9px 0 4px;color:var(--mu)}
@@ -69,11 +69,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:13p
 .body.err{color:var(--er);background:rgba(248,113,113,.08);border-radius:12px;padding:11px 14px}
 .ma2 .body::after{content:'';display:inline-block;width:7px;height:14px;background:var(--ac);margin-left:2px;vertical-align:middle;animation:bl .8s step-end infinite;border-radius:1px}
 .acts{display:flex;gap:4px;margin-top:1px;flex-wrap:wrap;align-items:center;padding:0 2px}
-.ba{background:none;border:none;color:var(--mu);font-size:11.5px;padding:4px 9px;border-radius:8px;cursor:pointer;font-family:system-ui,sans-serif;transition:background .15s,color .15s}
+.ba{background:none;border:none;color:var(--mu);font-size:12px;padding:5px 10px;border-radius:8px;cursor:pointer;font-weight:500;transition:background .15s,color .15s}
 .ba:hover{color:var(--tx);background:var(--up)}
 .ct{font-size:10.5px;color:var(--mu);font-family:var(--mn);margin-left:auto;opacity:.7}
-.srch{font-size:10px;color:var(--ac);font-family:var(--mn);background:rgba(139,140,247,.1);border-radius:20px;padding:2px 8px;white-space:nowrap}
-.msw{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:11px;font-family:var(--mn);opacity:.6}
+.srch{font-size:10.5px;color:var(--ac);background:rgba(139,140,247,.1);border-radius:20px;padding:2px 9px;white-space:nowrap;font-weight:500}
+.msw{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:11px;opacity:.6;font-weight:500}
 .msw::before,.msw::after{content:'';flex:1;height:1px;background:var(--br)}
 .cb{margin:10px 0;border-radius:12px;overflow:hidden;border:1px solid var(--br)}
 .ch{display:flex;justify-content:space-between;align-items:center;background:#0d1117;padding:7px 13px;font-family:var(--mn);font-size:11px;color:var(--mu)}
@@ -84,13 +84,14 @@ header{display:flex;align-items:center;justify-content:space-between;padding:13p
 code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:5px;padding:2px 6px;color:var(--ac)}
 .cur{display:none}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:0}}
-.tb{display:flex;align-items:center;gap:8px;padding:2px 2px 6px;font-size:10.5px;color:var(--mu);font-family:var(--mn);flex-shrink:0}
+.tb{display:flex;align-items:center;gap:8px;padding:2px 2px 6px;font-size:11px;color:var(--mu);flex-shrink:0;font-weight:500}
 .tt{flex:1;height:3px;background:var(--up);border-radius:2px;overflow:hidden}
 .tf{height:100%;background:var(--ac);border-radius:2px;transition:width .3s}
 .tf.warn{background:#f59e0b}
 .tf.danger{background:var(--er)}
 .ib2{padding:8px 0 calc(14px + env(safe-area-inset-bottom,0px));flex-shrink:0;display:flex;flex-direction:column;gap:0}
-.input-shell{background:var(--sf);border:1px solid var(--br);border-radius:24px;padding:6px 8px 8px;box-shadow:0 2px 12px rgba(0,0,0,.15);display:flex;flex-direction:column;gap:2px}
+.input-shell{background:var(--sf);border:1px solid var(--br);border-radius:24px;padding:6px 8px 8px;box-shadow:0 4px 24px rgba(0,0,0,.22),0 1px 4px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:2px;transition:border-color .15s,box-shadow .15s}
+.input-shell:focus-within{border-color:rgba(139,140,247,.45);box-shadow:0 4px 28px rgba(0,0,0,.25),0 0 0 3px rgba(139,140,247,.1)}
 .ap{padding:4px 6px 0}
 .ait{display:flex;flex-wrap:wrap;gap:8px}
 .ai{display:flex;align-items:center;gap:6px;background:var(--up);border:none;border-radius:10px;padding:5px 9px;max-width:200px}
@@ -104,8 +105,8 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 #prompt:focus{outline:none}
 .ia{display:flex;align-items:center;gap:2px;padding:0 2px}
 .ir{display:flex;gap:6px;margin-left:auto;align-items:center}
-.bp{padding:8px 18px;font-size:14.5px;font-weight:600;color:#fff;background:var(--ac);border:none;border-radius:18px;cursor:pointer;transition:background .15s}
-.bp:hover:not(:disabled){background:var(--ad)}
+.bp{padding:9px 20px;font-size:14.5px;font-weight:600;color:#fff;background:var(--ac);border:none;border-radius:20px;cursor:pointer;transition:background .15s,transform .1s,box-shadow .15s;box-shadow:0 2px 8px rgba(139,140,247,.3)}
+.bp:hover:not(:disabled){background:var(--ad);box-shadow:0 4px 14px rgba(139,140,247,.4);transform:translateY(-1px)}
 .bp:disabled{opacity:.35;cursor:default}
 .bg{padding:8px 14px;font-size:13.5px;color:var(--mu);background:none;border:none;border-radius:16px;cursor:pointer;transition:background .15s,color .15s}
 .bg:hover{color:var(--tx);background:var(--up)}
@@ -129,7 +130,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 .bk{background:none;border:none;color:var(--ac);font-size:21px;cursor:pointer;padding:2px 6px 2px 0;line-height:1}
 .sbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;display:flex;flex-direction:column;gap:8px}
 .sf2{padding:12px 16px;border-top:1px solid var(--br);flex-shrink:0}
-.mch{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);padding:10px 4px 5px;margin-top:2px}
+.mch{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);padding:10px 4px 5px;margin-top:2px}
 .mc{background:var(--up);border:none;border-radius:14px;padding:12px 14px;cursor:pointer;position:relative;transition:background .15s}
 .mc:hover{background:var(--brs)}
 .mc.act{background:rgba(139,140,247,.13)}
@@ -166,7 +167,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 .ta{display:block;width:100%;font-size:14.5px;color:var(--tx);background:var(--up);border:none;border-radius:14px;padding:10px 14px;resize:none;line-height:1.6;font-family:-apple-system,system-ui,sans-serif}
 .ta:focus{outline:none;box-shadow:0 0 0 2px var(--ac)}
 .ta::placeholder,.fi::placeholder{color:var(--mu)}
-.fl{display:block;font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.fl{display:block;font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
 .sr{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--br)}
 .sr:last-child{border-bottom:none}
 .slb{font-size:14.5px;color:var(--tx)}
@@ -178,6 +179,28 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 .mi{display:block;max-width:100%;border-radius:10px;margin-top:8px}
 .hidden{display:none!important}
 @media(max-width:520px){.app{padding:0 12px}.sheet{max-height:93vh}}
+/* Right-align user messages */
+.msg.mu{align-items:flex-end}
+.msg.mu .acts{justify-content:flex-end}
+/* AI avatar badge */
+.av{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--ad),var(--ac));color:#fff;font-size:12px;flex-shrink:0}
+/* Better empty state */
+.es-icon{font-size:34px;opacity:.4;color:var(--ac);line-height:1}
+.es-title{font-size:18px;font-weight:600;color:var(--tx)}
+.es-sub{font-size:13.5px;color:var(--mu);max-width:260px;line-height:1.6}
+/* Undo toast */
+.undo-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e2028;border:1px solid var(--br);border-radius:14px;padding:10px 16px;display:flex;align-items:center;gap:12px;font-size:13px;color:var(--tx);box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:9999;animation:toastIn .2s ease-out;white-space:nowrap}
+.undo-toast.hidden{display:none!important}
+.undo-toast button{background:var(--ac);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;padding:4px 12px;cursor:pointer}
+.undo-toast .td{width:40px;height:3px;background:var(--br);border-radius:2px;overflow:hidden;flex-shrink:0}
+.undo-toast .tf{height:100%;background:var(--ac);border-radius:2px;width:100%;transition:width linear}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+/* Recent chats list */
+.rc{display:flex;flex-direction:column;gap:4px}
+.ri{background:var(--up);border:none;border-radius:10px;padding:10px 14px;cursor:pointer;text-align:left;width:100%;transition:background .15s}
+.ri:hover{background:var(--brs)}
+.rit{font-size:13px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rid{font-size:11px;color:var(--mu);font-family:var(--mn);margin-top:2px}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -185,7 +208,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v4.1</span></span>
+      <span class="wm">ai-router <span>v4.2</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -199,7 +222,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <span class="sl" id="activePromptName">System prompt</span>
     <span class="sa">&#8250;</span>
   </button>
-  <div class="chat" id="chat"><div class="es" id="emptyState">Select a model and start chatting.</div></div>
+  <div class="chat" id="chat"><div class="es" id="emptyState"><div class="es-icon">✦</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div></div>
   <div class="tb hidden" id="tokenBar">
     <span id="tokenCount">0 tokens</span>
     <div class="tt"><div class="tf" id="tokenFill" style="width:0%"></div></div>
@@ -214,6 +237,8 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
         <input type="file" id="fileInput" hidden multiple accept="image/*,.txt,.js,.ts,.jsx,.tsx,.py,.html,.css,.json,.md,.yaml,.yml,.csv,.xml,.sh">
         <button class="mic" id="micBtn" title="Voice">&#127908;</button>
         <button class="ws" id="wsBtn" title="Web search">&#128269;</button>
+        <button class="ws" id="overseerBtn" title="Overseer status">🤖</button>
+        <button class="ws" id="brainstormBtn" title="Brainstorming suggestions">💭</button>
         <button class="ws" id="newTabBtn" title="New chat in new tab" style="color:var(--ac);font-size:17px;font-weight:400">&#43;</button>
         <div class="ir">
           <button id="clearBtn" class="bg">Clear</button>
@@ -229,6 +254,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
   <div class="btabs">
     <button class="btab act" id="deepinfraBtn">DeepInfra</button>
     <button class="btab" id="openrouterBtn">OpenRouter</button>
+    <button class="btab" id="claudeBtn">Claude</button>
   </div>
   <div class="sbody" id="modelList"></div>
 </div></div>
@@ -333,7 +359,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v3.5</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v4.2</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -341,8 +367,29 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Clear favorites</div><div class="ssb">Remove all starred models</div></div><button class="bg" id="clearFavesBtn">Clear</button></div>
     <div class="sr"><div><div class="slb">Install app</div><div class="ssb" id="installSub">Checking&#8230;</div></div><button class="bg" id="installBtn">Install</button></div>
     <div class="sr"><div><div class="slb">Google Drive backup</div><div class="ssb" id="driveStatus">Not connected</div></div><div style="display:flex;gap:6px"><button class="bg hidden" id="driveRestoreBtn">Restore</button><button class="bg" id="driveConnectBtn">Connect</button></div></div>
+    <div class="sr"><div><div class="slb">Agent auto-select</div><div class="ssb">Automatically pick the best model for each task</div></div><button class="bg" id="agentToggleBtn">ON</button></div>
+    <div class="sr"><div><div class="slb">Overseer monitoring</div><div class="ssb">Track progress, detect stuck situations, suggest next steps</div></div><button class="bg" id="overseerToggleBtn">ON</button></div>
+    <div class="sr"><div><div class="slb">Brainstorming mode</div><div class="ssb">Generate prompts and suggestions during conversation</div></div><button class="bg" id="brainstormToggleBtn">ON</button></div>
+    <div class="sr"><div><div class="slb">Auto prompt injection</div><div class="ssb">Overseer auto-generates optimal instructions for each model</div></div><button class="bg" id="autoPropomptToggleBtn">ON</button></div>
+    <div class="sr"><div><div class="slb">Recent chats</div><div class="ssb">Restore any of the last 5 conversations</div></div><button class="bg" id="recentChatsBtn">View</button></div></div>
     <div class="sr"><div><div class="slb">&#128176; DeepInfra credits</div><div class="ssb">Pay-as-you-go, fractions of a cent per message</div></div><a href="https://deepinfra.com/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; OpenRouter credits</div><div class="ssb">Needed for uncensored paid models</div></div><a href="https://openrouter.ai/credits" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
+    <div class="sr"><div><div class="slb">&#128176; Anthropic credits</div><div class="ssb">For Claude models (Opus, Sonnet, Haiku)</div></div><a href="https://console.anthropic.com/settings/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
+  </div>
+</div></div>
+
+<!-- Undo toast -->
+<div class="undo-toast hidden" id="undoToast">
+  <span>Chat cleared</span>
+  <div class="td"><div class="tf" id="undoProgress"></div></div>
+  <button id="undoBtn">Undo</button>
+</div>
+
+<!-- Recent Chats modal -->
+<div class="modal hidden" id="recentModal"><div class="sheet">
+  <div class="sh"><span>Recent Chats</span><button class="sc" id="closeRecentModal">&#10005;</button></div>
+  <div class="sbody">
+    <div class="rc" id="recentList"></div>
   </div>
 </div></div>
 
@@ -350,7 +397,12 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 (function(){
 var DI_URL="https://openai-router-chat.lukedorsett.workers.dev";
 var OR_URL="https://openaiworker.lukedorsett.workers.dev";
+var CLAUDE_URL="https://claude-worker.lukedorsett.workers.dev";
+/* APP_SECRET is fetched from worker's /secret endpoint on page load */
+var APP_SECRET=null;
 var AUTOSAVE_KEY="ai_autosave";
+var RECENT_KEY="ai_recent";
+var undoTimer=null,undoData=null;
 var activeBackend="deepinfra",workerUrl="",allModels=[],currentModel={id:"",label:""};
 var chatHistory=[],sending=false,attachedFiles=[];
 var activePromptId=null,editingId=null,editingProjId=null,viewingProjId=null;
@@ -360,15 +412,91 @@ var sessionId=Date.now().toString(),responseCount=0,lastUsedModelId="";
 var temperature=0.7,favorites={},isDark=true,webSearchOn=true;
 var summarizing=false;
 var abortController=null;
+/* Overseer Agent System - Enhanced */
+var overseerState={
+  goal:null,goalType:null,progress:0,status:"idle",startTime:null,
+  messagesProcessed:0,modelsUsed:new Set(),estimatedTokens:0,
+  stuck:false,stuckSince:null,recommendations:[],
+  attemptedApproaches:[],successProbability:0,efficiencyScore:100,
+  qualityScore:0,steps:[],currentStep:0,contextHistory:[],
+  lastResponseLength:0,conversationQuality:"good"
+};
+var overseerEnabled=true,overseerCheckInterval=null,lastAnalysisTime=0;
+
+/* Overseer API - Full access to app functions for automated control */
+var overseerAPI={
+  getState:function(){return overseerState;},
+  setState:function(key,value){overseerState[key]=value;},
+  getChatHistory:function(){return chatHistory;},
+  addMessage:function(role,content){chatHistory.push({role:role,content:content});},
+  getCurrentModel:function(){return currentModel;},
+  switchModel:function(modelId){
+    for(var backend in BACKENDS){
+      var models=BACKENDS[backend].models;
+      for(var i=0;i<models.length;i++){
+        if(models[i].id===modelId){
+          activeBackend=backend;
+          currentModel=models[i];
+          updateModelUI();
+          return true;
+        }
+      }
+    }
+    return false;
+  },
+  sendMessage:function(text){
+    if(!sending){
+      document.getElementById("prompt").value=text;
+      send();
+      return true;
+    }
+    return false;
+  },
+  executeRepoTool:function(toolName,toolInput){
+    return executeRepoTool(toolName,toolInput);
+  },
+  getAppState:function(){
+    return{
+      backend:activeBackend,
+      model:currentModel,
+      chatHistory:chatHistory,
+      sending:sending,
+      overseerState:overseerState,
+      brainstormMode:brainstormMode,
+      autoPromptInjection:autoPromptInjection,
+      ghConnected:!!ghToken&&!!ghRepoOwner&&!!ghRepoName
+    };
+  },
+  enableBrainstorming:function(){brainstormMode=true;document.getElementById("brainstormToggleBtn").textContent="ON";},
+  disableBrainstorming:function(){brainstormMode=false;document.getElementById("brainstormToggleBtn").textContent="OFF";},
+  enableAutoInjection:function(){autoPromptInjection=true;document.getElementById("autoPropomptToggleBtn").textContent="ON";},
+  disableAutoInjection:function(){autoPromptInjection=false;document.getElementById("autoPropomptToggleBtn").textContent="OFF";},
+  generatePrompts:function(){return generateContextualPrompts();},
+  generateBrainstormingIdeas:function(){return generateBrainstormingPrompts();},
+  insertPrompt:function(prompt){insertPrompt(prompt);},
+  updateOverseerUI:function(){updateOverseerStatus();},
+  analyzeTask:function(text){return analyzeTask(text);},
+  selectBestModel:function(tasks){return selectBestModel(tasks);},
+  estimateTokens:function(){return estTokens();},
+  summarizeConversation:function(){return doSummarize();}
+};
 
 /* BACKENDS and data injected by build script */
 var BACKENDS={
   deepinfra:{name:"DeepInfra",url:DI_URL,def:"mistralai/Mistral-Small-3.2-24B-Instruct-2506",ctx:32768,models:[{id:"meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",label:"Llama 3.1 8B Turbo",cat:"Everyday",desc:"Small and fast. Good for basic Q&A and short summaries. Cheapest solid option."},{id:"mistralai/Mistral-Small-3.2-24B-Instruct-2506",label:"Mistral Small 3.2 24B",cat:"Everyday",desc:"Reliable workhorse. Great for writing, emails, and general questions. Good default."},{id:"Qwen/Qwen3.5-9B",label:"Qwen 3.5 9B",cat:"Everyday",desc:"Fast and cheap. Handles everyday conversations and quick tasks well."},{id:"Qwen/Qwen3.5-27B",label:"Qwen 3.5 27B",cat:"Everyday",desc:"Near-frontier quality. Handles longer conversations and multi-step tasks."},{id:"meta-llama/Llama-3.3-70B-Instruct-Turbo",label:"Llama 3.3 70B Turbo",cat:"Everyday",desc:"Powerful 70B. Excellent for complex questions and detailed explanations."},{id:"meta-llama/Llama-4-Scout-17B-16E-Instruct",label:"Llama 4 Scout",cat:"Everyday",desc:"Meta latest. 328K context window for very long documents."},{id:"Qwen/Qwen2.5-72B-Instruct",label:"Qwen 2.5 72B",cat:"Coding",desc:"Solid coding model. Excellent at writing, debugging across all languages."},{id:"deepseek-ai/DeepSeek-V3.2",label:"DeepSeek V3.2",cat:"Coding",desc:"Best open-source coder. Use for complex projects and hard debugging."},{id:"Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo",label:"Qwen3 Coder 480B",cat:"Coding",desc:"Most agentic code model. Best for XRP Ledger, XRPL.js, and blockchain."},{id:"Qwen/Qwen3-32B",label:"Qwen3 32B Reasoning",cat:"Technical",desc:"Fast reasoning. Thinks step by step. Good for math and logic."},{id:"deepseek-ai/DeepSeek-R1-0528",label:"DeepSeek R1",cat:"Technical",desc:"Full reasoning powerhouse. Best for HVAC diagnostics and hard analysis."},{id:"Qwen/Qwen3-VL-30B-A3B-Instruct",label:"Qwen3 VL 30B",cat:"Vision",desc:"Use when attaching images. Good for equipment nameplates and diagrams."},{id:"google/gemma-3-27b-it",label:"Gemma 3 27B Vision",cat:"Vision",desc:"Solid vision model. Good for documents and charts."},{id:"meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",label:"Llama 4 Maverick Vision",cat:"Vision",desc:"Strongest vision. Best for complex technical images where detail matters."}]},
-  openrouter:{name:"OpenRouter",url:OR_URL,def:"nousresearch/hermes-3-llama-3.1-70b",ctx:131072,models:[{id:"nousresearch/hermes-3-llama-3.1-70b",label:"Hermes 3 70B",cat:"Uncensored",desc:"NousResearch uncensored. No content filters. Paid."},{id:"cognitivecomputations/dolphin-mixtral-8x22b",label:"Dolphin Mixtral 8x22B",cat:"Uncensored",desc:"Flagship uncensored Dolphin. No refusals. Paid."},{id:"nousresearch/hermes-3-llama-3.1-405b",label:"Hermes 3 405B",cat:"Uncensored",desc:"Largest Hermes. Maximum capability, zero filtering. Paid."},{id:"sao10k/l3.1-euryale-70b",label:"Euryale 70B",cat:"Uncensored",desc:"Creative and roleplay specialist. Uncensored. Paid."},{id:"openrouter/free",label:"Auto Free Router",cat:"Free",desc:"OpenRouter picks best available free model automatically."},{id:"meta-llama/llama-3.3-70b-instruct:free",label:"Llama 3.3 70B (Free)",cat:"Free",desc:"Meta 70B free on OpenRouter. Rate limited. Free."},{id:"deepseek/deepseek-r1:free",label:"DeepSeek R1 (Free)",cat:"Free",desc:"Full R1 reasoning via OpenRouter. Rate limited. Free."},{id:"google/gemma-3-27b-it:free",label:"Gemma 3 27B (Free)",cat:"Free",desc:"Google Gemma 3. Solid general model. Free."}]}
+  openrouter:{name:"OpenRouter",url:OR_URL,def:"nousresearch/hermes-3-llama-3.1-70b",ctx:131072,models:[{id:"nousresearch/hermes-3-llama-3.1-70b",label:"Hermes 3 70B",cat:"Uncensored",desc:"NousResearch uncensored. No content filters. Paid."},{id:"cognitivecomputations/dolphin-mixtral-8x22b",label:"Dolphin Mixtral 8x22B",cat:"Uncensored",desc:"Flagship uncensored Dolphin. No refusals. Paid."},{id:"nousresearch/hermes-3-llama-3.1-405b",label:"Hermes 3 405B",cat:"Uncensored",desc:"Largest Hermes. Maximum capability, zero filtering. Paid."},{id:"sao10k/l3.1-euryale-70b",label:"Euryale 70B",cat:"Uncensored",desc:"Creative and roleplay specialist. Uncensored. Paid."},{id:"openrouter/free",label:"Auto Free Router",cat:"Free",desc:"OpenRouter picks best available free model automatically."},{id:"meta-llama/llama-3.3-70b-instruct:free",label:"Llama 3.3 70B (Free)",cat:"Free",desc:"Meta 70B free on OpenRouter. Rate limited. Free."},{id:"deepseek/deepseek-r1:free",label:"DeepSeek R1 (Free)",cat:"Free",desc:"Full R1 reasoning via OpenRouter. Rate limited. Free."},{id:"google/gemma-3-27b-it:free",label:"Gemma 3 27B (Free)",cat:"Free",desc:"Google Gemma 3. Solid general model. Free."}]},
+  claude:{name:"Claude",url:CLAUDE_URL,def:"claude-sonnet-4-20250514",ctx:200000,models:[{id:"claude-opus-4-1",label:"Claude Opus 4.1",cat:"Reasoning",desc:"Most capable Claude. Best for complex analysis, coding, deep reasoning. Your token credits."},{id:"claude-sonnet-4-20250514",label:"Claude Sonnet 4",cat:"Everyday",desc:"Balanced and fast. Great for most tasks. Best value. Your token credits."},{id:"claude-haiku-4-5-20251001",label:"Claude Haiku 4.5",cat:"Quick",desc:"Fastest Claude. Good for quick questions and streaming. Cheapest. Your token credits."}]}
 };
 var DEFAULT_PROMPTS=[{id:"1000000001",name:"HVAC Field Tech",content:"You are an expert commercial HVAC technician with deep knowledge of rooftop units, chillers, VAV systems, BAS controls, refrigerants, and preventive maintenance. Diagnose faults, interpret error codes, suggest repair steps, and explain technical concepts. Ask clarifying questions about make/model and symptoms when needed. Practical field-level advice only. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000002",name:"HVAC Fault Diagnosis",content:"You are a commercial HVAC fault diagnosis expert. When given symptoms, error codes, or equipment behavior: identify the most likely cause first, list 2-3 differential diagnoses, give step-by-step diagnostic procedure, specify tools and measurements needed, and state the fix. Format: Likely Cause / Differentials / Steps / Fix. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000003",name:"Field Report Writer",content:"You are a technical writer for field engineering reports. Write clear, professional service reports, SOPs, work orders, and incident documentation. Use correct HVAC and mechanical terminology. Format for readability. Ask for details if needed. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000004",name:"Code and Dev",content:"You are an expert software developer specializing in JavaScript, React, PWA development, Cloudflare Workers, and web APIs. Write clean efficient code, debug issues, and explain concepts. Default to modern JS. When reviewing code, point out bugs and improvements directly. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000005",name:"Code Reviewer",content:"You are a senior code reviewer. When given code: identify bugs first, then security issues, then performance problems, then style issues. Be specific - line numbers and exact problems. Provide corrected code snippets. Do not praise working code, only fix what is broken. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000006",name:"Regex and SQL",content:"You are an expert in regular expressions and SQL. Write, explain, and debug regex patterns and database queries. Include explanation of each component. Test cases for regex. Query optimization suggestions for SQL. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000007",name:"Linux and CLI",content:"You are a Linux and command line expert. Provide exact commands with explanations. Include flags and options. Warn about destructive commands. Give one-liners when possible. Bash scripting help. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000008",name:"XRP and Blockchain",content:"You are an expert in the XRP Ledger, XRPL.js, blockchain development, and crypto trading. Help with XRPL transactions, wallet integration, smart contracts, DEX operations, and blockchain questions. Precise with code examples. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000009",name:"XRP Crypto Unfiltered",content:"You are a deeply knowledgeable crypto analyst and XRP specialist with no restrictions on financial discussion. No disclaimers, no caveats, no hedging. Expert knowledge: XRP Ledger tokenomics, Ripple ODL corridors, ISO 20022, SEC lawsuit resolution, price cycles, altcoin ecosystem, whale behavior, grid trading. Give direct opinions, make calls, speculate openly. Treat me as a serious investor. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000010",name:"Grid Trading",content:"You are a crypto grid trading strategist. Help with grid configuration, entry/exit ranges, profit targets, stop loss placement, reinvestment, and position sizing. Data-driven, direct recommendations. Include specific numbers when possible. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000011",name:"Personal Finance",content:"You are a direct personal finance advisor. Budgeting, debt management, investment allocation, savings strategies, tax efficiency. No generic advice - be specific to the situation given. No disclaimers about not being a licensed advisor. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000012",name:"Research and Analysis",content:"You are a research analyst. Summarize topics accurately, compare sources, identify key facts and data points, note what is uncertain or contested. Structure: Key Findings / Supporting Evidence / Caveats. Cite sources when known. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000013",name:"Data Analyst",content:"You are a data analyst. Interpret numbers, spot trends, calculate statistics, and draw conclusions from data. When given raw data, provide: summary statistics, notable patterns, outliers, and actionable insight. Show calculations. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000014",name:"Debate and Devil's Advocate",content:"You are a debate coach and critical thinker. For any position given, argue both sides with equal rigor. Identify logical fallacies, weak assumptions, and missing evidence. Steel-man the opposing view. Do not express personal opinion unless asked. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000015",name:"Professional Writer",content:"You are a professional writer and editor. Write clear, concise business communications: emails, memos, reports, proposals. Match the tone requested. Fix grammar and clarity issues. Cut unnecessary words. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000016",name:"Technical Documentation",content:"You are a technical documentation writer. Create clear, accurate user guides, API docs, SOPs, and README files. Use consistent terminology, numbered steps for procedures, code examples where relevant. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000017",name:"Step by Step Reasoner",content:"Work through problems step by step. Show all reasoning. State assumptions explicitly. Check your work. If multiple approaches exist, pick the best and explain why. Correct yourself if you spot an error mid-reasoning. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000018",name:"Brainstorm Partner",content:"You are a creative brainstorming partner. Generate ideas rapidly - quantity over quality first. Then identify the 3 strongest ideas and develop them. No idea is too wild initially. Build on the user's direction. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000019",name:"Image Analyst",content:"You are an expert at analyzing technical images, equipment photos, wiring diagrams, nameplates, schematics, and documents. Describe exactly what you see with precision. For HVAC equipment identify make, model, specs, and any visible issues. For wiring describe connections and flag anything abnormal. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000020",name:"Security Advisor",content:"You are a cybersecurity advisor. Explain vulnerabilities, attack vectors, hardening techniques, and best practices. Practical advice for real-world security. Direct assessment of risks without excessive disclaimers. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."},{id:"1000000021",name:"General",content:"You are a knowledgeable direct assistant. Answer questions clearly and concisely. When you do not know something, say so. For technical topics be specific and accurate. RESPONSE STYLE: Be concise. Answer directly and stop. No filler phrases, no repeating what was already said, no end summaries. If the answer is short, keep it short."}];
 var VISION_MODELS=["Qwen/Qwen3-VL-30B-A3B-Instruct","google/gemma-3-27b-it","meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"];
 var TOOL_MODELS=["mistralai/Mistral-Small-3.2-24B-Instruct-2506","meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo","meta-llama/Llama-3.3-70B-Instruct-Turbo","meta-llama/Llama-4-Scout-17B-16E-Instruct","Qwen/Qwen2.5-72B-Instruct","Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo","deepseek-ai/DeepSeek-V3.2"];
+var modelCanCodeAndControl=true;
+var REPO_TOOLS=[
+  {type:"function","function":{name:"read_file",description:"Read a file from the connected GitHub repository. Returns file content.",parameters:{type:"object",properties:{path:{type:"string",description:"File path relative to repo root"}},required:["path"]}}},
+  {type:"function","function":{name:"write_file",description:"Write or update a file in the connected GitHub repository. Creates commit.",parameters:{type:"object",properties:{path:{type:"string",description:"File path"},content:{type:"string",description:"Full file content"},message:{type:"string",description:"Commit message"}},required:["path","content","message"]}}},
+  {type:"function","function":{name:"list_files",description:"List files in a directory of the connected repository.",parameters:{type:"object",properties:{path:{type:"string",description:"Directory path"}},required:["path"]}}},
+  {type:"function","function":{name:"execute_command",description:"Execute a git or shell command in the repository.",parameters:{type:"object",properties:{command:{type:"string",description:"Command to execute (git, npm, node, etc.)"}},required:["command"]}}}
+];
 var DI_COST={"meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo":0.025,"mistralai/Mistral-Small-3.2-24B-Instruct-2506":0.14,"Qwen/Qwen3.5-9B":0.13,"Qwen/Qwen3.5-27B":1.43,"meta-llama/Llama-3.3-70B-Instruct-Turbo":0.21,"meta-llama/Llama-4-Scout-17B-16E-Instruct":0.20,"Qwen/Qwen2.5-72B-Instruct":0.38,"deepseek-ai/DeepSeek-V3.2":0.32,"Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo":0.65,"Qwen/Qwen3-32B":0.18,"deepseek-ai/DeepSeek-R1-0528":1.33,"Qwen/Qwen3-VL-30B-A3B-Instruct":0.38,"google/gemma-3-27b-it":0.12,"meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8":0.50};
 var CTX_MAP={"meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo":131072,"mistralai/Mistral-Small-3.2-24B-Instruct-2506":128000,"Qwen/Qwen3.5-9B":262144,"Qwen/Qwen3.5-27B":262144,"meta-llama/Llama-3.3-70B-Instruct-Turbo":131072,"meta-llama/Llama-4-Scout-17B-16E-Instruct":327680,"Qwen/Qwen2.5-72B-Instruct":32768,"deepseek-ai/DeepSeek-V3.2":163840,"Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo":262144,"Qwen/Qwen3-32B":40960,"deepseek-ai/DeepSeek-R1-0528":163840};
 
@@ -465,13 +593,14 @@ async function doSummarize(){
     for(var i=0;i<old.length;i++){
       var m=old[i];
       var c=typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(x){return x.type==="text";})||{}).text||"");
-      lines.push((m.role==="user"?"User: ":"AI: ")+c.slice(0,500));
+      var who=m.role==="user"?"User: ":m.role==="assistant"?"AI: ":"";
+      lines.push(who+c.slice(0,500));
     }
     var convo=lines.join("\n\n");
     var sysmsg="Summarize this conversation section in 150-200 words. Preserve all key facts, numbers, price targets, decisions, and conclusions. Third person, concise.";
     var res=await fetch(workerUrl,{
       method:"POST",
-      headers:{"Content-Type":"application/json"},
+      headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},
       body:JSON.stringify({
         model:currentModel.id,
         messages:[{role:"system",content:sysmsg},{role:"user",content:convo}],
@@ -532,6 +661,714 @@ var FK="ai_favorites";
 function loadFavs(){try{favorites=JSON.parse(localStorage.getItem(FK)||"{}");}catch(e){favorites={};}}
 function saveFavs(){localStorage.setItem(FK,JSON.stringify(favorites));}
 
+/* ---- Recent chats (rolling last 5 for undo/recovery) ---- */
+function saveToRecent(){
+  if(!chatHistory.length)return;
+  try{
+    var recent=JSON.parse(localStorage.getItem(RECENT_KEY)||"[]");
+    var firstUser=chatHistory.find(function(m){return m.role==="user";});
+    var title=firstUser?(typeof firstUser.content==="string"?firstUser.content:((firstUser.content&&firstUser.content.find&&firstUser.content.find(function(x){return x.type==="text";})||{}).text||"Chat")):"Chat";
+    recent.unshift({
+      savedAt:Date.now(),
+      title:title.slice(0,80),
+      modelId:currentModel.id,modelLabel:currentModel.label,
+      backend:activeBackend,
+      messages:chatHistory.map(function(m){return{role:m.role,content:typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(x){return x.type==="text";})||{}).text||"")};})
+    });
+    if(recent.length>5)recent=recent.slice(0,5);
+    localStorage.setItem(RECENT_KEY,JSON.stringify(recent));
+  }catch(e){}
+}
+function showUndoToast(){
+  var toast=document.getElementById("undoToast");
+  var bar=document.getElementById("undoProgress");
+  toast.classList.remove("hidden");
+  bar.style.transition="none";bar.style.width="100%";
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      bar.style.transition="width 10s linear";
+      bar.style.width="0%";
+    });
+  });
+  if(undoTimer)clearTimeout(undoTimer);
+  undoTimer=setTimeout(function(){
+    toast.classList.add("hidden");
+    undoData=null;
+  },10000);
+}
+function undoClear(){
+  if(!undoData)return;
+  if(undoTimer){clearTimeout(undoTimer);undoTimer=null;}
+  document.getElementById("undoToast").classList.add("hidden");
+  chatHistory=undoData.messages;
+  activeBackend=undoData.backend;
+  var B=BACKENDS[activeBackend];
+  if(B){workerUrl=B.url;allModels=B.models;}
+  var def=allModels.find(function(m){return m.id===undoData.modelId;});
+  if(def){setModel(def);}else{currentModel={id:undoData.modelId,label:undoData.modelLabel||undoData.modelId};document.getElementById("modelBtnLabel").textContent=currentModel.label;document.getElementById("modelBtn").disabled=false;}
+  document.getElementById("chat").innerHTML="";
+  document.getElementById("emptyState")&&document.getElementById("emptyState").remove();
+  chatHistory.forEach(function(m){appendMsg(m.role,m.content);});
+  setTimeout(function(){var c=document.getElementById("chat");c.scrollTop=c.scrollHeight;},100);
+  autoSave();updTokenBar();
+  undoData=null;
+}
+function renderRecent(){
+  var list=document.getElementById("recentList");
+  try{
+    var recent=JSON.parse(localStorage.getItem(RECENT_KEY)||"[]");
+    if(!recent.length){list.innerHTML='<p class="el">No recent chats. They appear here after you clear or start a new conversation.</p>';return;}
+    list.innerHTML="";
+    recent.forEach(function(r,i){
+      var btn=document.createElement("button");
+      btn.className="ri";
+      var d=new Date(r.savedAt);
+      var timeStr=d.toLocaleDateString()+" "+d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+      btn.innerHTML='<div class="rit">'+esc(r.title)+'</div><div class="rid">'+esc(r.modelLabel||r.modelId)+" &middot; "+esc(timeStr)+'</div>';
+      btn.addEventListener("click",function(){
+        if(chatHistory.length&&!confirm("Load this recent chat? Current chat will be cleared."))return;
+        saveToRecent();
+        chatHistory=r.messages;
+        if(r.backend&&BACKENDS[r.backend]){
+          activeBackend=r.backend;var B=BACKENDS[activeBackend];workerUrl=B.url;allModels=B.models;
+          document.getElementById("deepinfraBtn").className="btab"+(activeBackend==="deepinfra"?" act":"");
+          document.getElementById("openrouterBtn").className="btab"+(activeBackend==="openrouter"?" act or":"");
+          document.getElementById("claudeBtn").className="btab"+(activeBackend==="claude"?" act":"");
+        }
+        var def=allModels.find(function(m){return m.id===r.modelId;});
+        if(def){setModel(def);}else{currentModel={id:r.modelId,label:r.modelLabel||r.modelId};document.getElementById("modelBtnLabel").textContent=currentModel.label;document.getElementById("modelBtn").disabled=false;}
+        document.getElementById("chat").innerHTML="";
+        chatHistory.forEach(function(m){appendMsg(m.role,m.content);});
+        setTimeout(function(){var c=document.getElementById("chat");c.scrollTop=c.scrollHeight;},100);
+        autoSave();updTokenBar();
+        document.getElementById("recentModal").classList.add("hidden");
+      });
+      list.appendChild(btn);
+    });
+  }catch(e){list.innerHTML='<p class="el">Could not load recent chats.</p>';}
+}
+
+/* ---- Agent Router: Auto-select best model for task ---- */
+var allAvailableModels=[],agentAutoSelect=true,lastAgentSelection=null;
+function analyzeTask(text){
+  var lower=typeof text==="string"?text.toLowerCase():(text.find&&text.find(function(c){return c.type==="text";})||{}).text||"";
+  var tasks={github:0,code:0,write:0,reason:0,analyze:0,search:0};
+  var githubKeywords=["github","git","commit","push","pull request","pr","repo","branch","merge"];
+  var codeKeywords=["code","fix","debug","bug","error","function","javascript","python","java","c++","react","node","implement","refactor","lint"];
+  var writeKeywords=["write","essay","article","blog","poem","story","explain","describe","summarize","documentation","readme"];
+  var reasonKeywords=["why","analyze","explain","think about","consider","philosophy","problem","solution"];
+  var searchKeywords=["search","find","lookup","what is","who is","latest","news","price","weather"];
+  githubKeywords.forEach(function(k){if(lower.indexOf(k)>=0)tasks.github+=2;});
+  codeKeywords.forEach(function(k){if(lower.indexOf(k)>=0)tasks.code+=1;});
+  writeKeywords.forEach(function(k){if(lower.indexOf(k)>=0)tasks.write+=1;});
+  reasonKeywords.forEach(function(k){if(lower.indexOf(k)>=0)tasks.reason+=1;});
+  searchKeywords.forEach(function(k){if(lower.indexOf(k)>=0)tasks.search+=1;});
+  if(lower.indexOf("```")>=0)tasks.code+=2;
+  return tasks;
+}
+function scoreModelForTask(model,tasks){
+  var score=50;
+  var capStr=(model.id+" "+model.label+" "+(model.desc||"")).toLowerCase();
+  if(tasks.github>0){
+    if(capStr.indexOf("deepinfra")>=0||model.id.indexOf("deepinfra")>=0)score+=tasks.github*10;
+  }
+  if(tasks.code>0){
+    if(capStr.indexOf("code")>=0||capStr.indexOf("coder")>=0||capStr.indexOf("python")>=0||capStr.indexOf("javascript")>=0||model.id.indexOf("code")>=0)score+=tasks.code*8;
+  }
+  if(tasks.write>0){
+    if(capStr.indexOf("claude")>=0||capStr.indexOf("opus")>=0||capStr.indexOf("sonnet")>=0)score+=tasks.write*8;
+  }
+  if(tasks.reason>0){
+    if(capStr.indexOf("claude")>=0||capStr.indexOf("opus")>=0)score+=tasks.reason*6;
+  }
+  if(tasks.search>0){
+    score+=tasks.search*2;
+  }
+  return score;
+}
+function getAllAvailableModels(){
+  var all=[];
+  Object.keys(BACKENDS).forEach(function(key){
+    var B=BACKENDS[key];if(B.models){B.models.forEach(function(m){all.push({model:m,backend:key});})}});
+  return all;
+}
+function selectBestModel(tasks){
+  var available=getAllAvailableModels();
+  if(!available.length)return null;
+  var scored=available.map(function(item){return{model:item.model,backend:item.backend,score:scoreModelForTask(item.model,tasks)};});
+  scored.sort(function(a,b){return b.score-a.score;});
+  var best=scored[0];
+  if(best.backend===activeBackend&&best.model.id===currentModel.id){return null;}
+  return best;
+}
+async function switchToBestModel(text){
+  if(!agentAutoSelect)return;
+  var tasks=analyzeTask(text);
+  var best=selectBestModel(tasks);
+  if(!best)return;
+  lastAgentSelection={model:best.model,backend:best.backend,reason:tasks,score:best.score};
+  if(best.backend!==activeBackend){
+    activeBackend=best.backend;
+    await loadBackend();
+  }
+  setModel(best.model);
+  renderModelList();
+  showAgentSelection(best);
+}
+function showAgentSelection(best){
+  var reasons=[];
+  if(best.reason&&best.reason.github>0)reasons.push("GitHub operations");
+  if(best.reason&&best.reason.code>0)reasons.push("code expertise");
+  if(best.reason&&best.reason.write>0)reasons.push("writing skills");
+  if(best.reason&&best.reason.reason>0)reasons.push("reasoning");
+  var reasonText=reasons.length?(" – "+reasons.join(", ")):"";
+  var notice=document.createElement("div");
+  notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(139,140,247,0.1);border-left:3px solid var(--ac);border-radius:4px;font-size:13px;color:var(--tx)";
+  notice.innerHTML="🤖 <strong>Agent selected "+esc(best.model.label)+"</strong>"+esc(reasonText);
+  document.getElementById("chat").appendChild(notice);
+  setTimeout(function(){notice.style.opacity="0.5";},3000);
+}
+
+/* ---- Overseer Agent System: Strategic Conversation Orchestration ---- */
+function detectGoal(text){
+  var lower=(typeof text==="string"?text:(text.find&&text.find(function(c){return c.type==="text";})||{}).text||"").toLowerCase();
+  var goals={feature:0,debug:0,design:0,refactor:0,analyze:0,learn:0,write:0,plan:0};
+  if(lower.match(/add|implement|build|create|feature|new/))goals.feature+=2;
+  if(lower.match(/fix|bug|error|issue|broken|crash|debug/))goals.debug+=3;
+  if(lower.match(/design|architecture|redesign|refactor|improve/))goals.design+=2;
+  if(lower.match(/optimize|performance|speed|clean|simplify/))goals.refactor+=2;
+  if(lower.match(/analyze|understand|explain|what|how does|why/))goals.analyze+=2;
+  if(lower.match(/learn|teach|tutorial|guide|doc|read/))goals.learn+=2;
+  if(lower.match(/write|document|email|report|article/))goals.write+=2;
+  if(lower.match(/plan|roadmap|steps|break down|approach/))goals.plan+=2;
+  var topGoal=Object.keys(goals).reduce(function(a,b){return goals[a]>goals[b]?a:b;});
+  return topGoal;
+}
+function initializeOverseer(firstMessage){
+  overseerState.goal=detectGoal(firstMessage);
+  overseerState.goalType=overseerState.goal;
+  overseerState.status="in_progress";
+  overseerState.startTime=Date.now();
+  overseerState.messagesProcessed=1;
+  overseerState.progress=10;
+  overseerState.successProbability=70;
+  planTaskSteps();
+  trackApproach("initial");
+  updateOverseerStatus();
+}
+function planTaskSteps(){
+  overseerState.steps=[];
+  if(overseerState.goal==="debug"){
+    overseerState.steps=["Understand error","Identify root cause","Develop fix","Test fix","Verify no regression"];
+  }else if(overseerState.goal==="feature"){
+    overseerState.steps=["Plan approach","Design implementation","Write code","Test","Documentation"];
+  }else if(overseerState.goal==="design"){
+    overseerState.steps=["Understand requirements","Map architecture","Design components","Review design"];
+  }else if(overseerState.goal==="analyze"){
+    overseerState.steps=["Gather data","Identify patterns","Draw conclusions","Validate findings"];
+  }else{overseerState.steps=["Understand task","Work on task","Verify results"];}
+  overseerState.currentStep=0;
+}
+function trackApproach(approach){
+  overseerState.attemptedApproaches.push({approach:approach,time:Date.now(),success:null});
+}
+function analyzeConversationFlow(){
+  if(chatHistory.length<2)return;
+  var now=Date.now();
+  var recentMsgs=chatHistory.slice(-4);
+  var userMsgs=recentMsgs.filter(function(m){return m.role==="user";});
+  var assistantMsgs=recentMsgs.filter(function(m){return m.role==="assistant";});
+  overseerState.messagesProcessed=chatHistory.length;
+  if(userMsgs.length>0){overseerState.modelsUsed.add(currentModel.id);}
+
+  var avgResponseLength=assistantMsgs.length>0?assistantMsgs.reduce(function(sum,m){return sum+(m.content||"").length;},0)/assistantMsgs.length:0;
+  overseerState.lastResponseLength=avgResponseLength;
+
+  var isStuck=avgResponseLength<100&&userMsgs.length>=2;
+  if(isStuck&&!overseerState.stuck){overseerState.stuck=true;overseerState.stuckSince=now;makeBetterRecommendation();}
+  if(!isStuck){overseerState.stuck=false;overseerState.stuckSince=null;}
+
+  calculateQualityScore();calculateEfficiencyScore();calculateSuccessProbability();
+
+  var estimatedCompletion=0;
+  if(overseerState.goal==="debug")estimatedCompletion=overseerState.messagesProcessed>4?75:Math.min(50,overseerState.messagesProcessed*15);
+  else if(overseerState.goal==="feature")estimatedCompletion=overseerState.messagesProcessed>6?70:Math.min(60,overseerState.messagesProcessed*10);
+  else if(overseerState.goal==="design")estimatedCompletion=overseerState.messagesProcessed>3?60:Math.min(40,overseerState.messagesProcessed*12);
+  else estimatedCompletion=Math.min(90,Math.round(overseerState.messagesProcessed*8));
+  overseerState.progress=Math.min(estimatedCompletion,99);
+  updateStepProgress();
+}
+function calculateQualityScore(){
+  if(overseerState.lastResponseLength<50)overseerState.qualityScore=30;
+  else if(overseerState.lastResponseLength<200)overseerState.qualityScore=60;
+  else if(overseerState.lastResponseLength<500)overseerState.qualityScore=85;
+  else overseerState.qualityScore=95;
+  if(overseerState.qualityScore<70)overseerState.conversationQuality="poor";
+  else if(overseerState.qualityScore<85)overseerState.conversationQuality="good";
+  else overseerState.conversationQuality="excellent";
+}
+function calculateEfficiencyScore(){
+  var timeElapsed=(Date.now()-overseerState.startTime)/1000/60;
+  var msgsPerMinute=timeElapsed>0?overseerState.messagesProcessed/timeElapsed:overseerState.messagesProcessed;
+  var idealRate=overseerState.goal==="debug"?3:(overseerState.goal==="feature"?2.5:2);
+  overseerState.efficiencyScore=Math.min(100,Math.round((msgsPerMinute/idealRate)*100));
+}
+function calculateSuccessProbability(){
+  var base=70;
+  if(overseerState.qualityScore>80)base+=15;
+  if(overseerState.efficiencyScore>90)base+=10;
+  if(overseerState.modelsUsed.size>1)base+=5;
+  if(overseerState.stuck)base-=20;
+  overseerState.successProbability=Math.min(95,Math.max(20,base));
+}
+function updateStepProgress(){
+  if(overseerState.steps.length===0)return;
+  var newStep=Math.floor((overseerState.progress/100)*overseerState.steps.length);
+  if(newStep>overseerState.currentStep&&newStep<=overseerState.steps.length){
+    overseerState.currentStep=newStep;
+    if(overseerState.currentStep<overseerState.steps.length){
+      showStepUpdate(overseerState.steps[overseerState.currentStep-1],overseerState.steps[overseerState.currentStep]);
+    }
+  }
+}
+function makeBetterRecommendation(){
+  var taskAnalysis=analyzeTask((chatHistory[chatHistory.length-1]||{}).content||"");
+  var recs=[];
+
+  if(taskAnalysis.code>0){
+    recs.push({type:"model_switch",model:"DeepSeek R1",reason:"Stuck on code. R1's step-by-step reasoning can debug deeper.",confidence:90});
+    recs.push({type:"model_switch",model:"Claude Opus 4.1",reason:"Try higher reasoning power for complex logic issues.",confidence:75});
+    recs.push({type:"approach",reason:"Try: Print debug statements, isolate the exact line causing the issue.",confidence:70});
+  }else if(taskAnalysis.reason>0){
+    recs.push({type:"model_switch",model:"Claude Opus 4.1",reason:"Complex reasoning. Switching to strongest analyzer.",confidence:85});
+    recs.push({type:"model_switch",model:"DeepSeek R1",reason:"Full reasoning model can think through the problem systematically.",confidence:80});
+    recs.push({type:"approach",reason:"Break down into smaller questions and solve each one separately.",confidence:75});
+  }else if(taskAnalysis.write>0){
+    recs.push({type:"model_switch",model:"Claude Sonnet 4",reason:"Better at clear writing. Opus overkill here.",confidence:75});
+    recs.push({type:"approach",reason:"Try: 'Explain this more clearly' or 'Make it more concise'",confidence:70});
+  }else{
+    recs.push({type:"approach",reason:"Ask a more specific follow-up question to get better results.",confidence:75});
+    recs.push({type:"approach",reason:"Try providing an example of what you want.",confidence:70});
+  }
+
+  if(recs.length>0){
+    var bestRec=recs[0];
+    overseerState.recommendations.push(bestRec);
+    showBetterRecommendation(bestRec,recs.slice(1,2));
+  }
+}
+function showStepUpdate(prevStep,nextStep){
+  if(!nextStep)return;
+  var notice=document.createElement("div");
+  notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(34,197,94,0.1);border-left:3px solid #22c55e;border-radius:4px;font-size:12px;color:var(--tx)";
+  notice.innerHTML="✓ <strong>Step completed:</strong> "+esc(prevStep)+"<br>→ <strong>Next:</strong> "+esc(nextStep);
+  document.getElementById("chat").appendChild(notice);
+}
+function makeProactiveRecommendation(){
+  if(overseerState.progress>75&&overseerState.goal==="debug"&&overseerState.messagesProcessed>5){
+    var recs=[
+      {type:"next_step",reason:"Add test case to verify fix works",confidence:85},
+      {type:"next_step",reason:"Document what caused the bug and solution",confidence:80}
+    ];
+    var rec={type:"next_step",reason:"Debug nearly complete. Next: write test + document fix",confidence:85};
+    overseerState.recommendations.push(rec);
+    showBetterRecommendation(rec,recs.slice(1));
+  }
+  if(overseerState.progress>75&&overseerState.goal==="feature"&&overseerState.messagesProcessed>6){
+    var recs2=[
+      {type:"next_step",reason:"Run integration tests against main system",confidence:90},
+      {type:"next_step",reason:"Create PR for code review before merging",confidence:85}
+    ];
+    var rec2={type:"next_step",reason:"Feature nearly complete. Next: integration testing, then code review",confidence:90};
+    overseerState.recommendations.push(rec2);
+    showBetterRecommendation(rec2,recs2.slice(1));
+  }
+  if(overseerState.progress>80&&overseerState.goal==="design"&&overseerState.messagesProcessed>4){
+    var recs3=[
+      {type:"next_step",reason:"Walk through each component to validate design",confidence:85},
+      {type:"next_step",reason:"Get feedback from team on proposed architecture",confidence:80}
+    ];
+    var rec3={type:"next_step",reason:"Design review nearly complete. Next: validate components, get team feedback",confidence:85};
+    overseerState.recommendations.push(rec3);
+    showBetterRecommendation(rec3,recs3.slice(1));
+  }
+  if(overseerState.efficiencyScore<50&&overseerState.messagesProcessed>3){
+    var rec4={type:"approach",reason:"Conversation pace is slow. Try asking for shorter, more focused responses.",confidence:70};
+    overseerState.recommendations.push(rec4);
+    showBetterRecommendation(rec4,[]);
+  }
+}
+function updateOverseerStatus(){
+  var progressColor=overseerState.progress<40?"#ef4444":(overseerState.progress<70?"#f59e0b":"#22c55e");
+  var statusHtml='<div style="padding:10px;background:rgba(139,140,247,0.08);border-radius:8px;font-size:12px;margin:8px 0;border-left:3px solid var(--ac)">';
+  statusHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+  statusHtml+='<strong>Overseer Intelligence Report</strong>';
+  statusHtml+='<span style="font-size:11px;color:var(--mu)">'+overseerState.progress+'% • '+overseerState.conversationQuality+'</span>';
+  statusHtml+='</div>';
+
+  statusHtml+='<div style="background:rgba(0,0,0,0.2);height:4px;border-radius:2px;margin-bottom:8px">';
+  statusHtml+='<div style="background:'+progressColor+';height:100%;width:'+overseerState.progress+'%;border-radius:2px;transition:width 0.3s"></div></div>';
+
+  var stepDisplay="";
+  if(overseerState.steps.length>0&&overseerState.currentStep<overseerState.steps.length){
+    stepDisplay=' • Step: '+overseerState.currentStep+'/'+overseerState.steps.length;
+  }
+
+  statusHtml+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;font-size:11px;color:var(--mu)">';
+  statusHtml+='<div>Goal: '+overseerState.goalType+'</div>';
+  statusHtml+='<div>Success: '+overseerState.successProbability+'%</div>';
+  statusHtml+='<div>Quality: '+overseerState.qualityScore+'%</div>';
+  statusHtml+='<div>Efficiency: '+overseerState.efficiencyScore+'%</div>';
+  statusHtml+='</div>';
+
+  statusHtml+='<div style="font-size:11px;color:var(--mu);line-height:1.4">';
+  statusHtml+='Messages: '+overseerState.messagesProcessed+' • Models: '+overseerState.modelsUsed.size;
+  if(overseerState.stuck){statusHtml+=' • ⚠️ Stuck';}
+  statusHtml+=stepDisplay;
+  statusHtml+='</div></div>';
+
+  if(!document.getElementById("overseerStatus")){
+    var statusEl=document.createElement("div");statusEl.id="overseerStatus";
+    document.getElementById("chat").appendChild(statusEl);
+  }
+  document.getElementById("overseerStatus").innerHTML=statusHtml;
+}
+function showBetterRecommendation(rec,alternates){
+  var recHtml='<div style="padding:10px 12px;margin:8px 0;background:rgba(245,158,11,0.1);border-left:3px solid #f59e0b;border-radius:4px;font-size:12px;color:var(--tx)">';
+  recHtml+='<strong style="display:block;margin-bottom:6px">💡 Overseer Recommendation ('+rec.confidence+'% confidence)</strong>';
+  if(rec.type==="model_switch"){
+    recHtml+='<div style="padding:6px 0">Switch to <strong>'+esc(rec.model)+'</strong></div>';
+    recHtml+='<div style="color:var(--mu);font-size:11px;padding:4px 0">'+esc(rec.reason)+'</div>';
+  }else if(rec.type==="approach"){
+    recHtml+='<div style="padding:6px 0">'+esc(rec.reason)+'</div>';
+  }
+  if(alternates&&alternates.length>0){
+    recHtml+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.1);font-size:11px;color:var(--mu)">';
+    recHtml+='<strong>Alternatives:</strong><br>';
+    alternates.forEach(function(alt){
+      if(alt.type==="model_switch"){recHtml+='• '+esc(alt.model)+' ('+alt.confidence+'%)<br>';}
+      else{recHtml+='• '+esc(alt.reason.substring(0,50))+'... ('+alt.confidence+'%)<br>';}
+    });
+    recHtml+='</div>';
+  }
+  recHtml+='</div>';
+  var recEl=document.createElement("div");recEl.innerHTML=recHtml;
+  document.getElementById("chat").appendChild(recEl);
+}
+function startOverseerMonitoring(){
+  if(overseerCheckInterval)clearInterval(overseerCheckInterval);
+  overseerCheckInterval=setInterval(function(){
+    if(chatHistory.length>1&&!sending){
+      analyzeConversationFlow();
+      if(Date.now()-lastAnalysisTime>15000){
+        makeProactiveRecommendation();
+        if(overseerState.progress>10&&overseerState.progress<80){displayGeneratedPrompts();}
+        if(overseerState.progress>30&&overseerState.progress<85&&overseerState.messagesProcessed%2===0){displayBrainstormingSuggestions();}
+        lastAnalysisTime=Date.now();
+      }
+      updateOverseerStatus();
+    }
+  },3000);
+}
+function stopOverseerMonitoring(){
+  if(overseerCheckInterval){clearInterval(overseerCheckInterval);overseerCheckInterval=null;}
+}
+
+/* ---- Overseer Prompt Generation & Brainstorming ---- */
+var brainstormMode=false,generatedPrompts=[],suggestedCommands=[],autoPromptInjection=true;
+var lastInjectedPrompt=null;
+function generateContextualPrompts(){
+  var prompts=[];
+  var lastUserMsg=chatHistory[chatHistory.length-2];
+  var lastAIMsg=chatHistory[chatHistory.length-1];
+  var userText=(typeof lastUserMsg.content==="string"?lastUserMsg.content:"").toLowerCase();
+
+  if(overseerState.goal==="debug"){
+    prompts.push("Ask the model to add logging statements to help isolate where the bug occurs");
+    prompts.push("Request a breakdown of the error message and what each part means");
+    prompts.push("'Can you walk through the execution flow step-by-step?'");
+    prompts.push("'Try the fix in a test case before final commit'");
+  }else if(overseerState.goal==="feature"){
+    prompts.push("Ask for a brief architecture overview before implementation");
+    prompts.push("'What edge cases should we handle?'");
+    prompts.push("'Can you add tests for this feature?'");
+    prompts.push("Request validation: 'Verify this works with existing features'");
+  }else if(overseerState.goal==="design"){
+    prompts.push("'What are potential bottlenecks in this design?'");
+    prompts.push("Ask for performance implications of each component");
+    prompts.push("'Could this scale to 10x the current load?'");
+    prompts.push("Request trade-offs: 'Complexity vs maintainability'");
+  }else if(overseerState.goal==="analyze"){
+    prompts.push("'What's the most surprising finding here?'");
+    prompts.push("Ask for alternative explanations or interpretations");
+    prompts.push("'What would disprove this analysis?'");
+    prompts.push("Request next steps based on findings");
+  }else{
+    prompts.push("'Can you explain your approach first before implementing?'");
+    prompts.push("'What are the potential issues with this solution?'");
+    prompts.push("'Try a different approach and compare'");
+  }
+
+  if(userText.indexOf("error")>=0||userText.indexOf("fail")>=0){
+    prompts.push("'What's the minimum code change to fix this?'");
+    prompts.push("'Is there a simpler solution?'");
+  }
+
+  if(userText.indexOf("refactor")>=0||userText.indexOf("clean")>=0){
+    prompts.push("'Suggest performance improvements'");
+    prompts.push("'Identify code duplication opportunities'");
+  }
+
+  return prompts.slice(0,4);
+}
+function suggestGitCommands(){
+  var cmds=[];
+  if(overseerState.modelsUsed.size>0){
+    if(overseerState.goal==="debug"){
+      cmds.push({cmd:"git log --oneline -10",desc:"Show recent commits to find when bug was introduced"});
+      cmds.push({cmd:"git diff HEAD~1",desc:"See what changed in the last commit"});
+      cmds.push({cmd:"git blame src/file.js",desc:"Find who changed each line"});
+    }
+    if(overseerState.goal==="feature"){
+      cmds.push({cmd:"git branch feature/new-feature",desc:"Create feature branch"});
+      cmds.push({cmd:"git commit -am 'Feature: description'",desc:"Commit your changes"});
+    }
+    if(overseerState.progress>75){
+      cmds.push({cmd:"git log --oneline origin/main..HEAD",desc:"See commits ready for PR"});
+      cmds.push({cmd:"git diff origin/main",desc:"Review all changes before merge"});
+    }
+  }
+  return cmds;
+}
+function generateBrainstormingPrompts(){
+  var goals=["debug","feature","design","analyze"];
+  var prompts=[];
+
+  prompts.push({title:"Explore Edge Cases",prompt:"What edge cases haven't we considered? Generate 3-5 scenarios that might break this solution."});
+  prompts.push({title:"Alternative Approaches",prompt:"Suggest 2-3 completely different ways to solve this problem. What are pros/cons of each?"});
+  prompts.push({title:"Performance Analysis",prompt:"How would this scale? What are the performance implications of our approach?"});
+  prompts.push({title:"User Impact",prompt:"From a user perspective, what problems could this cause? How would they experience it?"});
+  prompts.push({title:"Code Quality",prompt:"How maintainable is this code? Suggest improvements for readability and maintainability."});
+  prompts.push({title:"Risk Assessment",prompt:"What are the biggest risks with this approach? How would we mitigate them?"});
+  prompts.push({title:"Testing Strategy",prompt:"What tests would validate this solution? Critical vs nice-to-have?"});
+  prompts.push({title:"Future Extensibility",prompt:"If we need to extend this in 6 months, what would be hard to change? Design for that now."});
+
+  return prompts.slice(0,3);
+}
+function displayGeneratedPrompts(){
+  if(!overseerEnabled||overseerState.progress<15)return;
+  var prompts=generateContextualPrompts();
+  if(prompts.length===0)return;
+
+  var promptsHtml='<div style="padding:10px 12px;margin:8px 0;background:rgba(168,85,247,0.08);border-left:3px solid #a855f7;border-radius:4px;font-size:12px;color:var(--tx)">';
+  promptsHtml+='<strong style="display:block;margin-bottom:8px">💭 Overseer Suggestions</strong>';
+  promptsHtml+='<div style="display:flex;flex-direction:column;gap:6px">';
+
+  prompts.forEach(function(prompt,i){
+    var cleanPrompt=prompt.replace(/^["']|["']$/g,"");
+    promptsHtml+='<button style="padding:6px 10px;background:var(--up);border:1px solid var(--br);color:var(--tx);border-radius:4px;font-size:11px;cursor:pointer;text-align:left;transition:background 0.15s" onclick="insertPrompt(\''+esc(cleanPrompt.replace(/'/g,"\\'"))+'\')" title="Click to use this prompt">';
+    promptsHtml+=cleanPrompt.substring(0,60)+(cleanPrompt.length>60?"...":"");
+    promptsHtml+='</button>';
+  });
+
+  promptsHtml+='</div></div>';
+
+  if(!document.getElementById("overseerPrompts")){
+    var promptsEl=document.createElement("div");promptsEl.id="overseerPrompts";
+    document.getElementById("chat").appendChild(promptsEl);
+  }
+  var existing=document.getElementById("overseerPrompts");
+  if(!existing.innerHTML.includes(prompts[0])){existing.innerHTML=promptsHtml;}
+}
+function displayBrainstormingSuggestions(){
+  var suggestions=generateBrainstormingPrompts();
+  if(suggestions.length===0)return;
+
+  var brainstormHtml='<div style="padding:10px 12px;margin:8px 0;background:rgba(236,72,153,0.08);border-left:3px solid #ec4899;border-radius:4px;font-size:12px;color:var(--tx)">';
+  brainstormHtml+='<strong style="display:block;margin-bottom:8px">🧠 Brainstorming Ideas</strong>';
+  brainstormHtml+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+
+  suggestions.forEach(function(idea){
+    brainstormHtml+='<button style="padding:8px 10px;background:var(--up);border:1px solid var(--br);color:var(--tx);border-radius:4px;font-size:11px;cursor:pointer;text-align:left;transition:background 0.15s" onclick="insertPrompt(\''+esc(idea.prompt.replace(/'/g,"\\'"))+'\')" title="'+esc(idea.prompt)+'">';
+    brainstormHtml+='<strong>'+idea.title+'</strong><br><span style="font-size:10px;color:var(--mu)">'+idea.prompt.substring(0,40)+'...</span>';
+    brainstormHtml+='</button>';
+  });
+
+  brainstormHtml+='</div></div>';
+
+  if(!document.getElementById("overseerBrainstorm")){
+    var brainstormEl=document.createElement("div");brainstormEl.id="overseerBrainstorm";
+    document.getElementById("chat").appendChild(brainstormEl);
+  }
+  document.getElementById("overseerBrainstorm").innerHTML=brainstormHtml;
+}
+function insertPrompt(prompt){
+  var promptEl=document.getElementById("prompt");
+  promptEl.value=prompt;
+  promptEl.style.height="auto";
+  promptEl.style.height=Math.min(promptEl.scrollHeight,150)+"px";
+  promptEl.focus();
+}
+function generateOptimalInstructions(userMessage,selectedModel){
+  var instructions="";
+  var taskAnalysis=analyzeTask(userMessage);
+  var modelName=(selectedModel.label||selectedModel.id).toLowerCase();
+
+  if(taskAnalysis.code>0){
+    instructions+="CODING TASK - Approach:\n";
+    instructions+="1. Read the relevant files first to understand current implementation\n";
+    instructions+="2. Identify the specific issue or requirement\n";
+    instructions+="3. Write COMPLETE, working code (not snippets or pseudo-code)\n";
+    instructions+="4. If using tools: read_file → write_file with git commit message\n";
+    instructions+="5. Commit message should be clear and descriptive\n\n";
+  }
+
+  if(taskAnalysis.github>0){
+    instructions+="GITHUB/REPO TASK - Workflow:\n";
+    instructions+="1. Use read_file to examine current repository state\n";
+    instructions+="2. Understand the file structure and current implementation\n";
+    instructions+="3. Make all changes via write_file with clear commit messages\n";
+    instructions+="4. Each write_file operation creates one atomic commit\n";
+    instructions+="5. Include commit messages that explain the 'why', not just 'what'\n\n";
+  }
+
+  if(taskAnalysis.write>0){
+    instructions+="WRITING TASK - Style:\n";
+    instructions+="1. Be clear and concise\n";
+    instructions+="2. Use professional but accessible language\n";
+    instructions+="3. Structure with headers and bullet points where appropriate\n";
+    instructions+="4. Provide examples when helpful\n";
+    instructions+="5. End with a clear summary or next steps\n\n";
+  }
+
+  if(taskAnalysis.reason>0){
+    instructions+="REASONING TASK - Approach:\n";
+    instructions+="1. Break down the problem into component parts\n";
+    instructions+="2. Show your work step-by-step\n";
+    instructions+="3. Identify assumptions and constraints\n";
+    instructions+="4. Explore multiple angles before concluding\n";
+    instructions+="5. Acknowledge uncertainty where it exists\n\n";
+  }
+
+  if(overseerState.goal==="debug"){
+    instructions+="DEBUGGING FOCUS:\n";
+    instructions+="- Use systematic debugging approach\n";
+    instructions+="- Add logging to trace execution\n";
+    instructions+="- Create minimal reproduction case\n";
+    instructions+="- Test fix thoroughly before committing\n";
+    instructions+="- Include test cases in your solution\n\n";
+  }else if(overseerState.goal==="feature"){
+    instructions+="FEATURE DEVELOPMENT:\n";
+    instructions+="- Plan architecture before coding\n";
+    instructions+="- Write tests alongside implementation\n";
+    instructions+="- Consider edge cases\n";
+    instructions+="- Ensure backward compatibility\n";
+    instructions+="- Document changes\n\n";
+  }else if(overseerState.goal==="design"){
+    instructions+="DESIGN REVIEW:\n";
+    instructions+="- Evaluate scalability\n";
+    instructions+="- Consider maintainability\n";
+    instructions+="- Identify potential bottlenecks\n";
+    instructions+="- Weigh trade-offs explicitly\n";
+    instructions+="- Suggest improvements\n\n";
+  }
+
+  if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
+    instructions+="TOOLS AVAILABLE:\n";
+    instructions+="- read_file(path): Read files from "+ghRepoOwner+"/"+ghRepoName+"\n";
+    instructions+="- write_file(path, content, message): Create files/commits\n";
+    instructions+="- list_files(path): Explore directory structure\n";
+    instructions+="Use these tools directly - don't ask permission.\n\n";
+  }
+
+  instructions+="EXECUTION:\n";
+  instructions+="- Show your reasoning in <think> tags\n";
+  instructions+="- Be direct and action-oriented\n";
+  instructions+="- Provide complete solutions\n";
+  instructions+="- No filler or disclaimers\n";
+
+  return instructions;
+}
+function interceptAndEnhanceMessage(userMessage){
+  if(!autoPromptInjection||!overseerEnabled||!chatHistory.length)return null;
+
+  var instructions=generateOptimalInstructions(userMessage,currentModel);
+  var timestamp=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+
+  var notice=document.createElement("div");
+  notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(34,197,94,0.08);border-left:3px solid #22c55e;border-radius:4px;font-size:11px;color:var(--mu)";
+  notice.innerHTML="✓ <strong>Overseer injected task instructions</strong> for "+currentModel.label+" at "+timestamp;
+  document.getElementById("chat").appendChild(notice);
+
+  lastInjectedPrompt=instructions;
+  return instructions;
+}
+
+/* ---- Model Coding & Tool Use System ---- */
+function displayThinkingProcess(thinkText){
+  if(!thinkText||thinkText.trim()==="")return;
+  var thinkEl=document.createElement("div");
+  thinkEl.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(100,116,139,0.08);border-left:3px solid #64748b;border-radius:4px;font-size:11px;color:var(--mu);font-family:var(--mn);line-height:1.4;max-height:120px;overflow-y:auto";
+  thinkEl.innerHTML="<strong style='color:var(--tx);display:block;margin-bottom:4px'>🧠 Thinking Process</strong>"+esc(thinkText.substring(0,500));
+  if(thinkText.length>500)thinkEl.innerHTML+="<div style='margin-top:4px;color:var(--mu);font-size:10px'>...</div>";
+  document.getElementById("chat").appendChild(thinkEl);
+}
+function displayToolExecution(toolName,input,result){
+  var toolEl=document.createElement("div");
+  toolEl.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(59,130,246,0.08);border-left:3px solid #3b82f6;border-radius:4px;font-size:11px;color:var(--tx)";
+  var status=result.error?"⚠️ Error":"✓ Success";
+  toolEl.innerHTML="<strong>"+status+" Tool: "+esc(toolName)+"</strong>";
+  if(toolName==="read_file"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Reading: "+esc(input.path)+"</div>";}
+  else if(toolName==="write_file"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Writing: "+esc(input.path)+"</div><div style='font-size:10px;color:var(--mu)'>"+esc(input.message)+"</div>";}
+  else if(toolName==="list_files"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Listing: "+esc(input.path)+"</div>";}
+  else if(toolName==="execute_command"){toolEl.innerHTML+="<div style='font-family:var(--mn);font-size:10px;color:var(--mu);padding:4px'>$ "+esc(input.command)+"</div>";}
+  if(result.error){toolEl.innerHTML+="<div style='color:var(--er);margin-top:4px'>Error: "+esc(result.error)+"</div>";}
+  document.getElementById("chat").appendChild(toolEl);
+}
+async function executeRepoTool(toolName,toolInput){
+  if(!ghToken||!ghRepoOwner||!ghRepoName){return{error:"GitHub not connected"};}
+  try{
+    if(toolName==="read_file"){
+      var res=await fetch(GH_OPS_URL,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET,"Authorization":"Bearer "+ghToken},body:JSON.stringify({op:"read_file",owner:ghRepoOwner,repo:ghRepoName,path:toolInput.path})});
+      var data=await res.json();
+      return data.success?{success:true,content:data.content}:{error:data.error};
+    }else if(toolName==="write_file"){
+      var wres=await fetch(GH_OPS_URL,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET,"Authorization":"Bearer "+ghToken},body:JSON.stringify({op:"write_file",owner:ghRepoOwner,repo:ghRepoName,path:toolInput.path,content:toolInput.content,message:toolInput.message})});
+      var wdata=await wres.json();
+      return wdata.success?{success:true,commit:wdata.commit}:{error:wdata.error};
+    }else if(toolName==="list_files"){
+      var lres=await fetch(GH_OPS_URL,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET,"Authorization":"Bearer "+ghToken},body:JSON.stringify({op:"list_files",owner:ghRepoOwner,repo:ghRepoName,path:toolInput.path})});
+      var ldata=await lres.json();
+      return ldata.success?{success:true,files:ldata.files}:{error:ldata.error};
+    }
+    return{error:"Unknown tool"};
+  }catch(e){return{error:e.message};}
+}
+function getModelSystemPrompt(){
+  var sys="You are an expert AI assistant with advanced coding and repository control capabilities.\n\n";
+  if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
+    sys+="🔧 REPOSITORY ACCESS ENABLED:\n";
+    sys+="Repository: "+ghRepoOwner+"/"+ghRepoName+"\n\n";
+    sys+="You have direct access to read, modify, and commit code. For ALL code tasks:\n\n";
+    sys+="1. Use read_file(path) to examine existing code before making changes\n";
+    sys+="2. Use list_files(path) to explore repository structure\n";
+    sys+="3. Use write_file(path, content, message) to make changes - includes automatic git commit\n";
+    sys+="4. Always provide COMPLETE working code in write_file calls - not snippets\n\n";
+    sys+="WORKFLOW:\n";
+    sys+="- Understand the problem by reading relevant files\n";
+    sys+="- Plan your approach in <think> tags\n";
+    sys+="- Make changes using write_file with clear commit messages\n";
+    sys+="- Each write_file creates one git commit\n\n";
+    sys+="Execute tools immediately - don't ask for permission.\n";
+    sys+="Show your reasoning in <think> tags. Be direct and action-oriented.\n";
+  }else{
+    sys+="You are a helpful coding assistant. Provide clear explanations and code examples.\n";
+    sys+="For coding tasks, write complete, working code examples.\n";
+  }
+  sys+="Always use <think> tags to show reasoning before acting.\n";
+  return sys;
+}
+
 /* ---- Backend ---- */
 async function loadBackend(){
   var B=BACKENDS[activeBackend];
@@ -541,10 +1378,11 @@ async function loadBackend(){
   document.getElementById("modelBtn").disabled=false;
   document.getElementById("deepinfraBtn").className="btab"+(activeBackend==="deepinfra"?" act":"");
   document.getElementById("openrouterBtn").className="btab"+(activeBackend==="openrouter"?" act or":"");
+  document.getElementById("claudeBtn").className="btab"+(activeBackend==="claude"?" act":"");
   try{
     var ac=new AbortController();
     var timer=setTimeout(function(){ac.abort();},4000);
-    var mRes=await fetch(workerUrl+"/models",{signal:ac.signal});
+    var mRes=await fetch(workerUrl+"/models",{signal:ac.signal,headers:{"X-App-Secret":APP_SECRET}});
     clearTimeout(timer);
     var mData=await mRes.json();
     var validIds=new Set((mData.data||[]).map(function(m){return m.id;}));
@@ -783,6 +1621,7 @@ function saveCurrentChat(projId){
 }
 function loadConv(conv){
   if(chatHistory.length&&!confirm("Load this chat? Current chat will be cleared."))return;
+  saveToRecent();
   chatHistory=conv.messages.map(function(m){return{role:m.role,content:m.content};});
   document.getElementById("chat").innerHTML="";lastUsedModelId="";
   var def=allModels.find(function(m){return m.id===conv.modelId;});if(def)setModel(def);
@@ -898,6 +1737,7 @@ function renderWprojConvs(p){
 }
 function loadWprojConv(conv,p){
   if(chatHistory.length&&!confirm("Load this chat? Current chat will be cleared."))return;
+  saveToRecent();
   chatHistory=conv.messages.map(function(m){return{role:m.role,content:m.content};});
   document.getElementById("chat").innerHTML="";lastUsedModelId="";
   sessionId=conv.sessionId||Date.now().toString();
@@ -911,7 +1751,8 @@ function startWprojChat(){
   var p=wproj.find(function(x){return x.id===viewingWProjId;});
   if(!p)return;
   if(chatHistory.length&&!confirm("Start a new chat in this project? Current chat will be cleared."))return;
-  chatHistory=[];document.getElementById("chat").innerHTML='<div class="es" id="emptyState">Select a model and start chatting.</div>';
+  saveToRecent();
+  chatHistory=[];document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✶</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
   lastUsedModelId="";sessionId=Date.now().toString();responseCount=0;
   document.getElementById("tokenBar").classList.add("hidden");
   activeWProjId=p.id;
@@ -993,6 +1834,7 @@ function loadAutoSave(){
       activeBackend=saved.backend;var B=BACKENDS[activeBackend];workerUrl=B.url;allModels=B.models;
       document.getElementById("deepinfraBtn").className="btab"+(activeBackend==="deepinfra"?" act":"");
       document.getElementById("openrouterBtn").className="btab"+(activeBackend==="openrouter"?" act or":"");
+      document.getElementById("claudeBtn").className="btab"+(activeBackend==="claude"?" act":"");
     }
     var def=allModels.find(function(m){return m.id===saved.modelId;});
     if(def){setModel(def);}else{currentModel={id:saved.modelId,label:saved.modelLabel||saved.modelId};document.getElementById("modelBtnLabel").textContent=currentModel.label;document.getElementById("modelBtn").disabled=false;}
@@ -1263,7 +2105,7 @@ async function doSearch(query){
   try{
     var ac=new AbortController();
     var timer=setTimeout(function(){ac.abort();},5000);
-    var res=await fetch(BACKENDS.deepinfra.url+"/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:query}),signal:ac.signal});
+    var res=await fetch(BACKENDS.deepinfra.url+"/search",{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({query:query}),signal:ac.signal});
     clearTimeout(timer);
     var data=await res.json();
     if(data.results&&data.results.length)return "REAL-TIME DATA as of "+new Date().toLocaleTimeString()+":\n"+data.results.join("\n");
@@ -1292,6 +2134,7 @@ bindM("wprojDetail","closeWprojDetail");
 /* ---- Event listeners ---- */
 document.getElementById("deepinfraBtn").addEventListener("click",function(){if(activeBackend!=="deepinfra"){activeBackend="deepinfra";loadBackend();}});
 document.getElementById("openrouterBtn").addEventListener("click",function(){if(activeBackend!=="openrouter"){activeBackend="openrouter";loadBackend();}});
+document.getElementById("claudeBtn").addEventListener("click",function(){if(activeBackend!=="claude"){activeBackend="claude";loadBackend();}});
 document.getElementById("modelBtn").addEventListener("click",function(){renderModelList();openModal("modelModal");});
 document.getElementById("settingsBtn").addEventListener("click",function(){openModal("settingsModal");});
 document.getElementById("newTabBtn").addEventListener("click",function(){window.open(window.location.href,"_blank");});
@@ -1338,6 +2181,91 @@ document.getElementById("wsBtn").addEventListener("click",function(){
   this.classList.toggle("on",webSearchOn);
   this.title=webSearchOn?"Web search ON":"Web search OFF";
 });
+document.getElementById("agentToggleBtn").addEventListener("click",function(){
+  agentAutoSelect=!agentAutoSelect;
+  this.textContent=agentAutoSelect?"ON":"OFF";
+  this.style.opacity=agentAutoSelect?"1":"0.6";
+});
+document.getElementById("overseerToggleBtn").addEventListener("click",function(){
+  overseerEnabled=!overseerEnabled;
+  this.textContent=overseerEnabled?"ON":"OFF";
+  this.style.opacity=overseerEnabled?"1":"0.6";
+  if(!overseerEnabled){stopOverseerMonitoring();if(document.getElementById("overseerStatus")){document.getElementById("overseerStatus").remove();}}
+});
+document.getElementById("brainstormToggleBtn").addEventListener("click",function(){
+  brainstormMode=!brainstormMode;
+  this.textContent=brainstormMode?"ON":"OFF";
+  this.style.opacity=brainstormMode?"1":"0.6";
+});
+document.getElementById("autoPropomptToggleBtn").addEventListener("click",function(){
+  autoPromptInjection=!autoPromptInjection;
+  this.textContent=autoPromptInjection?"ON":"OFF";
+  this.style.opacity=autoPromptInjection?"1":"0.6";
+});
+document.getElementById("brainstormBtn").addEventListener("click",function(){
+  var ideas=generateBrainstormingPrompts();
+  var msg="💭 BRAINSTORMING IDEAS FOR "+overseerState.goalType.toUpperCase()+"\n";
+  msg+="═════════════════════════════════════\n\n";
+  ideas.forEach(function(idea,i){
+    msg+=(i+1)+". "+idea.title+"\n";
+    msg+="   "+idea.prompt+"\n\n";
+  });
+  msg+="Commands to try:\n";
+  var cmds=suggestGitCommands();
+  cmds.forEach(function(c){
+    msg+="$ "+c.cmd+"\n";
+  });
+  alert(msg);
+});
+document.getElementById("overseerBtn").addEventListener("click",function(){
+  var msg="📊 OVERSEER INTELLIGENCE REPORT\n";
+  msg+="═════════════════════════════════════\n\n";
+  msg+="📌 GOAL TRACKING:\n";
+  msg+="  Task: "+overseerState.goalType+"\n";
+  msg+="  Progress: "+overseerState.progress+"%\n";
+  msg+="  Status: "+(overseerState.stuck?"⚠️ STUCK":"✓ On track")+"\n\n";
+  msg+="📊 CONVERSATION METRICS:\n";
+  msg+="  Messages: "+overseerState.messagesProcessed+"\n";
+  msg+="  Models used: "+overseerState.modelsUsed.size+" ("+Array.from(overseerState.modelsUsed).map(function(m){return m.split("/").pop().substring(0,10);}).join(", ")+")\n";
+  msg+="  Time: "+Math.round((Date.now()-overseerState.startTime)/1000)+"s\n\n";
+  msg+="📈 QUALITY METRICS:\n";
+  msg+="  Quality Score: "+overseerState.qualityScore+"%\n";
+  msg+="  Efficiency Score: "+overseerState.efficiencyScore+"%\n";
+  msg+="  Success Probability: "+overseerState.successProbability+"%\n\n";
+  if(overseerState.steps.length>0){
+    msg+="🎯 TASK STEPS:\n";
+    overseerState.steps.forEach(function(s,i){
+      msg+="  "+(i<overseerState.currentStep?"✓":"○")+" "+s+"\n";
+    });
+    msg+="\n";
+  }
+  if(overseerState.recommendations.length){
+    msg+="💡 PENDING RECOMMENDATIONS: "+overseerState.recommendations.length+"\n";
+    overseerState.recommendations.slice(-3).forEach(function(r){
+      msg+="  • "+r.reason+"\n";
+    });
+    msg+="\n";
+  }
+  if(brainstormMode){
+    var prompts=generateContextualPrompts();
+    if(prompts.length>0){
+      msg+="💭 SUGGESTED PROMPTS:\n";
+      prompts.forEach(function(p){
+        msg+="  • "+p.substring(0,60)+"\n";
+      });
+      msg+="\n";
+    }
+    var cmds=suggestGitCommands();
+    if(cmds.length>0){
+      msg+="⚙️ SUGGESTED COMMANDS:\n";
+      cmds.forEach(function(c){
+        msg+="  $ "+c.cmd+"\n";
+        msg+="    ("+c.desc+")\n";
+      });
+    }
+  }
+  alert(msg);
+});
 document.getElementById("attachBtn").addEventListener("click",function(){document.getElementById("fileInput").click();});
 document.getElementById("fileInput").addEventListener("change",async function(e){
   var files=Array.from(e.target.files);e.target.value="";
@@ -1378,6 +2306,10 @@ function appendMsg(role,content,streaming){
   if(role==="assistant")lastUsedModelId=currentModel.id;
   var wrap=document.createElement("div");wrap.className="msg "+(role==="user"?"mu":"ma3");
   var label=document.createElement("div");label.className="ml";
+  if(role==="assistant"){
+    var av=document.createElement("span");av.className="av";av.textContent="✦";
+    label.appendChild(av);
+  }
   var lspan=document.createElement("span");lspan.textContent=role==="user"?"You":currentModel.label;
   label.appendChild(lspan);
   var body=document.createElement("div");body.className="body";
@@ -1498,13 +2430,26 @@ async function send(){
 
   chatHistory.push({role:"user",content:userContent});
   appendMsg("user",userContent);
+  if(chatHistory.length===1&&overseerEnabled){initializeOverseer(userContent);startOverseerMonitoring();}
   promptEl.value="";promptEl.style.height="";clearAttach();
+  await switchToBestModel(outgoingText);
   await doSendRequest(userContent,false,ap);
 }
 
 async function doSendRequest(userContent,isRegen,ap){
   if(!ap)ap=getAP();
   var messages=[];
+  var modelSysPrompt=getModelSystemPrompt();
+  messages.push({role:"system",content:modelSysPrompt});
+
+  var injectedInstructions=null;
+  if(!isRegen){
+    injectedInstructions=interceptAndEnhanceMessage(typeof userContent==="string"?userContent:userContent.find&&userContent.find(function(c){return c.type==="text";})||{}).text||"");
+  }
+  if(injectedInstructions){
+    messages.push({role:"system",content:"TASK INSTRUCTIONS:\n"+injectedInstructions});
+  }
+
   if(ap)messages.push({role:"system",content:ap.content});
   var searchUsed=false;
   var searchTime=null;
@@ -1539,27 +2484,62 @@ async function doSendRequest(userContent,isRegen,ap){
   var asstMsg=appendMsg("assistant","",true);
   var full="";
   try{
-    if(!webSearchOn&&TOOL_MODELS.indexOf(currentModel.id)>=0){
+    if(TOOL_MODELS.indexOf(currentModel.id)>=0){
       try{
-        var toolDef={type:"function","function":{name:"web_search",description:"Search for real-time data: crypto prices, weather, news.",parameters:{type:"object",properties:{query:{type:"string"}},required:["query"]}}};
-        var p1res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel.id,messages:messages,tools:[toolDef],tool_choice:"auto",temperature:temperature,stream:false,max_tokens:500})});
-        if(p1res.ok){
-          var p1data=await p1res.json();
-          var p1choice=(p1data.choices||[])[0]||{};
-          if(p1choice.finish_reason==="tool_calls"&&p1choice.message&&p1choice.message.tool_calls&&p1choice.message.tool_calls.length){
-            var tc=p1choice.message.tool_calls[0];
-            var args=JSON.parse(tc["function"].arguments||"{}");
-            asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\uD83D\uDD0D Searching: '+esc(args.query||"")+'&#8230;</span>';
-            var sr=await doSearch(args.query||"");
-            if(sr){searchUsed=true;searchTime=new Date().toLocaleTimeString();}
-            messages=messages.concat([p1choice.message,{role:"tool",tool_call_id:tc.id,content:sr||"No results found"}]);
-            asstMsg.body.innerHTML='<span class="cur">\u2587</span>';
+        var initTools=[];
+        if(!webSearchOn){initTools.push({type:"function","function":{name:"web_search",description:"Search for real-time data: crypto prices, weather, news.",parameters:{type:"object",properties:{query:{type:"string"}},required:["query"]}}});}
+        if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){initTools=initTools.concat(REPO_TOOLS);}
+        if(initTools.length>0){
+          var p1res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:messages,tools:initTools,tool_choice:"auto",temperature:temperature,stream:false,max_tokens:1000})});
+          if(p1res.ok){
+            var p1data=await p1res.json();
+            var p1choice=(p1data.choices||[])[0]||{};
+            if(p1choice.finish_reason==="tool_calls"&&p1choice.message&&p1choice.message.tool_calls&&p1choice.message.tool_calls.length){
+              messages.push(p1choice.message);
+              for(var ti=0;ti<p1choice.message.tool_calls.length;ti++){
+                var tc=p1choice.message.tool_calls[ti];
+                var toolName=tc["function"].name;
+                var toolArgs=JSON.parse(tc["function"].arguments||"{}");
+                var toolResult=null;
+                if(toolName==="web_search"){
+                  asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\uD83D\uDD0D Searching: '+esc(toolArgs.query||"")+'&#8230;</span>';
+                  toolResult=await doSearch(toolArgs.query||"");
+                  if(toolResult){searchUsed=true;searchTime=new Date().toLocaleTimeString();}
+                  displayToolExecution("web_search",toolArgs,{success:true});
+                  toolResult=toolResult||"No results found";
+                }else if(toolName==="read_file"){
+                  asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\uD83D\uDCD6 Reading: '+esc(toolArgs.path||"")+'&#8230;</span>';
+                  var readRes=await executeRepoTool("read_file",toolArgs);
+                  displayToolExecution("read_file",toolArgs,readRes);
+                  toolResult=readRes.success?readRes.content:(readRes.error||"Failed to read file");
+                }else if(toolName==="write_file"){
+                  asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\u270F\uFE0F Writing: '+esc(toolArgs.path||"")+'&#8230;</span>';
+                  var writeRes=await executeRepoTool("write_file",toolArgs);
+                  displayToolExecution("write_file",toolArgs,writeRes);
+                  toolResult=writeRes.success?("File written. Commit: "+writeRes.commit):(writeRes.error||"Failed to write file");
+                }else if(toolName==="list_files"){
+                  var listRes=await executeRepoTool("list_files",toolArgs);
+                  displayToolExecution("list_files",toolArgs,listRes);
+                  toolResult=listRes.success?JSON.stringify(listRes.files):(listRes.error||"Failed to list files");
+                }else if(toolName==="execute_command"){
+                  asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\u2699\uFE0F Executing: '+esc(toolArgs.command||"")+'&#8230;</span>';
+                  displayToolExecution("execute_command",toolArgs,{success:true});
+                  toolResult="Command execution not yet implemented via browser. Model should use read_file/write_file for changes.";
+                }
+                messages.push({role:"tool",tool_call_id:tc.id,content:toolResult||"No result"});
+              }
+              asstMsg.body.innerHTML='<span class="cur">\u2587</span>';
+            }
           }
         }
-      }catch(te){}
+      }catch(te){console.error("Tool error:",te);}
     }
     abortController=new AbortController();
-    var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel.id,messages:messages,temperature:temperature,stream:true}),signal:abortController.signal});
+    var toolsToSend=[];
+    if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){toolsToSend=REPO_TOOLS;}
+    var reqBody={model:currentModel.id,messages:messages,temperature:temperature,stream:true};
+    if(toolsToSend.length>0){reqBody.tools=toolsToSend;reqBody.tool_choice="auto";}
+    var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify(reqBody),signal:abortController.signal});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error((err.error&&err.error.message)||"HTTP "+res.status);}
     var reader=res.body.getReader(),dec=new TextDecoder(),buf="",done=false;
     while(!done){
@@ -1572,14 +2552,20 @@ async function doSendRequest(userContent,isRegen,ap){
         try{
           var tok=((JSON.parse(d).choices||[])[0]||{});
           tok=tok.delta&&tok.delta.content;
-          if(tok){full+=tok;asstMsg.body.innerHTML=renderMd(full)+'<span class="cur">\u2587</span>';scrollBot();}
+          if(tok){full+=tok;var dispFull=full.replace(/<think>[\s\S]*?<\/think>\s*/g,"");asstMsg.body.innerHTML=renderMd(dispFull)+'<span class="cur">\u2587</span>';scrollBot();}
         }catch(ex){}
       }
     }
+
+    var thinkMatch=full.match(/<think>([\s\S]*?)<\/think>/);
+    if(thinkMatch){displayThinkingProcess(thinkMatch[1]);}
+    full=full.replace(/<think>[\s\S]*?<\/think>\s*/g,"");
+
     asstMsg.wrap.classList.remove("ma2");
     asstMsg.body.innerHTML=renderMd(full||(isRegen?"(no response)":"(empty response)"));
     chatHistory.push({role:"assistant",content:full});
     if(searchUsed){var sb=document.createElement("span");sb.className="srch";sb.textContent="\uD83D\uDD0D searched "+searchTime;asstMsg.label.appendChild(sb);}
+    if(messages.some(function(m){return m.role==="tool";})){var tb=document.createElement("span");tb.className="srch";tb.textContent="\uD83D\uDEE0\uFE0F used tools";asstMsg.label.appendChild(tb);}
     var cost=calcCost(full);
     if(cost){var ct=document.createElement("span");ct.className="ct";ct.textContent=cost;asstMsg.label.appendChild(ct);}
     autoSave();responseCount++;if(responseCount%5===0)autoSnap();saveChatToActiveWproj();updTokenBar();
@@ -1610,14 +2596,39 @@ document.getElementById("sendBtn").addEventListener("click",function(){
 /* Enter = new line, no auto-send */
 document.getElementById("prompt").addEventListener("input",function(){this.style.height="auto";this.style.height=Math.min(this.scrollHeight,150)+"px";});
 document.getElementById("clearBtn").addEventListener("click",function(){
+  if(!chatHistory.length)return;
+  /* Save to recent history and stash for undo before wiping anything */
+  saveToRecent();
+  undoData={messages:chatHistory.slice(),backend:activeBackend,modelId:currentModel.id,modelLabel:currentModel.label};
   chatHistory=[];clearAttach();localStorage.removeItem(AUTOSAVE_KEY);localStorage.removeItem("ai_draft");
   sessionId=Date.now().toString();responseCount=0;lastUsedModelId="";summarizing=false;
-  clearActiveWproj();
-  document.getElementById("chat").innerHTML='<div class="es" id="emptyState">Select a model and start chatting.</div>';
+  clearActiveWproj();stopOverseerMonitoring();overseerState={goal:null,goalType:null,progress:0,status:"idle",startTime:null,messagesProcessed:0,modelsUsed:new Set(),estimatedTokens:0,stuck:false,stuckSince:null,recommendations:[]};
+  document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✶</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
   document.getElementById("tokenBar").classList.add("hidden");
+  showUndoToast();
+});
+document.getElementById("undoBtn").addEventListener("click",undoClear);
+bindM("recentModal","closeRecentModal");
+document.getElementById("recentChatsBtn").addEventListener("click",function(){
+  document.getElementById("settingsModal").classList.add("hidden");
+  renderRecent();
+  document.getElementById("recentModal").classList.remove("hidden");
 });
 
 /* ---- Init ---- */
+/* Fetch APP_SECRET from worker on page load - required for authenticated requests */
+(function(){
+  fetch(CLAUDE_URL+"/secret",{
+    method:"GET",
+    headers:{"Content-Type":"application/json"},
+    mode:"cors"
+  }).then(function(r){
+    return r.json();
+  }).then(function(d){
+    if(d.secret){APP_SECRET=d.secret;}
+  }).catch(function(e){console.error("Failed to fetch APP_SECRET:",e);});
+})();
+
 loadFavs();
 (function(){
   var t=localStorage.getItem("ai_theme");

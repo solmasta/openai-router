@@ -1,6 +1,0 @@
-name = "openrouter"
-main = "openrouter-worker.js"
-compatibility_date = "2024-09-23"
-
-# Add your OPENROUTER_KEY as a Secret in the Cloudflare dashboard
-# Settings → Variables and Secrets → Add → OPENROUTER_KEY
