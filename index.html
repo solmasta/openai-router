@@ -238,6 +238,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
         <button class="mic" id="micBtn" title="Voice">&#127908;</button>
         <button class="ws" id="wsBtn" title="Web search">&#128269;</button>
         <button class="ws" id="overseerBtn" title="Overseer status">🤖</button>
+        <button class="ws" id="brainstormBtn" title="Brainstorming suggestions">💭</button>
         <button class="ws" id="newTabBtn" title="New chat in new tab" style="color:var(--ac);font-size:17px;font-weight:400">&#43;</button>
         <div class="ir">
           <button id="clearBtn" class="bg">Clear</button>
@@ -368,6 +369,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Google Drive backup</div><div class="ssb" id="driveStatus">Not connected</div></div><div style="display:flex;gap:6px"><button class="bg hidden" id="driveRestoreBtn">Restore</button><button class="bg" id="driveConnectBtn">Connect</button></div></div>
     <div class="sr"><div><div class="slb">Agent auto-select</div><div class="ssb">Automatically pick the best model for each task</div></div><button class="bg" id="agentToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Overseer monitoring</div><div class="ssb">Track progress, detect stuck situations, suggest next steps</div></div><button class="bg" id="overseerToggleBtn">ON</button></div>
+    <div class="sr"><div><div class="slb">Brainstorming mode</div><div class="ssb">Generate prompts and suggestions during conversation</div></div><button class="bg" id="brainstormToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Recent chats</div><div class="ssb">Restore any of the last 5 conversations</div></div><button class="bg" id="recentChatsBtn">View</button></div></div>
     <div class="sr"><div><div class="slb">&#128176; DeepInfra credits</div><div class="ssb">Pay-as-you-go, fractions of a cent per message</div></div><a href="https://deepinfra.com/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; OpenRouter credits</div><div class="ssb">Needed for uncensored paid models</div></div><a href="https://openrouter.ai/credits" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
@@ -1001,6 +1003,8 @@ function startOverseerMonitoring(){
       analyzeConversationFlow();
       if(Date.now()-lastAnalysisTime>15000){
         makeProactiveRecommendation();
+        if(overseerState.progress>10&&overseerState.progress<80){displayGeneratedPrompts();}
+        if(overseerState.progress>30&&overseerState.progress<85&&overseerState.messagesProcessed%2===0){displayBrainstormingSuggestions();}
         lastAnalysisTime=Date.now();
       }
       updateOverseerStatus();
@@ -1009,6 +1013,141 @@ function startOverseerMonitoring(){
 }
 function stopOverseerMonitoring(){
   if(overseerCheckInterval){clearInterval(overseerCheckInterval);overseerCheckInterval=null;}
+}
+
+/* ---- Overseer Prompt Generation & Brainstorming ---- */
+var brainstormMode=false,generatedPrompts=[],suggestedCommands=[];
+function generateContextualPrompts(){
+  var prompts=[];
+  var lastUserMsg=chatHistory[chatHistory.length-2];
+  var lastAIMsg=chatHistory[chatHistory.length-1];
+  var userText=(typeof lastUserMsg.content==="string"?lastUserMsg.content:"").toLowerCase();
+
+  if(overseerState.goal==="debug"){
+    prompts.push("Ask the model to add logging statements to help isolate where the bug occurs");
+    prompts.push("Request a breakdown of the error message and what each part means");
+    prompts.push("'Can you walk through the execution flow step-by-step?'");
+    prompts.push("'Try the fix in a test case before final commit'");
+  }else if(overseerState.goal==="feature"){
+    prompts.push("Ask for a brief architecture overview before implementation");
+    prompts.push("'What edge cases should we handle?'");
+    prompts.push("'Can you add tests for this feature?'");
+    prompts.push("Request validation: 'Verify this works with existing features'");
+  }else if(overseerState.goal==="design"){
+    prompts.push("'What are potential bottlenecks in this design?'");
+    prompts.push("Ask for performance implications of each component");
+    prompts.push("'Could this scale to 10x the current load?'");
+    prompts.push("Request trade-offs: 'Complexity vs maintainability'");
+  }else if(overseerState.goal==="analyze"){
+    prompts.push("'What's the most surprising finding here?'");
+    prompts.push("Ask for alternative explanations or interpretations");
+    prompts.push("'What would disprove this analysis?'");
+    prompts.push("Request next steps based on findings");
+  }else{
+    prompts.push("'Can you explain your approach first before implementing?'");
+    prompts.push("'What are the potential issues with this solution?'");
+    prompts.push("'Try a different approach and compare'");
+  }
+
+  if(userText.indexOf("error")>=0||userText.indexOf("fail")>=0){
+    prompts.push("'What's the minimum code change to fix this?'");
+    prompts.push("'Is there a simpler solution?'");
+  }
+
+  if(userText.indexOf("refactor")>=0||userText.indexOf("clean")>=0){
+    prompts.push("'Suggest performance improvements'");
+    prompts.push("'Identify code duplication opportunities'");
+  }
+
+  return prompts.slice(0,4);
+}
+function suggestGitCommands(){
+  var cmds=[];
+  if(overseerState.modelsUsed.size>0){
+    if(overseerState.goal==="debug"){
+      cmds.push({cmd:"git log --oneline -10",desc:"Show recent commits to find when bug was introduced"});
+      cmds.push({cmd:"git diff HEAD~1",desc:"See what changed in the last commit"});
+      cmds.push({cmd:"git blame src/file.js",desc:"Find who changed each line"});
+    }
+    if(overseerState.goal==="feature"){
+      cmds.push({cmd:"git branch feature/new-feature",desc:"Create feature branch"});
+      cmds.push({cmd:"git commit -am 'Feature: description'",desc:"Commit your changes"});
+    }
+    if(overseerState.progress>75){
+      cmds.push({cmd:"git log --oneline origin/main..HEAD",desc:"See commits ready for PR"});
+      cmds.push({cmd:"git diff origin/main",desc:"Review all changes before merge"});
+    }
+  }
+  return cmds;
+}
+function generateBrainstormingPrompts(){
+  var goals=["debug","feature","design","analyze"];
+  var prompts=[];
+
+  prompts.push({title:"Explore Edge Cases",prompt:"What edge cases haven't we considered? Generate 3-5 scenarios that might break this solution."});
+  prompts.push({title:"Alternative Approaches",prompt:"Suggest 2-3 completely different ways to solve this problem. What are pros/cons of each?"});
+  prompts.push({title:"Performance Analysis",prompt:"How would this scale? What are the performance implications of our approach?"});
+  prompts.push({title:"User Impact",prompt:"From a user perspective, what problems could this cause? How would they experience it?"});
+  prompts.push({title:"Code Quality",prompt:"How maintainable is this code? Suggest improvements for readability and maintainability."});
+  prompts.push({title:"Risk Assessment",prompt:"What are the biggest risks with this approach? How would we mitigate them?"});
+  prompts.push({title:"Testing Strategy",prompt:"What tests would validate this solution? Critical vs nice-to-have?"});
+  prompts.push({title:"Future Extensibility",prompt:"If we need to extend this in 6 months, what would be hard to change? Design for that now."});
+
+  return prompts.slice(0,3);
+}
+function displayGeneratedPrompts(){
+  if(!overseerEnabled||overseerState.progress<15)return;
+  var prompts=generateContextualPrompts();
+  if(prompts.length===0)return;
+
+  var promptsHtml='<div style="padding:10px 12px;margin:8px 0;background:rgba(168,85,247,0.08);border-left:3px solid #a855f7;border-radius:4px;font-size:12px;color:var(--tx)">';
+  promptsHtml+='<strong style="display:block;margin-bottom:8px">💭 Overseer Suggestions</strong>';
+  promptsHtml+='<div style="display:flex;flex-direction:column;gap:6px">';
+
+  prompts.forEach(function(prompt,i){
+    var cleanPrompt=prompt.replace(/^["']|["']$/g,"");
+    promptsHtml+='<button style="padding:6px 10px;background:var(--up);border:1px solid var(--br);color:var(--tx);border-radius:4px;font-size:11px;cursor:pointer;text-align:left;transition:background 0.15s" onclick="insertPrompt(\''+esc(cleanPrompt.replace(/'/g,"\\'"))+'\')" title="Click to use this prompt">';
+    promptsHtml+=cleanPrompt.substring(0,60)+(cleanPrompt.length>60?"...":"");
+    promptsHtml+='</button>';
+  });
+
+  promptsHtml+='</div></div>';
+
+  if(!document.getElementById("overseerPrompts")){
+    var promptsEl=document.createElement("div");promptsEl.id="overseerPrompts";
+    document.getElementById("chat").appendChild(promptsEl);
+  }
+  var existing=document.getElementById("overseerPrompts");
+  if(!existing.innerHTML.includes(prompts[0])){existing.innerHTML=promptsHtml;}
+}
+function displayBrainstormingSuggestions(){
+  var suggestions=generateBrainstormingPrompts();
+  if(suggestions.length===0)return;
+
+  var brainstormHtml='<div style="padding:10px 12px;margin:8px 0;background:rgba(236,72,153,0.08);border-left:3px solid #ec4899;border-radius:4px;font-size:12px;color:var(--tx)">';
+  brainstormHtml+='<strong style="display:block;margin-bottom:8px">🧠 Brainstorming Ideas</strong>';
+  brainstormHtml+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+
+  suggestions.forEach(function(idea){
+    brainstormHtml+='<button style="padding:8px 10px;background:var(--up);border:1px solid var(--br);color:var(--tx);border-radius:4px;font-size:11px;cursor:pointer;text-align:left;transition:background 0.15s" onclick="insertPrompt(\''+esc(idea.prompt.replace(/'/g,"\\'"))+'\')" title="'+esc(idea.prompt)+'">';
+    brainstormHtml+='<strong>'+idea.title+'</strong><br><span style="font-size:10px;color:var(--mu)">'+idea.prompt.substring(0,40)+'...</span>';
+    brainstormHtml+='</button>';
+  });
+
+  brainstormHtml+='</div></div>';
+
+  if(!document.getElementById("overseerBrainstorm")){
+    var brainstormEl=document.createElement("div");brainstormEl.id="overseerBrainstorm";
+    document.getElementById("chat").appendChild(brainstormEl);
+  }
+  document.getElementById("overseerBrainstorm").innerHTML=brainstormHtml;
+}
+function insertPrompt(prompt){
+  var promptEl=document.getElementById("prompt");
+  promptEl.value=prompt;
+  promptEl.style.height="auto";
+  promptEl.style.height=Math.min(promptEl.scrollHeight,150)+"px";
+  promptEl.focus();
 }
 
 /* ---- Model Coding & Tool Use System ---- */
@@ -1899,6 +2038,26 @@ document.getElementById("overseerToggleBtn").addEventListener("click",function()
   this.style.opacity=overseerEnabled?"1":"0.6";
   if(!overseerEnabled){stopOverseerMonitoring();if(document.getElementById("overseerStatus")){document.getElementById("overseerStatus").remove();}}
 });
+document.getElementById("brainstormToggleBtn").addEventListener("click",function(){
+  brainstormMode=!brainstormMode;
+  this.textContent=brainstormMode?"ON":"OFF";
+  this.style.opacity=brainstormMode?"1":"0.6";
+});
+document.getElementById("brainstormBtn").addEventListener("click",function(){
+  var ideas=generateBrainstormingPrompts();
+  var msg="💭 BRAINSTORMING IDEAS FOR "+overseerState.goalType.toUpperCase()+"\n";
+  msg+="═════════════════════════════════════\n\n";
+  ideas.forEach(function(idea,i){
+    msg+=(i+1)+". "+idea.title+"\n";
+    msg+="   "+idea.prompt+"\n\n";
+  });
+  msg+="Commands to try:\n";
+  var cmds=suggestGitCommands();
+  cmds.forEach(function(c){
+    msg+="$ "+c.cmd+"\n";
+  });
+  alert(msg);
+});
 document.getElementById("overseerBtn").addEventListener("click",function(){
   var msg="📊 OVERSEER INTELLIGENCE REPORT\n";
   msg+="═════════════════════════════════════\n\n";
@@ -1926,7 +2085,26 @@ document.getElementById("overseerBtn").addEventListener("click",function(){
     overseerState.recommendations.slice(-3).forEach(function(r){
       msg+="  • "+r.reason+"\n";
     });
-  }else{msg+="💡 No recommendations at this time.\n";}
+    msg+="\n";
+  }
+  if(brainstormMode){
+    var prompts=generateContextualPrompts();
+    if(prompts.length>0){
+      msg+="💭 SUGGESTED PROMPTS:\n";
+      prompts.forEach(function(p){
+        msg+="  • "+p.substring(0,60)+"\n";
+      });
+      msg+="\n";
+    }
+    var cmds=suggestGitCommands();
+    if(cmds.length>0){
+      msg+="⚙️ SUGGESTED COMMANDS:\n";
+      cmds.forEach(function(c){
+        msg+="  $ "+c.cmd+"\n";
+        msg+="    ("+c.desc+")\n";
+      });
+    }
+  }
   alert(msg);
 });
 document.getElementById("attachBtn").addEventListener("click",function(){document.getElementById("fileInput").click();});
