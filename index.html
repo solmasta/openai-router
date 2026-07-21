@@ -375,6 +375,17 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
   <div class="sf2"><button class="ceb" id="editWprojBtn">Edit project</button></div>
 </div></div>
 
+<div class="modal hidden" id="agentConfirmModal"><div class="sheet">
+  <div class="sh"><span>🤖 Overseer Suggestion</span><button class="sc" id="closeAgentConfirmModal">&#10005;</button></div>
+  <div class="sbody">
+    <div id="agentConfirmText" style="font-size:14px;line-height:1.5;color:var(--tx)"></div>
+  </div>
+  <div class="sf2 ef">
+    <button class="bg" id="agentConfirmSendCurrent">Send with current model</button>
+    <button class="bp" id="agentConfirmSwitch">Switch &amp; Send</button>
+  </div>
+</div></div>
+
 <div class="modal hidden" id="settingsModal"><div class="sheet">
   <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v4.2</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
@@ -524,6 +535,23 @@ var REPO_TOOLS=[
   {type:"function","function":{name:"execute_command",description:"Execute a git or shell command in the repository.",parameters:{type:"object",properties:{command:{type:"string",description:"Command to execute (git, npm, node, etc.)"}},required:["command"]}}}
 ];
 var DI_COST={"meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo":0.025,"mistralai/Mistral-Small-3.2-24B-Instruct-2506":0.14,"Qwen/Qwen3.5-9B":0.13,"Qwen/Qwen3.5-27B":1.43,"meta-llama/Llama-3.3-70B-Instruct-Turbo":0.21,"meta-llama/Llama-4-Scout-17B-16E-Instruct":0.20,"Qwen/Qwen2.5-72B-Instruct":0.38,"deepseek-ai/DeepSeek-V3.2":0.32,"Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo":0.65,"Qwen/Qwen3-32B":0.18,"deepseek-ai/DeepSeek-R1-0528":1.33,"Qwen/Qwen3-VL-30B-A3B-Instruct":0.38,"google/gemma-3-27b-it":0.12,"meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8":0.50};
+/* Rough relative cost tier per model, 0 (free/cheapest) to 3 (most
+   expensive), spanning all three backends so the agent router can prefer
+   a cheaper model when the task doesn't need extra capability, and only
+   reach for a pricier one when it actually does. DeepInfra tiers are
+   derived from DI_COST; OpenRouter/Claude are approximate public pricing
+   tiers since we don't meter them per-token client-side. */
+var MODEL_COST_TIER={
+  "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo":0,"Qwen/Qwen3.5-9B":0,"google/gemma-3-27b-it":0,
+  "mistralai/Mistral-Small-3.2-24B-Instruct-2506":1,"meta-llama/Llama-4-Scout-17B-16E-Instruct":1,"Qwen/Qwen3-32B":1,"deepseek-ai/DeepSeek-V3.2":1,"Qwen/Qwen2.5-72B-Instruct":1,"meta-llama/Llama-3.3-70B-Instruct-Turbo":1,
+  "Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo":2,"Qwen/Qwen3-VL-30B-A3B-Instruct":2,"meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8":2,
+  "Qwen/Qwen3.5-27B":3,"deepseek-ai/DeepSeek-R1-0528":3,
+  "openrouter/free":0,"meta-llama/llama-3.3-70b-instruct:free":0,"deepseek/deepseek-r1:free":0,"google/gemma-3-27b-it:free":0,
+  "nousresearch/hermes-3-llama-3.1-70b":2,"cognitivecomputations/dolphin-mixtral-8x22b":2,"sao10k/l3.1-euryale-70b":2,
+  "nousresearch/hermes-3-llama-3.1-405b":3,
+  "claude-haiku-4-5-20251001":1,"claude-sonnet-4-20250514":2,"claude-opus-4-1":3
+};
+function getModelCostTier(model){return MODEL_COST_TIER.hasOwnProperty(model.id)?MODEL_COST_TIER[model.id]:1;}
 var CTX_MAP={"meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo":131072,"mistralai/Mistral-Small-3.2-24B-Instruct-2506":128000,"Qwen/Qwen3.5-9B":262144,"Qwen/Qwen3.5-27B":262144,"meta-llama/Llama-3.3-70B-Instruct-Turbo":131072,"meta-llama/Llama-4-Scout-17B-16E-Instruct":327680,"Qwen/Qwen2.5-72B-Instruct":32768,"deepseek-ai/DeepSeek-V3.2":163840,"Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo":262144,"Qwen/Qwen3-32B":40960,"deepseek-ai/DeepSeek-R1-0528":163840};
 
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
@@ -810,6 +838,17 @@ function scoreModelForTask(model,tasks){
   if(tasks.search>0){
     score+=tasks.search*2;
   }
+  /* Token efficiency: how demanding does this message actually look?
+     When nothing points to a hard task, prefer cheaper/faster models -
+     reach for an expensive one only when the task genuinely calls for it,
+     rather than defaulting to the biggest model for a simple "hi". */
+  var complexity=tasks.github+tasks.code+tasks.write+tasks.reason+tasks.analyze+tasks.search;
+  var tier=getModelCostTier(model);
+  if(complexity<=1){
+    score+=(3-tier)*6; /* low-complexity: reward cheap models */
+  }else if(complexity>=5){
+    score+=tier*2; /* high-complexity: small nudge toward more capable/pricier models */
+  }
   return score;
 }
 function getAllAvailableModels(){
@@ -827,11 +866,50 @@ function selectBestModel(tasks){
   if(best.backend===activeBackend&&best.model.id===currentModel.id){return null;}
   return best;
 }
+function switchReasonText(best){
+  var reasons=[];
+  if(best.reason&&best.reason.github>0)reasons.push("GitHub operations");
+  if(best.reason&&best.reason.code>0)reasons.push("code expertise");
+  if(best.reason&&best.reason.write>0)reasons.push("writing skills");
+  if(best.reason&&best.reason.reason>0)reasons.push("reasoning");
+  if(best.reason&&best.reason.search>0)reasons.push("real-time info");
+  return reasons.length?reasons.join(", "):"efficiency for this message";
+}
+/* Ask before switching instead of silently swapping models underneath the
+   user - this blocks send() until they pick, so a message never goes out
+   on a model they didn't confirm. Resolves true to switch, false to keep
+   the current model and send as-is. */
+function confirmModelSwitch(best){
+  return new Promise(function(resolve){
+    var reasonText=switchReasonText(best);
+    var txt="Currently on <strong>"+esc(currentModel.label)+"</strong>. "+
+      "<strong>"+esc(best.model.label)+"</strong> ("+esc(BACKENDS[best.backend].name)+") looks like a better fit for "+esc(reasonText)+".";
+    document.getElementById("agentConfirmText").innerHTML=txt;
+    openModal("agentConfirmModal");
+    var sendBtn=document.getElementById("agentConfirmSendCurrent");
+    var switchBtn=document.getElementById("agentConfirmSwitch");
+    var closeBtn=document.getElementById("closeAgentConfirmModal");
+    function cleanup(){
+      closeModal("agentConfirmModal");
+      sendBtn.removeEventListener("click",onSend);
+      switchBtn.removeEventListener("click",onSwitch);
+      closeBtn.removeEventListener("click",onClose);
+    }
+    function onSend(){cleanup();resolve(false);}
+    function onSwitch(){cleanup();resolve(true);}
+    function onClose(){cleanup();resolve(false);}
+    sendBtn.addEventListener("click",onSend);
+    switchBtn.addEventListener("click",onSwitch);
+    closeBtn.addEventListener("click",onClose);
+  });
+}
 async function switchToBestModel(text){
   if(!agentAutoSelect)return;
   var tasks=analyzeTask(text);
   var best=selectBestModel(tasks);
   if(!best)return;
+  var confirmed=await confirmModelSwitch(best);
+  if(!confirmed)return;
   lastAgentSelection={model:best.model,backend:best.backend,reason:tasks,score:best.score};
   if(best.backend!==activeBackend){
     activeBackend=best.backend;
@@ -842,15 +920,10 @@ async function switchToBestModel(text){
   showAgentSelection(best);
 }
 function showAgentSelection(best){
-  var reasons=[];
-  if(best.reason&&best.reason.github>0)reasons.push("GitHub operations");
-  if(best.reason&&best.reason.code>0)reasons.push("code expertise");
-  if(best.reason&&best.reason.write>0)reasons.push("writing skills");
-  if(best.reason&&best.reason.reason>0)reasons.push("reasoning");
-  var reasonText=reasons.length?(" – "+reasons.join(", ")):"";
+  var reasonText=switchReasonText(best);
   var notice=document.createElement("div");
   notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(139,140,247,0.1);border-left:3px solid var(--ac);border-radius:4px;font-size:13px;color:var(--tx)";
-  notice.innerHTML="🤖 <strong>Agent selected "+esc(best.model.label)+"</strong>"+esc(reasonText);
+  notice.innerHTML="🤖 <strong>Agent switched to "+esc(best.model.label)+"</strong> – "+esc(reasonText);
   document.getElementById("chat").appendChild(notice);
   setTimeout(function(){notice.style.opacity="0.5";},3000);
 }
@@ -1489,8 +1562,22 @@ async function compressImg(file){
     };r.readAsDataURL(file);
   });
 }
+/* Cap raw text uploads - unlike images (already resized before upload),
+   text files had no size limit at all, so a large log/doc would burn
+   tokens sending its full raw content every message it stays attached. */
+var TXT_UPLOAD_CHAR_CAP=40000;
 async function readTxt(file){
-  return new Promise(function(resolve){var r=new FileReader();r.onload=function(e){resolve(e.target.result);};r.readAsText(file);});
+  return new Promise(function(resolve){
+    var r=new FileReader();
+    r.onload=function(e){
+      var text=e.target.result;
+      if(text.length>TXT_UPLOAD_CHAR_CAP){
+        text=text.slice(0,TXT_UPLOAD_CHAR_CAP)+"\n\n[...truncated - file was "+text.length+" chars, showing first "+TXT_UPLOAD_CHAR_CAP+" to limit token usage]";
+      }
+      resolve(text);
+    };
+    r.readAsText(file);
+  });
 }
 function renderAttach(){
   var prev=document.getElementById("attachPreview"),items=document.getElementById("attachItems");
