@@ -17,6 +17,28 @@ export default {
       return new Response(null, { status: 204, headers: CORS });
     }
 
+    // Public endpoint: get APP_SECRET for frontend - validates origin only
+    if (request.method === "GET" && url.pathname === "/secret") {
+      const origin = request.headers.get("Origin") || request.headers.get("Referer") || "";
+      const allowedOrigins = [
+        "https://solmasta.github.io",
+        "http://localhost:8000",
+        "http://localhost:3000",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:3000"
+      ];
+
+      if (!allowedOrigins.some(o => origin.startsWith(o))) {
+        return new Response(JSON.stringify({ error: "Origin not allowed" }), {
+          status: 403, headers: { "Content-Type": "application/json", ...CORS }
+        });
+      }
+
+      return new Response(JSON.stringify({ secret: env.APP_SECRET }), {
+        headers: { "Content-Type": "application/json", ...CORS }
+      });
+    }
+
     if (!checkAuth(request, env)) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { "Content-Type": "application/json", ...CORS }

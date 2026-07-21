@@ -398,8 +398,8 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 var DI_URL="https://openai-router-chat.lukedorsett.workers.dev";
 var OR_URL="https://openaiworker.lukedorsett.workers.dev";
 var CLAUDE_URL="https://claude-worker.lukedorsett.workers.dev";
-/* Must match the APP_SECRET secret set on ALL Workers (see README) */
-var APP_SECRET="847df0f4489d8e95b59d4a8dc0afdbe7b53c4ead960a1450b2b0dc1e711ae1db";
+/* APP_SECRET is fetched from worker's /secret endpoint on page load */
+var APP_SECRET=null;
 var AUTOSAVE_KEY="ai_autosave";
 var RECENT_KEY="ai_recent";
 var undoTimer=null,undoData=null;
@@ -422,6 +422,64 @@ var overseerState={
   lastResponseLength:0,conversationQuality:"good"
 };
 var overseerEnabled=true,overseerCheckInterval=null,lastAnalysisTime=0;
+
+/* Overseer API - Full access to app functions for automated control */
+var overseerAPI={
+  getState:function(){return overseerState;},
+  setState:function(key,value){overseerState[key]=value;},
+  getChatHistory:function(){return chatHistory;},
+  addMessage:function(role,content){chatHistory.push({role:role,content:content});},
+  getCurrentModel:function(){return currentModel;},
+  switchModel:function(modelId){
+    for(var backend in BACKENDS){
+      var models=BACKENDS[backend].models;
+      for(var i=0;i<models.length;i++){
+        if(models[i].id===modelId){
+          activeBackend=backend;
+          currentModel=models[i];
+          updateModelUI();
+          return true;
+        }
+      }
+    }
+    return false;
+  },
+  sendMessage:function(text){
+    if(!sending){
+      document.getElementById("prompt").value=text;
+      send();
+      return true;
+    }
+    return false;
+  },
+  executeRepoTool:function(toolName,toolInput){
+    return executeRepoTool(toolName,toolInput);
+  },
+  getAppState:function(){
+    return{
+      backend:activeBackend,
+      model:currentModel,
+      chatHistory:chatHistory,
+      sending:sending,
+      overseerState:overseerState,
+      brainstormMode:brainstormMode,
+      autoPromptInjection:autoPromptInjection,
+      ghConnected:!!ghToken&&!!ghRepoOwner&&!!ghRepoName
+    };
+  },
+  enableBrainstorming:function(){brainstormMode=true;document.getElementById("brainstormToggleBtn").textContent="ON";},
+  disableBrainstorming:function(){brainstormMode=false;document.getElementById("brainstormToggleBtn").textContent="OFF";},
+  enableAutoInjection:function(){autoPromptInjection=true;document.getElementById("autoPropomptToggleBtn").textContent="ON";},
+  disableAutoInjection:function(){autoPromptInjection=false;document.getElementById("autoPropomptToggleBtn").textContent="OFF";},
+  generatePrompts:function(){return generateContextualPrompts();},
+  generateBrainstormingIdeas:function(){return generateBrainstormingPrompts();},
+  insertPrompt:function(prompt){insertPrompt(prompt);},
+  updateOverseerUI:function(){updateOverseerStatus();},
+  analyzeTask:function(text){return analyzeTask(text);},
+  selectBestModel:function(tasks){return selectBestModel(tasks);},
+  estimateTokens:function(){return estTokens();},
+  summarizeConversation:function(){return doSummarize();}
+};
 
 /* BACKENDS and data injected by build script */
 var BACKENDS={
@@ -2558,6 +2616,19 @@ document.getElementById("recentChatsBtn").addEventListener("click",function(){
 });
 
 /* ---- Init ---- */
+/* Fetch APP_SECRET from worker on page load - required for authenticated requests */
+(function(){
+  fetch(CLAUDE_URL+"/secret",{
+    method:"GET",
+    headers:{"Content-Type":"application/json"},
+    mode:"cors"
+  }).then(function(r){
+    return r.json();
+  }).then(function(d){
+    if(d.secret){APP_SECRET=d.secret;}
+  }).catch(function(e){console.error("Failed to fetch APP_SECRET:",e);});
+})();
+
 loadFavs();
 (function(){
   var t=localStorage.getItem("ai_theme");
