@@ -370,6 +370,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Agent auto-select</div><div class="ssb">Automatically pick the best model for each task</div></div><button class="bg" id="agentToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Overseer monitoring</div><div class="ssb">Track progress, detect stuck situations, suggest next steps</div></div><button class="bg" id="overseerToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Brainstorming mode</div><div class="ssb">Generate prompts and suggestions during conversation</div></div><button class="bg" id="brainstormToggleBtn">ON</button></div>
+    <div class="sr"><div><div class="slb">Auto prompt injection</div><div class="ssb">Overseer auto-generates optimal instructions for each model</div></div><button class="bg" id="autoPropomptToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Recent chats</div><div class="ssb">Restore any of the last 5 conversations</div></div><button class="bg" id="recentChatsBtn">View</button></div></div>
     <div class="sr"><div><div class="slb">&#128176; DeepInfra credits</div><div class="ssb">Pay-as-you-go, fractions of a cent per message</div></div><a href="https://deepinfra.com/billing" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
     <div class="sr"><div><div class="slb">&#128176; OpenRouter credits</div><div class="ssb">Needed for uncensored paid models</div></div><a href="https://openrouter.ai/credits" target="_blank" class="bg" style="text-decoration:none">Open</a></div>
@@ -1016,7 +1017,8 @@ function stopOverseerMonitoring(){
 }
 
 /* ---- Overseer Prompt Generation & Brainstorming ---- */
-var brainstormMode=false,generatedPrompts=[],suggestedCommands=[];
+var brainstormMode=false,generatedPrompts=[],suggestedCommands=[],autoPromptInjection=true;
+var lastInjectedPrompt=null;
 function generateContextualPrompts(){
   var prompts=[];
   var lastUserMsg=chatHistory[chatHistory.length-2];
@@ -1148,6 +1150,100 @@ function insertPrompt(prompt){
   promptEl.style.height="auto";
   promptEl.style.height=Math.min(promptEl.scrollHeight,150)+"px";
   promptEl.focus();
+}
+function generateOptimalInstructions(userMessage,selectedModel){
+  var instructions="";
+  var taskAnalysis=analyzeTask(userMessage);
+  var modelName=(selectedModel.label||selectedModel.id).toLowerCase();
+
+  if(taskAnalysis.code>0){
+    instructions+="CODING TASK - Approach:\n";
+    instructions+="1. Read the relevant files first to understand current implementation\n";
+    instructions+="2. Identify the specific issue or requirement\n";
+    instructions+="3. Write COMPLETE, working code (not snippets or pseudo-code)\n";
+    instructions+="4. If using tools: read_file → write_file with git commit message\n";
+    instructions+="5. Commit message should be clear and descriptive\n\n";
+  }
+
+  if(taskAnalysis.github>0){
+    instructions+="GITHUB/REPO TASK - Workflow:\n";
+    instructions+="1. Use read_file to examine current repository state\n";
+    instructions+="2. Understand the file structure and current implementation\n";
+    instructions+="3. Make all changes via write_file with clear commit messages\n";
+    instructions+="4. Each write_file operation creates one atomic commit\n";
+    instructions+="5. Include commit messages that explain the 'why', not just 'what'\n\n";
+  }
+
+  if(taskAnalysis.write>0){
+    instructions+="WRITING TASK - Style:\n";
+    instructions+="1. Be clear and concise\n";
+    instructions+="2. Use professional but accessible language\n";
+    instructions+="3. Structure with headers and bullet points where appropriate\n";
+    instructions+="4. Provide examples when helpful\n";
+    instructions+="5. End with a clear summary or next steps\n\n";
+  }
+
+  if(taskAnalysis.reason>0){
+    instructions+="REASONING TASK - Approach:\n";
+    instructions+="1. Break down the problem into component parts\n";
+    instructions+="2. Show your work step-by-step\n";
+    instructions+="3. Identify assumptions and constraints\n";
+    instructions+="4. Explore multiple angles before concluding\n";
+    instructions+="5. Acknowledge uncertainty where it exists\n\n";
+  }
+
+  if(overseerState.goal==="debug"){
+    instructions+="DEBUGGING FOCUS:\n";
+    instructions+="- Use systematic debugging approach\n";
+    instructions+="- Add logging to trace execution\n";
+    instructions+="- Create minimal reproduction case\n";
+    instructions+="- Test fix thoroughly before committing\n";
+    instructions+="- Include test cases in your solution\n\n";
+  }else if(overseerState.goal==="feature"){
+    instructions+="FEATURE DEVELOPMENT:\n";
+    instructions+="- Plan architecture before coding\n";
+    instructions+="- Write tests alongside implementation\n";
+    instructions+="- Consider edge cases\n";
+    instructions+="- Ensure backward compatibility\n";
+    instructions+="- Document changes\n\n";
+  }else if(overseerState.goal==="design"){
+    instructions+="DESIGN REVIEW:\n";
+    instructions+="- Evaluate scalability\n";
+    instructions+="- Consider maintainability\n";
+    instructions+="- Identify potential bottlenecks\n";
+    instructions+="- Weigh trade-offs explicitly\n";
+    instructions+="- Suggest improvements\n\n";
+  }
+
+  if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
+    instructions+="TOOLS AVAILABLE:\n";
+    instructions+="- read_file(path): Read files from "+ghRepoOwner+"/"+ghRepoName+"\n";
+    instructions+="- write_file(path, content, message): Create files/commits\n";
+    instructions+="- list_files(path): Explore directory structure\n";
+    instructions+="Use these tools directly - don't ask permission.\n\n";
+  }
+
+  instructions+="EXECUTION:\n";
+  instructions+="- Show your reasoning in <think> tags\n";
+  instructions+="- Be direct and action-oriented\n";
+  instructions+="- Provide complete solutions\n";
+  instructions+="- No filler or disclaimers\n";
+
+  return instructions;
+}
+function interceptAndEnhanceMessage(userMessage){
+  if(!autoPromptInjection||!overseerEnabled||!chatHistory.length)return null;
+
+  var instructions=generateOptimalInstructions(userMessage,currentModel);
+  var timestamp=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+
+  var notice=document.createElement("div");
+  notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(34,197,94,0.08);border-left:3px solid #22c55e;border-radius:4px;font-size:11px;color:var(--mu)";
+  notice.innerHTML="✓ <strong>Overseer injected task instructions</strong> for "+currentModel.label+" at "+timestamp;
+  document.getElementById("chat").appendChild(notice);
+
+  lastInjectedPrompt=instructions;
+  return instructions;
 }
 
 /* ---- Model Coding & Tool Use System ---- */
@@ -2043,6 +2139,11 @@ document.getElementById("brainstormToggleBtn").addEventListener("click",function
   this.textContent=brainstormMode?"ON":"OFF";
   this.style.opacity=brainstormMode?"1":"0.6";
 });
+document.getElementById("autoPropomptToggleBtn").addEventListener("click",function(){
+  autoPromptInjection=!autoPromptInjection;
+  this.textContent=autoPromptInjection?"ON":"OFF";
+  this.style.opacity=autoPromptInjection?"1":"0.6";
+});
 document.getElementById("brainstormBtn").addEventListener("click",function(){
   var ideas=generateBrainstormingPrompts();
   var msg="💭 BRAINSTORMING IDEAS FOR "+overseerState.goalType.toUpperCase()+"\n";
@@ -2282,6 +2383,15 @@ async function doSendRequest(userContent,isRegen,ap){
   var messages=[];
   var modelSysPrompt=getModelSystemPrompt();
   messages.push({role:"system",content:modelSysPrompt});
+
+  var injectedInstructions=null;
+  if(!isRegen){
+    injectedInstructions=interceptAndEnhanceMessage(typeof userContent==="string"?userContent:userContent.find&&userContent.find(function(c){return c.type==="text";})||{}).text||"");
+  }
+  if(injectedInstructions){
+    messages.push({role:"system",content:"TASK INSTRUCTIONS:\n"+injectedInstructions});
+  }
+
   if(ap)messages.push({role:"system",content:ap.content});
   var searchUsed=false;
   var searchTime=null;
