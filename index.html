@@ -350,6 +350,8 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 (function(){
 var DI_URL="https://openai-router-chat.lukedorsett.workers.dev";
 var OR_URL="https://openaiworker.lukedorsett.workers.dev";
+/* Must match the APP_SECRET secret set on BOTH Workers (see README) */
+var APP_SECRET="CHANGE_ME_APP_SECRET";
 var AUTOSAVE_KEY="ai_autosave";
 var activeBackend="deepinfra",workerUrl="",allModels=[],currentModel={id:"",label:""};
 var chatHistory=[],sending=false,attachedFiles=[];
@@ -472,7 +474,7 @@ async function doSummarize(){
     var sysmsg="Summarize this conversation section in 150-200 words. Preserve all key facts, numbers, price targets, decisions, and conclusions. Third person, concise.";
     var res=await fetch(workerUrl,{
       method:"POST",
-      headers:{"Content-Type":"application/json"},
+      headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},
       body:JSON.stringify({
         model:currentModel.id,
         messages:[{role:"system",content:sysmsg},{role:"user",content:convo}],
@@ -545,7 +547,7 @@ async function loadBackend(){
   try{
     var ac=new AbortController();
     var timer=setTimeout(function(){ac.abort();},4000);
-    var mRes=await fetch(workerUrl+"/models",{signal:ac.signal});
+    var mRes=await fetch(workerUrl+"/models",{signal:ac.signal,headers:{"X-App-Secret":APP_SECRET}});
     clearTimeout(timer);
     var mData=await mRes.json();
     var validIds=new Set((mData.data||[]).map(function(m){return m.id;}));
@@ -1264,7 +1266,7 @@ async function doSearch(query){
   try{
     var ac=new AbortController();
     var timer=setTimeout(function(){ac.abort();},5000);
-    var res=await fetch(BACKENDS.deepinfra.url+"/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:query}),signal:ac.signal});
+    var res=await fetch(BACKENDS.deepinfra.url+"/search",{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({query:query}),signal:ac.signal});
     clearTimeout(timer);
     var data=await res.json();
     if(data.results&&data.results.length)return "REAL-TIME DATA as of "+new Date().toLocaleTimeString()+":\n"+data.results.join("\n");
@@ -1543,7 +1545,7 @@ async function doSendRequest(userContent,isRegen,ap){
     if(!webSearchOn&&TOOL_MODELS.indexOf(currentModel.id)>=0){
       try{
         var toolDef={type:"function","function":{name:"web_search",description:"Search for real-time data: crypto prices, weather, news.",parameters:{type:"object",properties:{query:{type:"string"}},required:["query"]}}};
-        var p1res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel.id,messages:messages,tools:[toolDef],tool_choice:"auto",temperature:temperature,stream:false,max_tokens:500})});
+        var p1res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:messages,tools:[toolDef],tool_choice:"auto",temperature:temperature,stream:false,max_tokens:500})});
         if(p1res.ok){
           var p1data=await p1res.json();
           var p1choice=(p1data.choices||[])[0]||{};
@@ -1560,7 +1562,7 @@ async function doSendRequest(userContent,isRegen,ap){
       }catch(te){}
     }
     abortController=new AbortController();
-    var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel.id,messages:messages,temperature:temperature,stream:true}),signal:abortController.signal});
+    var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:messages,temperature:temperature,stream:true}),signal:abortController.signal});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error((err.error&&err.error.message)||"HTTP "+res.status);}
     var reader=res.body.getReader(),dec=new TextDecoder(),buf="",done=false;
     while(!done){

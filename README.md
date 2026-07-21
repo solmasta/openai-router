@@ -23,32 +23,39 @@ Everything the browser needs — markup, CSS, and JS — lives inline in `index.
 
 ## Setup
 
-### 1. Deploy the DeepInfra Worker
+### 1. Pick a shared secret
+
+Generate a random string (e.g. `openssl rand -hex 32`) — this is `APP_SECRET`. Both Workers check it on every request so the raw Worker URL (visible in `index.html`'s source) can't be hit directly by bots/scanners to spend your API credits. It's not real auth — the same string ships in the client JS, so anyone who reads the repo can read it too — but it does stop casual/automated abuse of the bare URL.
+
+### 2. Deploy the DeepInfra Worker
 
 1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) and create a new Worker.
 2. Paste the contents of `openai-router.js`.
 3. Add a secret named `DEEPINFRA_KEY` with your [DeepInfra API key](https://deepinfra.com).
-4. Deploy and copy the Worker URL.
+4. Add a secret named `APP_SECRET` with the string from step 1.
+5. Deploy and copy the Worker URL.
 
-### 2. Deploy the OpenRouter Worker
+### 3. Deploy the OpenRouter Worker
 
 1. Create a second Worker.
 2. Paste the contents of `openrouter-worker.js`.
 3. Add a secret named `OPENROUTER_KEY` with your [OpenRouter API key](https://openrouter.ai).
-4. Deploy and copy the Worker URL.
+4. Add a secret named `APP_SECRET` with the **same** string from step 1.
+5. Deploy and copy the Worker URL.
 
-### 3. Point the frontend at your Workers
+### 4. Point the frontend at your Workers
 
-In `index.html`, find this line near the top of the `<script>` block:
+In `index.html`, find these lines near the top of the `<script>` block:
 
 ```js
 var DI_URL="https://openai-router-chat.lukedorsett.workers.dev";
 var OR_URL="https://openaiworker.lukedorsett.workers.dev";
+var APP_SECRET="CHANGE_ME_APP_SECRET";
 ```
 
-Replace both with your own Worker URLs from steps 1–2.
+Replace `DI_URL`/`OR_URL` with your own Worker URLs from steps 2–3, and `APP_SECRET` with the exact string you set as the `APP_SECRET` secret on both Workers.
 
-### 4. Deploy to GitHub Pages
+### 5. Deploy to GitHub Pages
 
 1. Push `index.html`, `manifest.json`, `sw.js`, and the icon files to the root of a repo.
 2. Enable GitHub Pages: **Settings → Pages → Deploy from branch → main → / (root)**.
@@ -64,4 +71,4 @@ Edit the `BACKENDS` object inside `index.html`'s `<script>` block — each backe
 
 ## Security note
 
-Both Workers accept requests from any origin with no auth check — the Worker URLs are visible in `index.html`'s source, so anyone with the URL can call them and spend your API credits. This is fine for personal/low-traffic use but worth knowing about; adding an origin check, a shared-secret header, or Cloudflare rate limiting would tighten this up if it becomes a concern.
+Both Workers check the `X-App-Secret` header against an `APP_SECRET` secret (set up above) before doing anything else, so a bare Worker URL discovered by a scanner or bot can't spend your API credits without also knowing that string. That said, this repo is public and `APP_SECRET` is embedded in `index.html`'s client-side JS — anyone who actually reads the source (here or via view-source on the live page) can read it too. This raises the bar against casual/automated abuse of the raw URL; it isn't a substitute for real per-user auth. If that's not enough for your usage, consider adding Cloudflare rate limiting on top.
