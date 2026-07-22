@@ -97,6 +97,26 @@ function assert(cond, label) {
     document.getElementById('prompt').value = '';
   });
 
+  console.log('\n-- project detail\'s Edit button closes the detail modal underneath it --');
+  // wprojEditor is earlier in the DOM than wprojDetail, and both share the
+  // same z-index, so if wprojDetail is left open when the editor opens on
+  // top of it, wprojDetail (later in DOM) paints over the editor instead -
+  // the editor is technically open but invisible, sitting behind the
+  // project page the user was already on.
+  await page.click('#wprojBtn'); await page.waitForTimeout(150);
+  await page.click('#newWprojBtn'); await page.waitForTimeout(150);
+  await page.fill('#wprojNameInput', 'Regtest Edit Project');
+  await page.fill('#wprojInstrInput', 'regtest instructions');
+  await page.click('#saveWprojBtn'); await page.waitForTimeout(150);
+  await page.click('#wprojBtn'); await page.waitForTimeout(150);
+  await page.click('.pjc'); await page.waitForTimeout(150);
+  await page.click('#editWprojBtn'); await page.waitForTimeout(150);
+  const detailHiddenAfterEdit = await page.evaluate(() => document.getElementById('wprojDetail').classList.contains('hidden'));
+  const editorVisibleAfterEdit = await page.evaluate(() => !document.getElementById('wprojEditor').classList.contains('hidden'));
+  assert(detailHiddenAfterEdit, 'project detail modal closes when Edit is tapped (does not stack over the editor)');
+  assert(editorVisibleAfterEdit, 'project editor is actually visible after tapping Edit');
+  await page.click('#closeWprojEditor'); await page.waitForTimeout(150);
+
   console.log('\n-- send error keeps message usable (Regen + tab sync) --');
   // The sandboxed network always fails here (no egress to the worker URLs),
   // which exercises the same catch-block path a real timeout/rate-limit would.

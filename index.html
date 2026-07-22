@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.14</span></span>
+      <span class="wm">ai-router <span>v5.15</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.14</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.15</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -3100,7 +3100,7 @@ document.getElementById("saveWprojBtn").addEventListener("click",saveWproj);
 document.getElementById("deleteWprojBtn").addEventListener("click",delWproj);
 document.getElementById("backToWprojHub").addEventListener("click",function(){closeModal("wprojDetail");renderWprojHub();openModal("wprojHubModal");});
 document.getElementById("startWprojChatBtn").addEventListener("click",startWprojChat);
-document.getElementById("editWprojBtn").addEventListener("click",function(){openWprojEditor(viewingWProjId);});
+document.getElementById("editWprojBtn").addEventListener("click",function(){closeModal("wprojDetail");openWprojEditor(viewingWProjId);});
 document.getElementById("newProjectBtn").addEventListener("click",function(){closeModal("projectsModal");openProjEditor(null);});
 document.getElementById("saveToProjectBtn").addEventListener("click",function(){
   var list=document.getElementById("projectList");list.innerHTML="";
