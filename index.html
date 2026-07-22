@@ -572,15 +572,18 @@ var temperature=0.7,favorites={},isDark=true;
 var summarizing=false;
 var abortController=null;
 /* Overseer Agent System - Enhanced */
-var overseerState={
-  goal:null,goalType:null,progress:0,status:"idle",startTime:null,
-  messagesProcessed:0,modelsUsed:new Set(),estimatedTokens:0,
-  stuck:false,stuckSince:null,recommendations:[],
-  attemptedApproaches:[],successProbability:0,efficiencyScore:100,
-  qualityScore:0,steps:[],currentStep:0,contextHistory:[],
-  lastResponseLength:0,conversationQuality:"good",
-  activeProject:null,activeProjectInstructions:null
-};
+function defaultOverseerState(){
+  return{
+    goal:null,goalType:null,progress:0,status:"idle",startTime:null,
+    messagesProcessed:0,modelsUsed:new Set(),estimatedTokens:0,
+    stuck:false,stuckSince:null,recommendations:[],
+    attemptedApproaches:[],successProbability:0,efficiencyScore:100,
+    qualityScore:0,steps:[],currentStep:0,contextHistory:[],
+    lastResponseLength:0,conversationQuality:"good",
+    activeProject:null,activeProjectInstructions:null
+  };
+}
+var overseerState=defaultOverseerState();
 var overseerEnabled=true,overseerCheckInterval=null,lastAnalysisTime=0;
 
 /* Overseer API - Full access to app functions for automated control */
@@ -2243,7 +2246,8 @@ function tabTitleFor(hist){
   return raw.slice(0,24)+(raw.length>24?"...":"");
 }
 function currentTabSnapshot(){
-  return{title:tabTitleFor(chatHistory),chatHistory:chatHistory.slice(),modelId:currentModel.id,modelLabel:currentModel.label,backend:activeBackend,sessionId:sessionId};
+  var ov=Object.assign({},overseerState,{modelsUsed:Array.from(overseerState.modelsUsed)});
+  return{title:tabTitleFor(chatHistory),chatHistory:chatHistory.slice(),modelId:currentModel.id,modelLabel:currentModel.label,backend:activeBackend,sessionId:sessionId,overseer:ov};
 }
 function syncActiveTabFromLiveState(){
   if(!openTabs.length)return;
@@ -2270,6 +2274,18 @@ function applyTabAsLiveState(t){
   var def=allModels.find(function(m){return m.id===t.modelId;});
   if(def){setModel(def);}else if(t.modelId){currentModel={id:t.modelId,label:t.modelLabel||t.modelId};document.getElementById("modelBtnLabel").textContent=currentModel.label;document.getElementById("modelBtn").disabled=false;}
   renderChatFromHistory(t.chatHistory||[]);
+  /* Each tab keeps its own Overseer progress - switching tabs must not
+     leak stale goal/progress/project from whichever tab was last active,
+     especially now that the status bar makes it visible at a glance. */
+  stopOverseerMonitoring();
+  if(t.overseer){
+    overseerState=Object.assign(defaultOverseerState(),t.overseer,{modelsUsed:new Set(t.overseer.modelsUsed||[])});
+  }else{
+    overseerState=defaultOverseerState();
+  }
+  if(overseerEnabled&&chatHistory.length>1){startOverseerMonitoring();}
+  updateOverseerBar();
+  preVisionModel=null;
 }
 function renderTabBar(){
   var bar=document.getElementById("tabBar");
@@ -2309,6 +2325,10 @@ function createNewTab(){
   activeTabIndex=openTabs.length-1;
   sessionId=newSessionId;
   renderChatFromHistory([]);
+  stopOverseerMonitoring();
+  overseerState=defaultOverseerState();
+  updateOverseerBar();
+  preVisionModel=null;
   renderTabBar();
   saveTabsToStorage();
 }
