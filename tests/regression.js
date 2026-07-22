@@ -125,6 +125,48 @@ function assert(cond, label) {
   const hasTextPart = contentParts.some(p => p.type === 'text');
   assert(hasTextPart, 'a caption-less image attachment still sends a text part alongside the image');
 
+  console.log('\n-- regen reuses the prompt/project active at send time, not whatever is selected now --');
+  // A message sent while "Prompt A" is the active system prompt, regenerated
+  // after switching to "Prompt B", must still be regenerated under Prompt
+  // A's instructions - Regen used to always read whatever's currently
+  // selected via getAP(), so switching between send and Regen silently
+  // changed which ruleset the model followed (this is what happened when a
+  // WORQ project message got regenerated under "Research and Analysis").
+  await page.click('#systemToggle'); await page.waitForTimeout(150);
+  await page.click('#newPromptBtn'); await page.waitForTimeout(150);
+  await page.fill('#promptNameInput', 'Regtest Prompt A');
+  await page.fill('#promptContentInput', 'PROJ_A_MARKER instructions');
+  await page.click('#savePromptBtn'); await page.waitForTimeout(150);
+  await sendMsg('regen prompt-context test');
+  await page.click('#systemToggle'); await page.waitForTimeout(150);
+  await page.click('#newPromptBtn'); await page.waitForTimeout(150);
+  await page.fill('#promptNameInput', 'Regtest Prompt B');
+  await page.fill('#promptContentInput', 'PROJ_B_MARKER instructions');
+  await page.click('#savePromptBtn'); await page.waitForTimeout(150);
+  let lastRegenBody = null;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      try {
+        const parsed = JSON.parse(req.postData());
+        if (parsed.messages) lastRegenBody = parsed;
+      } catch (e) {}
+    }
+    await route.continue();
+  });
+  await page.locator('button:has-text("Regen")').last().click();
+  // Poll for the intercepted request body specifically, not just UI
+  // settle time - unrouting before the request lands (a race, not an app
+  // bug) reads lastRegenBody as null and misreports a failure.
+  for (let i = 0; i < 15 && lastRegenBody === null; i++) await page.waitForTimeout(200);
+  await dismissConfirmIfAny();
+  await waitForSendDone();
+  await page.unroute('**/*');
+  const regenSysContent = (lastRegenBody && lastRegenBody.messages ? lastRegenBody.messages : [])
+    .filter(m => m.role === 'system').map(m => m.content).join('\n');
+  assert(regenSysContent.indexOf('PROJ_A_MARKER') >= 0, 'regen uses the prompt active at original send time (Prompt A)');
+  assert(regenSysContent.indexOf('PROJ_B_MARKER') < 0, 'regen ignores the prompt switched to afterward (Prompt B)');
+
   console.log('\n-- github connect/disconnect + write-confirm gate --');
   await page.click('#settingsBtn'); await page.waitForTimeout(150);
   await page.click('#githubConnectBtn'); await page.waitForTimeout(150);

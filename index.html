@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.11</span></span>
+      <span class="wm">ai-router <span>v5.12</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.11</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.12</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1770,7 +1770,7 @@ async function executeRepoTool(toolName,toolInput){
     return{error:"Unknown tool"};
   }catch(e){return{error:e.message};}
 }
-function getModelSystemPrompt(){
+function getModelSystemPrompt(ap){
   /* A project defines its own purpose and behavior - it arrives as its own
      system message right after this one (see generateOptimalInstructions).
      Priming the model here with an unconditional "you're a repo-control
@@ -1779,8 +1779,14 @@ function getModelSystemPrompt(){
      code (e.g. a photo-to-work-order project), pushing it toward repo
      exploration the project never asked for. The repo tools are still
      available either way - toolsToSend is set independently of this text -
-     this only removes the unconditional nudge to use them. */
-  var curAp2=getAP();
+     this only removes the unconditional nudge to use them.
+
+     Takes the resolved ap for THIS message instead of reading getAP()
+     itself - on a Regen, the currently-selected project/prompt can differ
+     from whatever was active when the original message was sent, and this
+     framing has to match ap.content (pushed as its own system message by
+     the caller), not whatever happens to be selected right now. */
+  var curAp2=ap!==undefined?ap:getAP();
   var inProject=curAp2&&typeof curAp2.id==="string"&&curAp2.id.indexOf("wproj_")===0;
   var sys="You are an expert AI assistant with advanced coding and repository control capabilities.\n\n";
   if(inProject){
@@ -1944,6 +1950,19 @@ function getAP(){
     if(p)return{id:"wproj_"+p.id,name:p.title,content:p.instructions||""};
   }
   return prompts.find(function(p){return p.id===activePromptId;})||null;
+}
+/* Look up an ap by the id getAP() would have returned at send time - lets
+   Regen reuse the exact project/prompt a message was originally sent
+   under, even if the user has since switched to a different one. Returns
+   null (not a fallback) when the id is missing or no longer exists, so
+   the caller can fall back to the current live selection itself. */
+function resolveApById(id){
+  if(!id)return null;
+  if(typeof id==="string"&&id.indexOf("wproj_")===0){
+    var wp=wproj.find(function(x){return x.id===id.slice(6);});
+    return wp?{id:"wproj_"+wp.id,name:wp.title,content:wp.instructions||""}:null;
+  }
+  return prompts.find(function(p){return p.id===id;})||null;
 }
 function refreshPL(){
   var a=getAP();
@@ -3340,7 +3359,8 @@ async function regenLast(){
   while(chatHistory.length>0&&chatHistory[chatHistory.length-1].role==="assistant")chatHistory.pop();
   var msgs2=document.getElementById("chat").querySelectorAll(".ma3");
   if(msgs2.length)msgs2[msgs2.length-1].remove();
-  doSendRequest(lastUser.content,true);
+  var regenAp=resolveApById(lastUser.apId)||getAP();
+  doSendRequest(lastUser.content,true,regenAp);
 }
 
 /* ---- Send ---- */
@@ -3412,7 +3432,12 @@ async function send(){
     return;
   }
 
-  chatHistory.push({role:"user",content:userContent});
+  /* Tag the message with which project/prompt was active when it was
+     sent, so Regen can reuse the same one later - the active selection
+     can change mid-conversation, and Regen previously always read
+     whatever's selected NOW via getAP(), silently regenerating under a
+     completely different project's rules than the original send used. */
+  chatHistory.push({role:"user",content:userContent,apId:ap?ap.id:null});
   appendMsg("user",userContent);
   /* Save immediately, before waiting on the response - if the app gets
      killed (battery dies, backgrounded and evicted, accidental close)
@@ -3432,7 +3457,7 @@ async function send(){
 async function doSendRequest(userContent,isRegen,ap){
   if(!ap)ap=getAP();
   var messages=[];
-  var modelSysPrompt=getModelSystemPrompt();
+  var modelSysPrompt=getModelSystemPrompt(ap);
   messages.push({role:"system",content:modelSysPrompt});
 
   var msgText=typeof userContent==="string"?userContent:((userContent&&userContent.find&&userContent.find(function(c){return c.type==="text";}))||{}).text||"";
