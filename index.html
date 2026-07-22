@@ -21,7 +21,14 @@
 .light code.ic{background:#efeff4;border-color:transparent;color:var(--ac)}
 html,body{height:100%;overscroll-behavior:none}
 body{background:var(--bg);color:var(--tx);font-family:-apple-system,system-ui,sans-serif;font-size:15.5px;line-height:1.65;display:flex;flex-direction:column;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
-.app{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:820px;width:100%;margin:0 auto;padding:0 16px}
+/* svh (small viewport height) rather than dvh - dvh is defined to track
+   Safari's toolbar showing/hiding in real time as the user scrolls, so
+   anything centered inside .app (like the empty-state screen) visibly
+   shifts position every time the toolbar comes and goes. svh always
+   assumes the toolbar is visible (the smallest the viewport ever gets),
+   which trades a few px of space when the toolbar auto-hides for a
+   layout that never moves under you. */
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh;height:100svh;max-width:820px;width:100%;margin:0 auto;padding:0 16px}
 header{display:flex;align-items:center;justify-content:space-between;padding:calc(13px + env(safe-area-inset-top,0px)) 0 12px;flex-shrink:0;gap:8px}
 .hl{display:flex;align-items:center;gap:8px;min-width:0}
 .wm{font-size:15px;color:var(--tx);flex-shrink:0;font-weight:700;letter-spacing:-.01em}
@@ -243,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.22</span></span>
+      <span class="wm">ai-router <span>v5.23</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +478,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.22</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.23</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
