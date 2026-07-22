@@ -28,7 +28,10 @@ async function handleGitHubOp(body, env) {
         if (!path) return { error: "Missing path" };
         const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
         const res = await fetch(url, { headers });
-        if (!res.ok) return { error: `Failed to read ${path}`, status: res.status };
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          return { error: `Failed to read ${path}: HTTP ${res.status}${errBody.message ? " - " + errBody.message : ""}`, status: res.status };
+        }
         const data = await res.json();
         const fileContent = atob(data.content);
         return { success: true, content: fileContent, sha: data.sha };
@@ -57,7 +60,10 @@ async function handleGitHubOp(body, env) {
           headers,
           body: JSON.stringify(payload),
         });
-        if (!writeRes.ok) return { error: `Failed to write ${path}`, status: writeRes.status };
+        if (!writeRes.ok) {
+          const writeErrBody = await writeRes.json().catch(() => ({}));
+          return { error: `Failed to write ${path}: HTTP ${writeRes.status}${writeErrBody.message ? " - " + writeErrBody.message : ""}`, status: writeRes.status };
+        }
         const writeData = await writeRes.json();
         return { success: true, commit: writeData.commit.sha };
 
@@ -65,7 +71,10 @@ async function handleGitHubOp(body, env) {
         if (!path) return { error: "Missing path" };
         const listUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
         const listRes = await fetch(listUrl, { headers });
-        if (!listRes.ok) return { error: `Failed to list ${path}`, status: listRes.status };
+        if (!listRes.ok) {
+          const listErrBody = await listRes.json().catch(() => ({}));
+          return { error: `Failed to list ${path}: HTTP ${listRes.status}${listErrBody.message ? " - " + listErrBody.message : ""}`, status: listRes.status };
+        }
         const listData = await listRes.json();
         const files = Array.isArray(listData)
           ? listData.map(f => ({ name: f.name, type: f.type, path: f.path }))
