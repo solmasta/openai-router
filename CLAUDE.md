@@ -27,3 +27,12 @@ app state, not whether a live model reply came back.
 If you change one of the flows above, update `tests/regression.js` in the
 same commit rather than letting it drift out of sync with what it claims to
 cover.
+
+## Bump the version number with every user-visible change
+
+The version string (two spots: the header `.wm span`, and the Settings modal
+title - `grep -n "v5\."` finds both) is how the user confirms a deploy
+actually landed, especially on a PWA where the service worker can serve a
+stale cached copy. Bump it in the same commit as any change they'd notice -
+not just feature work, bug fixes too. Skipping a bump because a change
+"felt small" is exactly what makes the version number useless as a signal.
