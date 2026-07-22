@@ -99,6 +99,32 @@ function assert(cond, label) {
   assert(modelDuring !== modelBefore, `model switched for image attach (before="${modelBefore}" during="${modelDuring}")`);
   assert(modelAfter === modelBefore, `model restored after image message (before="${modelBefore}" after="${modelAfter}")`);
 
+  console.log('\n-- image attached with no caption still includes a text part --');
+  let lastRequestBody = null;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      try {
+        const parsed = JSON.parse(req.postData());
+        if (parsed.messages) lastRequestBody = parsed;
+      } catch (e) {}
+    }
+    await route.continue();
+  });
+  const fileInput2 = await page.$('#fileInput');
+  await fileInput2.setInputFiles(imgPath);
+  await page.waitForTimeout(300);
+  await page.fill('#prompt', '');
+  await page.click('#sendBtn');
+  await page.waitForTimeout(600);
+  await dismissConfirmIfAny();
+  await waitForSendDone();
+  await page.unroute('**/*');
+  const lastUserMsg = lastRequestBody && lastRequestBody.messages ? lastRequestBody.messages.filter(m => m.role === 'user').pop() : null;
+  const contentParts = lastUserMsg && Array.isArray(lastUserMsg.content) ? lastUserMsg.content : [];
+  const hasTextPart = contentParts.some(p => p.type === 'text');
+  assert(hasTextPart, 'a caption-less image attachment still sends a text part alongside the image');
+
   console.log('\n-- github connect/disconnect + write-confirm gate --');
   await page.click('#settingsBtn'); await page.waitForTimeout(150);
   await page.click('#githubConnectBtn'); await page.waitForTimeout(150);
