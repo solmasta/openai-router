@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.16</span></span>
+      <span class="wm">ai-router <span>v5.17</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.16</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.17</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -2861,7 +2861,15 @@ async function driveAutoRestoreIfEmpty(){
   try{localPrompts=JSON.parse(localStorage.getItem(pk("ai_prompts"))||"{}");}catch(e){}
   try{localMemories=JSON.parse(localStorage.getItem(pk("ai_memories"))||"[]");}catch(e){}
   try{localDocLib=JSON.parse(localStorage.getItem(pk("ai_doclibrary"))||"[]");}catch(e){}
-  var hasLocalData=chatHistory.length>0||(localProjects&&localProjects.length>0)||(localWproj&&localWproj.length>0)||(localPrompts&&Object.keys(localPrompts).length>0)||(localMemories&&localMemories.length>0)||(localDocLib&&localDocLib.length>0);
+  /* localPrompts is {prompts:[...],activeId:...} - an object, not an
+     array. savePrompts() writes both keys unconditionally, so once
+     ai_prompts exists at all in localStorage (e.g. the user just opened
+     Settings > Prompts once on a fresh device, without adding anything),
+     Object.keys(localPrompts).length is always 2 regardless of whether
+     the prompts list itself is empty. That made hasLocalData permanently
+     true on a device with zero actual saved prompts, silently blocking
+     auto-restore from ever running - check the actual array length. */
+  var hasLocalData=chatHistory.length>0||(localProjects&&localProjects.length>0)||(localWproj&&localWproj.length>0)||(localPrompts&&Array.isArray(localPrompts.prompts)&&localPrompts.prompts.length>0)||(localMemories&&localMemories.length>0)||(localDocLib&&localDocLib.length>0);
   if(hasLocalData)return;
   try{
     if(!driveFolderId)await driveEnsureFolder();
