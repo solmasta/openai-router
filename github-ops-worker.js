@@ -9,6 +9,18 @@ function checkAuth(request, env) {
   return !!env.APP_SECRET && provided === env.APP_SECRET;
 }
 
+// GitHub's error responses are normally {"message": "..."} JSON, but some
+// failure modes (edge/proxy rejections, HTML error pages) return plain text
+// instead - falling back to raw text keeps this diagnostic instead of
+// silently collapsing to just a status code whenever the body isn't JSON.
+async function describeError(res) {
+  const text = await res.text();
+  let message = "";
+  try { message = JSON.parse(text).message || ""; } catch {}
+  if (!message && text) message = text.slice(0, 200);
+  return message ? `HTTP ${res.status} - ${message}` : `HTTP ${res.status}`;
+}
+
 async function handleGitHubOp(body, env) {
   const { op, owner, repo, path, content, message, branch } = body;
   const token = env.GITHUB_TOKEN;
@@ -20,6 +32,11 @@ async function handleGitHubOp(body, env) {
     "Authorization": `token ${token}`,
     "Accept": "application/vnd.github.v3+json",
     "Content-Type": "application/json",
+    // GitHub's API rejects any request with no User-Agent header (403,
+    // "Request forbidden by administrative rules") - browsers and most
+    // HTTP clients set one automatically, but Cloudflare Workers' fetch()
+    // does not, so it has to be set explicitly here.
+    "User-Agent": "openai-router-github-ops-worker",
   };
 
   try {
@@ -28,10 +45,7 @@ async function handleGitHubOp(body, env) {
         if (!path) return { error: "Missing path" };
         const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
         const res = await fetch(url, { headers });
-        if (!res.ok) {
-          const errBody = await res.json().catch(() => ({}));
-          return { error: `Failed to read ${path}: HTTP ${res.status}${errBody.message ? " - " + errBody.message : ""}`, status: res.status };
-        }
+        if (!res.ok) return { error: `Failed to read ${path}: ${await describeError(res)}`, status: res.status };
         const data = await res.json();
         const fileContent = atob(data.content);
         return { success: true, content: fileContent, sha: data.sha };
@@ -60,10 +74,7 @@ async function handleGitHubOp(body, env) {
           headers,
           body: JSON.stringify(payload),
         });
-        if (!writeRes.ok) {
-          const writeErrBody = await writeRes.json().catch(() => ({}));
-          return { error: `Failed to write ${path}: HTTP ${writeRes.status}${writeErrBody.message ? " - " + writeErrBody.message : ""}`, status: writeRes.status };
-        }
+        if (!writeRes.ok) return { error: `Failed to write ${path}: ${await describeError(writeRes)}`, status: writeRes.status };
         const writeData = await writeRes.json();
         return { success: true, commit: writeData.commit.sha };
 
@@ -71,10 +82,7 @@ async function handleGitHubOp(body, env) {
         if (!path) return { error: "Missing path" };
         const listUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
         const listRes = await fetch(listUrl, { headers });
-        if (!listRes.ok) {
-          const listErrBody = await listRes.json().catch(() => ({}));
-          return { error: `Failed to list ${path}: HTTP ${listRes.status}${listErrBody.message ? " - " + listErrBody.message : ""}`, status: listRes.status };
-        }
+        if (!listRes.ok) return { error: `Failed to list ${path}: ${await describeError(listRes)}`, status: listRes.status };
         const listData = await listRes.json();
         const files = Array.isArray(listData)
           ? listData.map(f => ({ name: f.name, type: f.type, path: f.path }))
