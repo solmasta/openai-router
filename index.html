@@ -989,14 +989,33 @@ function getAllAvailableModels(){
     var B=BACKENDS[key];if(B.models){B.models.forEach(function(m){all.push({model:m,backend:key});})}});
   return all;
 }
+/* Minimum score edge a candidate needs over the current model before it's
+   even worth suggesting a switch - without this, two models scoring a
+   couple points apart could ping-pong the suggestion back and forth on
+   every message as the conversation alternates between message types. */
+var SWITCH_SCORE_MARGIN=15;
+var declinedSwitchTargets={};
+/* After any decline, skip suggesting a switch at all for the next few
+   messages - the actual ping-pong isn't necessarily the same model being
+   re-suggested (different message types can make different candidate
+   models score highest each time), it's getting interrupted with a
+   switch prompt on every single message. This gives real breathing room
+   regardless of which model would've been suggested next. */
+var switchSuggestionCooldown=0;
 function selectBestModel(tasks){
   var available=getAllAvailableModels();
   if(!available.length)return null;
   var scored=available.map(function(item){return{model:item.model,backend:item.backend,score:scoreModelForTask(item.model,tasks)};});
   scored.sort(function(a,b){return b.score-a.score;});
-  var best=scored[0];
-  if(best.backend===activeBackend&&best.model.id===currentModel.id){return null;}
-  return best;
+  var currentScore=scoreModelForTask(currentModel,tasks);
+  for(var i=0;i<scored.length;i++){
+    var candidate=scored[i];
+    if(candidate.backend===activeBackend&&candidate.model.id===currentModel.id)continue;
+    if(declinedSwitchTargets[candidate.model.id])continue;
+    if(candidate.score-currentScore<SWITCH_SCORE_MARGIN)return null;
+    return candidate;
+  }
+  return null;
 }
 function switchReasonText(best){
   var reasons=[];
@@ -1027,9 +1046,13 @@ function confirmModelSwitch(best){
       switchBtn.removeEventListener("click",onSwitch);
       closeBtn.removeEventListener("click",onClose);
     }
-    function onSend(){cleanup();resolve(false);}
+    /* Remember a decline for this conversation so the same model isn't
+       suggested again and again if the user already said no once -
+       that's the actual ping-pong: not the scoring itself, but asking
+       about the same rejected candidate on every subsequent message. */
+    function onSend(){declinedSwitchTargets[best.model.id]=true;switchSuggestionCooldown=2;cleanup();resolve(false);}
     function onSwitch(){cleanup();resolve(true);}
-    function onClose(){cleanup();resolve(false);}
+    function onClose(){declinedSwitchTargets[best.model.id]=true;switchSuggestionCooldown=2;cleanup();resolve(false);}
     sendBtn.addEventListener("click",onSend);
     switchBtn.addEventListener("click",onSwitch);
     closeBtn.addEventListener("click",onClose);
@@ -1037,6 +1060,7 @@ function confirmModelSwitch(best){
 }
 async function switchToBestModel(text){
   if(!agentAutoSelect)return;
+  if(switchSuggestionCooldown>0){switchSuggestionCooldown--;return;}
   var tasks=analyzeTask(text);
   var best=selectBestModel(tasks);
   if(!best)return;
@@ -2286,6 +2310,7 @@ function applyTabAsLiveState(t){
   if(overseerEnabled&&chatHistory.length>1){startOverseerMonitoring();}
   updateOverseerBar();
   preVisionModel=null;
+  declinedSwitchTargets={};switchSuggestionCooldown=0;
 }
 function renderTabBar(){
   var bar=document.getElementById("tabBar");
@@ -2329,6 +2354,7 @@ function createNewTab(){
   overseerState=defaultOverseerState();
   updateOverseerBar();
   preVisionModel=null;
+  declinedSwitchTargets={};switchSuggestionCooldown=0;
   renderTabBar();
   saveTabsToStorage();
 }
@@ -3431,9 +3457,11 @@ document.getElementById("clearBtn").addEventListener("click",function(){
   undoData={messages:chatHistory.slice(),backend:activeBackend,modelId:currentModel.id,modelLabel:currentModel.label};
   chatHistory=[];clearAttach();localStorage.removeItem(pk(AUTOSAVE_KEY));localStorage.removeItem(pk("ai_draft"));
   sessionId=Date.now().toString();responseCount=0;lastUsedModelId="";summarizing=false;
-  clearActiveWproj();stopOverseerMonitoring();overseerState={goal:null,goalType:null,progress:0,status:"idle",startTime:null,messagesProcessed:0,modelsUsed:new Set(),estimatedTokens:0,stuck:false,stuckSince:null,recommendations:[]};
+  clearActiveWproj();stopOverseerMonitoring();overseerState=defaultOverseerState();
+  preVisionModel=null;declinedSwitchTargets={};switchSuggestionCooldown=0;
   document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✶</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
   document.getElementById("tokenBar").classList.add("hidden");
+  updateOverseerBar();
   if(openTabs.length){openTabs[activeTabIndex]=currentTabSnapshot();renderTabBar();saveTabsToStorage();}
   showUndoToast();
 });
