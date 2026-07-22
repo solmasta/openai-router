@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.24</span></span>
+      <span class="wm">ai-router <span>v5.25</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -478,7 +478,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.24</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.25</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1896,7 +1896,29 @@ function supportsWebP(){
   WEBP_SUPPORTED=c.toDataURL("image/webp").indexOf("image/webp")===0;
   return WEBP_SUPPORTED;
 }
+function canvasFromBitmapLike(w,h,drawable){
+  var MAX=1024,tw=w,th=h;
+  if(tw>MAX||th>MAX){var rat=Math.min(MAX/tw,MAX/th);tw=Math.round(tw*rat);th=Math.round(th*rat);}
+  var c=document.createElement("canvas");c.width=tw;c.height=th;
+  c.getContext("2d").drawImage(drawable,0,0,tw,th);
+  return supportsWebP()?c.toDataURL("image/webp",0.8):c.toDataURL("image/jpeg",0.75);
+}
 async function compressImg(file){
+  /* Try createImageBitmap() first - full-resolution phone photos (e.g.
+     24MP+ JPEGs) could fail to decode via the classic <img> element on
+     mobile Safari, which has tighter memory/size limits on that specific
+     decode path; createImageBitmap is built for exactly this (bulk/large
+     image handling) and succeeds where <img> silently errored out. Only
+     fall back to the <img>-based path below if this isn't supported or
+     itself fails, rather than assuming it always works. */
+  if(window.createImageBitmap){
+    try{
+      var bmp=await createImageBitmap(file);
+      var url=canvasFromBitmapLike(bmp.width,bmp.height,bmp);
+      if(bmp.close)bmp.close();
+      return url;
+    }catch(e){/* fall through to the FileReader+Image path below */}
+  }
   return new Promise(function(resolve,reject){
     /* Neither FileReader nor Image had an error handler here before - if
        reading the file failed, or the browser's <img> couldn't decode it
@@ -1911,11 +1933,7 @@ async function compressImg(file){
       var img=new Image();
       img.onerror=function(){reject(new Error("Could not decode image"));};
       img.onload=function(){
-        var MAX=1024,w=img.width,h=img.height;
-        if(w>MAX||h>MAX){var rat=Math.min(MAX/w,MAX/h);w=Math.round(w*rat);h=Math.round(h*rat);}
-        var c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);
-        if(supportsWebP()){resolve(c.toDataURL("image/webp",0.8));}
-        else{resolve(c.toDataURL("image/jpeg",0.75));}
+        resolve(canvasFromBitmapLike(img.width,img.height,img));
       };img.src=e.target.result;
     };r.readAsDataURL(file);
   });
