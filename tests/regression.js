@@ -262,6 +262,10 @@ function assert(cond, label) {
     await route.continue();
   });
   await sendMsg('what is dtcc and how does it relate to xrp');
+  // Poll for the intercepted body specifically - unrouting before the
+  // request lands (a timing race, not an app bug) reads it as null and
+  // misreports a failure. Same fix already applied to the regen test.
+  for (let i = 0; i < 15 && lastUnrelatedBody === null; i++) await page.waitForTimeout(200);
   await page.unroute('**/*');
   assert(lastUnrelatedBody && !lastUnrelatedBody.tools, 'an unrelated (non-code/github) message gets no tools field even with GitHub connected');
 
@@ -277,6 +281,7 @@ function assert(cond, label) {
     await route.continue();
   });
   await sendMsg('please read the README file from the github repo');
+  for (let i = 0; i < 15 && lastRelatedBody === null; i++) await page.waitForTimeout(200);
   await page.unroute('**/*');
   assert(lastRelatedBody && Array.isArray(lastRelatedBody.tools) && lastRelatedBody.tools.length > 0, 'a genuinely code/github-relevant message still gets the repo tools');
 

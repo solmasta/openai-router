@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.19</span></span>
+      <span class="wm">ai-router <span>v5.20</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.19</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.20</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -2695,14 +2695,44 @@ function driveInitClient(){
         driveSaveToken(resp.access_token,resp.expires_in);
         localStorage.setItem(pk("drive_connected"),"1");
         updateDriveUI(true);
-        if(chatHistory.length===0){
-          driveAutoRestoreIfEmpty();
-        }else{
-          driveEnsureFolder().then(function(){driveAutoPush(true);});
-        }
+        driveHandleFreshConnect();
       }
     }
   });
+}
+/* Deciding push-vs-restore on connect purely from whether THIS device's
+   chatHistory is empty meant a second device with any local test/chat
+   activity would immediately force-push its own (likely thinner) state
+   over Drive, silently overwriting a real backup from a first device -
+   then every later "Restore" on that second device just downloaded back
+   what it had already overwritten Drive with. Check whether Drive
+   actually has a backup first, and never push over an existing one
+   without the user's say-so. */
+async function driveHandleFreshConnect(){
+  if(!driveFolderId)await driveEnsureFolder();
+  if(!driveFolderId)return;
+  var found=await Promise.all([
+    driveFindFileByName(DRIVE_FILES.prompts),
+    driveFindFileByName(DRIVE_FILES.projects),
+    driveFindFileByName(DRIVE_FILES.workprojects),
+    driveFindFileByName(DRIVE_FILES.autosave),
+    driveFindFileByName(DRIVE_FILES.memories),
+    driveFindFileByName(DRIVE_FILES.doclibrary)
+  ]);
+  var backupExists=found.some(function(id){return !!id;});
+  if(!backupExists){
+    /* Nothing in Drive yet at all - this is the first device to ever
+       connect, safe to push its state up as the initial backup. */
+    driveAutoPush(true);
+    return;
+  }
+  if(chatHistory.length===0){
+    driveAutoRestoreIfEmpty();
+  }else if(confirm("Google Drive already has a backup (from another device). Restore it now? This replaces what's currently on this device.")){
+    driveRestore();
+  }
+  /* If declined, leave both sides alone rather than guessing - normal
+     use will keep pushing this device's own changes from here on. */
 }
 function driveConnect(){
   driveInitClient();
