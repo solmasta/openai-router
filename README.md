@@ -80,7 +80,7 @@ Edit the `BACKENDS` object inside `index.html`'s `<script>` block — each backe
 { id:"meta-llama/Meta-Llama-3-8B-Instruct", label:"Llama 3 8B", cat:"Everyday", desc:"..." }
 ```
 
-Claude model IDs: `claude-opus-4-1`, `claude-sonnet-4-20250514`, `claude-haiku-4-5-20251001`.
+Claude model IDs: `claude-opus-4-8`, `claude-sonnet-5`, `claude-haiku-4-5-20251001`.
 
 ## Security note
 

@@ -49,8 +49,8 @@ export default {
     if (request.method === "GET" && url.pathname === "/models") {
       const models = {
         data: [
-          { id: "claude-opus-4-1", name: "Claude Opus 4.1" },
-          { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4" },
+          { id: "claude-opus-4-8", name: "Claude Opus 4.8" },
+          { id: "claude-sonnet-5", name: "Claude Sonnet 5" },
           { id: "claude-haiku-4-5-20251001", name: "Claude Haiku 4.5" },
         ]
       };
