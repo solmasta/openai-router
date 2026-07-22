@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.10</span></span>
+      <span class="wm">ai-router <span>v5.11</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.10</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.11</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1729,7 +1729,12 @@ function interceptAndEnhanceMessage(userMessage){
 function displayThinkingProcess(thinkText){
   if(!thinkText||thinkText.trim()==="")return;
   var thinkEl=document.createElement("div");
-  thinkEl.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(100,116,139,0.08);border-left:3px solid #64748b;border-radius:4px;font-size:11px;color:var(--mu);font-family:var(--mn);line-height:1.4;max-height:120px;overflow-y:auto";
+  /* No max-height/overflow-y here on purpose - a clipped, internally
+     scrollable box left its own header ("Thinking Process") scrolled out
+     of view with no visible scrollbar cue, making it look broken rather
+     than just tall. Full height + centered text reads as a normal card
+     no matter how long the reasoning is. */
+  thinkEl.style.cssText="padding:10px 14px;margin:8px auto;max-width:520px;background:rgba(100,116,139,0.08);border-left:3px solid #64748b;border-radius:4px;font-size:11px;color:var(--mu);font-family:var(--mn);line-height:1.4;text-align:center";
   thinkEl.innerHTML="<strong style='color:var(--tx);display:block;margin-bottom:4px'>🧠 Thinking Process</strong>"+esc(thinkText.substring(0,500));
   if(thinkText.length>500)thinkEl.innerHTML+="<div style='margin-top:4px;color:var(--mu);font-size:10px'>...</div>";
   document.getElementById("chat").appendChild(thinkEl);
