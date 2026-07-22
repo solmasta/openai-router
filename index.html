@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.25</span></span>
+      <span class="wm">ai-router <span>v5.26</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -478,14 +478,14 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.25</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.26</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
     <div class="sr"><div><div class="slb">Share conversation</div><div class="ssb">Copy current chat to clipboard</div></div><button class="bg" id="shareBtn">Share</button></div>
     <div class="sr"><div><div class="slb">Clear favorites</div><div class="ssb">Remove all starred models</div></div><button class="bg" id="clearFavesBtn">Clear</button></div>
     <div class="sr"><div><div class="slb">Install app</div><div class="ssb" id="installSub">Checking&#8230;</div></div><button class="bg" id="installBtn">Install</button></div>
-    <div class="sr"><div><div class="slb">Google Drive backup</div><div class="ssb" id="driveStatus">Not connected</div></div><div style="display:flex;gap:6px"><button class="bg hidden" id="driveRestoreBtn">Restore</button><button class="bg" id="driveConnectBtn">Connect</button></div></div>
+    <div class="sr"><div><div class="slb">Google Drive backup</div><div class="ssb" id="driveStatus">Not connected</div></div><div style="display:flex;gap:6px"><button class="bg hidden" id="driveBackupBtn">Back up</button><button class="bg hidden" id="driveRestoreBtn">Restore</button><button class="bg" id="driveConnectBtn">Connect</button></div></div>
     <div class="sr"><div><div class="slb">GitHub repository</div><div class="ssb" id="githubStatus">Not connected</div></div><button class="bg" id="githubConnectBtn">Connect</button></div>
     <div class="sr"><div><div class="slb">Agent auto-select</div><div class="ssb">Automatically pick the best model for each task</div></div><button class="bg" id="agentToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Overseer monitoring</div><div class="ssb">Track progress, detect stuck situations, suggest next steps</div></div><button class="bg" id="overseerToggleBtn">ON</button></div>
@@ -2118,7 +2118,7 @@ function importDefaults(){
 /* ---- Projects ---- */
 var GK="ai_projects";
 function loadProjects(){try{projects=JSON.parse(localStorage.getItem(pk(GK))||"[]");}catch(e){projects=[];}}
-function saveProjects(){localStorage.setItem(pk(GK),JSON.stringify(projects));driveAutoPush(true);}
+function saveProjects(){localStorage.setItem(pk(GK),JSON.stringify(projects));}
 function renderProjectList(){
   var list=document.getElementById("projectList");list.innerHTML="";
   if(!projects.length){list.innerHTML='<p class="el">No folders yet.</p>';return;}
@@ -2221,7 +2221,7 @@ function delProject(){
 /* ---- Projects (dedicated, important-to-keep workspaces) ---- */
 var WPK="ai_workprojects";
 function loadWProjects(){try{wproj=JSON.parse(localStorage.getItem(pk(WPK))||"[]");}catch(e){wproj=[];}}
-function saveWProjects(){localStorage.setItem(pk(WPK),JSON.stringify(wproj));driveAutoPush(true);}
+function saveWProjects(){localStorage.setItem(pk(WPK),JSON.stringify(wproj));}
 
 function renderWprojHub(){
   var list=document.getElementById("wprojList");list.innerHTML="";
@@ -2404,7 +2404,6 @@ function autoSave(){
     if(openTabs.length>1)renderTabBar();
     saveTabsToStorage();
   }
-  driveAutoPush();
 }
 function loadAutoSave(){
   try{
@@ -2556,7 +2555,7 @@ function initTabs(){
    Overseer-mediated: only memories relevant to the current message get
    injected, not the whole list every time, to stay token-efficient. ---- */
 function loadMemories(){try{memories=JSON.parse(localStorage.getItem(pk(MK))||"[]");}catch(e){memories=[];}}
-function saveMemories(){localStorage.setItem(pk(MK),JSON.stringify(memories));driveAutoPush(true);}
+function saveMemories(){localStorage.setItem(pk(MK),JSON.stringify(memories));}
 function addMemory(text,always){
   text=(text||"").trim();if(!text)return;
   memories.push({id:Date.now().toString()+Math.random().toString(36).slice(2,5),text:text,always:!!always,createdAt:Date.now()});
@@ -2651,7 +2650,7 @@ function showMemorySuggestion(text){
    future conversation, unlike one-message-only attachments. ---- */
 var DOC_LIBRARY_CAP=30;
 function loadDocLibrary(){try{docLibrary=JSON.parse(localStorage.getItem(pk(DLK))||"[]");}catch(e){docLibrary=[];}}
-function saveDocLibrary(){localStorage.setItem(pk(DLK),JSON.stringify(docLibrary));driveAutoPush(true);}
+function saveDocLibrary(){localStorage.setItem(pk(DLK),JSON.stringify(docLibrary));}
 function addToLibrary(file){
   docLibrary.push({id:Date.now().toString()+Math.random().toString(36).slice(2,5),name:file.name,type:file.type,content:file.content||null,dataUrl:file.dataUrl||null,addedAt:Date.now()});
   if(docLibrary.length>DOC_LIBRARY_CAP)docLibrary=docLibrary.slice(-DOC_LIBRARY_CAP);
@@ -2757,9 +2756,9 @@ async function driveHandleFreshConnect(){
   ]);
   var backupExists=found.some(function(id){return !!id;});
   if(!backupExists){
-    /* Nothing in Drive yet at all - this is the first device to ever
-       connect, safe to push its state up as the initial backup. */
-    driveAutoPush(true);
+    /* Nothing in Drive yet at all - just leave it connected. Backup is
+       manual now (the "Back up" button in Settings) rather than firing
+       automatically here. */
     return;
   }
   if(!driveHasLocalData()){
@@ -2990,19 +2989,23 @@ async function driveAutoRestoreIfEmpty(){
 function updateDriveUI(connected){
   var btn=document.getElementById("driveConnectBtn");
   var restoreBtn=document.getElementById("driveRestoreBtn");
+  var backupBtn=document.getElementById("driveBackupBtn");
   if(!btn)return;
   if(connected){
     btn.textContent="Disconnect";btn.onclick=driveDisconnect;
     if(restoreBtn)restoreBtn.classList.remove("hidden");
-    updateDriveStatus("Connected - backs up automatically");
+    if(backupBtn)backupBtn.classList.remove("hidden");
+    updateDriveStatus("Connected - tap Back up to save, Restore to pull down");
   }else{
     btn.textContent="Connect";btn.onclick=driveConnect;
     if(restoreBtn)restoreBtn.classList.add("hidden");
+    if(backupBtn)backupBtn.classList.add("hidden");
     updateDriveStatus("Not connected");
   }
 }
 function updateDriveStatus(text){var s=document.getElementById("driveStatus");if(s)s.textContent=text;}
 document.getElementById("driveRestoreBtn").addEventListener("click",driveRestore);
+document.getElementById("driveBackupBtn").addEventListener("click",function(){driveEnsureFolder().then(function(){driveAutoPush(true);});});
 driveLoadCache();
 
 /* ---- Install (Android/Desktop native, iPhone guided) ---- */
@@ -3895,20 +3898,11 @@ if(localStorage.getItem(pk("drive_connected"))==="1"){
     alert("Google Drive backup is paused - your connection expired. Reconnect in Settings to resume backing up and restore your latest data.");
   }else{
     updateDriveUI(true);
-    /* driveAutoPush() only ever fires reactively, from inside a save
-       (autoSave, saveProjects, saveWProjects, etc.) - simply reopening
-       the app with nothing changed never called any of those, so Drive
-       could sit stale indefinitely on a device that's just being read
-       from, not edited. Push proactively here whenever there's real
-       local data, so opening the app is itself enough to refresh Drive -
-       this is always the current device's own data going up, so unlike
-       the cross-device case in driveHandleFreshConnect, there's no
-       overwrite risk to guard against. */
-    if(driveHasLocalData()){
-      driveEnsureFolder().then(function(){driveAutoPush(true);});
-    }else{
-      driveAutoRestoreIfEmpty();
-    }
+    /* Backup is manual now (the "Back up" button in Settings) - no
+       automatic push here or anywhere else. driveAutoRestoreIfEmpty()
+       still runs since it's a pull, not a push, and only ever acts when
+       there's genuinely nothing local to lose. */
+    driveAutoRestoreIfEmpty();
   }
 }else{
   updateDriveUI(false);
