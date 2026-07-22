@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.23</span></span>
+      <span class="wm">ai-router <span>v5.24</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -478,7 +478,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.23</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.24</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1897,9 +1897,20 @@ function supportsWebP(){
   return WEBP_SUPPORTED;
 }
 async function compressImg(file){
-  return new Promise(function(resolve){
-    var r=new FileReader();r.onload=function(e){
-      var img=new Image();img.onload=function(){
+  return new Promise(function(resolve,reject){
+    /* Neither FileReader nor Image had an error handler here before - if
+       reading the file failed, or the browser's <img> couldn't decode it
+       (some HEIC variants are inconsistently supported even though iOS's
+       own photo picker previews them fine), the promise just never
+       settled. The caller's `await` then hung forever: the file-select
+       loop never reached renderAttach(), so the photo silently never
+       appeared, with no error and no way to recover short of reloading. */
+    var r=new FileReader();
+    r.onerror=function(){reject(new Error("Could not read file"));};
+    r.onload=function(e){
+      var img=new Image();
+      img.onerror=function(){reject(new Error("Could not decode image"));};
+      img.onload=function(){
         var MAX=1024,w=img.width,h=img.height;
         if(w>MAX||h>MAX){var rat=Math.min(MAX/w,MAX/h);w=Math.round(w*rat);h=Math.round(h*rat);}
         var c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);
@@ -3328,19 +3339,30 @@ function looksLikeImageFile(file){
 }
 document.getElementById("fileInput").addEventListener("change",async function(e){
   var files=Array.from(e.target.files);e.target.value="";
+  var failedNames=[];
   for(var i=0;i<files.length;i++){
     var file=files[i];
-    if(looksLikeImageFile(file)){
-      var du=await compressImg(file);
-      attachedFiles.push({type:"image",dataUrl:du,name:file.name});
-      addToLibrary({type:"image",dataUrl:du,name:file.name});
-    }else{
-      var ct=await readTxt(file);
-      attachedFiles.push({type:"text",content:ct,name:file.name});
-      addToLibrary({type:"text",content:ct,name:file.name});
+    try{
+      if(looksLikeImageFile(file)){
+        var du=await compressImg(file);
+        attachedFiles.push({type:"image",dataUrl:du,name:file.name});
+        addToLibrary({type:"image",dataUrl:du,name:file.name});
+      }else{
+        var ct=await readTxt(file);
+        attachedFiles.push({type:"text",content:ct,name:file.name});
+        addToLibrary({type:"text",content:ct,name:file.name});
+      }
+    }catch(err){
+      /* One unreadable/undecodable file (compressImg now rejects instead
+         of hanging forever) must not silently swallow the rest of the
+         selection - skip it, keep processing whatever else was picked,
+         and say which one failed instead of leaving nothing attached
+         with no explanation. */
+      failedNames.push(file.name);
     }
   }
   renderAttach();
+  if(failedNames.length){alert("Couldn't attach: "+failedNames.join(", ")+"\n\nUnsupported or unreadable file format.");}
 });
 document.getElementById("tempSlider").addEventListener("input",function(){
   temperature=parseFloat(this.value);

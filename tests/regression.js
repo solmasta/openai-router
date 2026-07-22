@@ -187,6 +187,32 @@ function assert(cond, label) {
   const hasTextPart = contentParts.some(p => p.type === 'text');
   assert(hasTextPart, 'a caption-less image attachment still sends a text part alongside the image');
 
+  console.log('\n-- an undecodable "image" file surfaces an error instead of hanging forever --');
+  // compressImg() had no error handling on the FileReader or Image objects -
+  // a file the browser's <img> can't decode (some HEIC variants are
+  // inconsistently supported despite iOS's own photo picker previewing them
+  // fine) left the promise never settling, so the attach handler's `await`
+  // hung forever: the photo just silently never appeared, with nothing to
+  // recover from short of a reload.
+  const corruptImgPath = path.join(os.tmpdir(), 'regression_corrupt.png');
+  fs.writeFileSync(corruptImgPath, Buffer.from('this is not a real png file, just garbage bytes'));
+  let dialogMessage = null;
+  page.once('dialog', async (dialog) => { dialogMessage = dialog.message(); await dialog.accept(); });
+  const fileInputBad = await page.$('#fileInput');
+  await fileInputBad.setInputFiles({ name: 'corrupt.png', mimeType: 'image/png', buffer: fs.readFileSync(corruptImgPath) });
+  await page.waitForTimeout(1500);
+  assert(!!dialogMessage && dialogMessage.indexOf('corrupt.png') >= 0, `an undecodable image triggers a clear error naming the file (got dialog: ${JSON.stringify(dialogMessage)})`);
+  const attachCountAfterBadFile = await page.evaluate(() => document.querySelectorAll('#attachItems .ai').length);
+  assert(attachCountAfterBadFile === 0, 'the undecodable file itself is not added to the attachment list');
+  // The app must still work normally afterward - one bad file shouldn't leave anything stuck.
+  const fileInputRecover = await page.$('#fileInput');
+  await fileInputRecover.setInputFiles(imgPath);
+  await page.waitForTimeout(800);
+  const attachCountAfterGoodFile = await page.evaluate(() => document.querySelectorAll('#attachItems .ai').length);
+  assert(attachCountAfterGoodFile === 1, 'a valid image still attaches normally right after a failed one');
+  await page.evaluate(() => { document.querySelectorAll('#attachItems .ac2').forEach(function(b){b.click();}); });
+  await page.waitForTimeout(200);
+
   console.log('\n-- regen reuses the prompt/project active at send time, not whatever is selected now --');
   // A message sent while "Prompt A" is the active system prompt, regenerated
   // after switching to "Prompt B", must still be regenerated under Prompt
