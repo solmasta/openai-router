@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.4</span></span>
+      <span class="wm">ai-router <span>v5.5</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.4</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.5</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -3191,11 +3191,26 @@ function showOverseerReport(){
   btn.addEventListener("mouseleave",function(){clearTimeout(pressTimer);});
 })();
 document.getElementById("attachBtn").addEventListener("click",function(){document.getElementById("fileInput").click();});
+var IMAGE_EXTENSIONS=["jpg","jpeg","png","gif","webp","heic","heif","bmp","tiff","tif","avif"];
+function looksLikeImageFile(file){
+  if(file.type&&file.type.startsWith("image/"))return true;
+  /* Mobile Safari sometimes hands back an empty file.type for photos
+     (HEIC in particular) - without this fallback the image silently gets
+     treated as a text file (readTxt() on binary data), the model never
+     sees it, hasImg stays false, ensureVisionModel() never fires, and
+     whatever model is active just hallucinates a plausible-sounding
+     answer instead of actually looking at the photo. */
+  if(!file.type){
+    var ext=(file.name||"").split(".").pop().toLowerCase();
+    return IMAGE_EXTENSIONS.indexOf(ext)>=0;
+  }
+  return false;
+}
 document.getElementById("fileInput").addEventListener("change",async function(e){
   var files=Array.from(e.target.files);e.target.value="";
   for(var i=0;i<files.length;i++){
     var file=files[i];
-    if(file.type.startsWith("image/")){
+    if(looksLikeImageFile(file)){
       var du=await compressImg(file);
       attachedFiles.push({type:"image",dataUrl:du,name:file.name});
       addToLibrary({type:"image",dataUrl:du,name:file.name});
