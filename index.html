@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.8</span></span>
+      <span class="wm">ai-router <span>v5.9</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.8</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.9</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1615,19 +1615,17 @@ function generateOptimalInstructions(userMessage,selectedModel){
   if(curProject){
     overseerState.activeProject=curProject.name;
     overseerState.activeProjectInstructions=curProject.content;
-    /* A project's instructions are the user's deliberate, explicit override
-       of default behavior - the whole point of creating one. Truncating to
-       500 chars silently dropped everything past the first few rules (for
-       WORQ, that cut off the mandatory output-format and prohibited-content
-       sections entirely), and appending the generic task/goal/tool
-       boilerplate below actively worked against a project with its own
-       strict format rules - the model ends up torn between "output only a
-       two-line code box" and "explore the repo, use tools directly, add
-       logging". A project's own instructions are authoritative: send them
-       in full and skip the generic overlay entirely. */
-    instructions+="PROJECT: "+curProject.name+"\n";
-    instructions+="Follow this project's instructions exactly - they override any general guidance below:\n"+(curProject.content||"")+"\n\n";
-    return instructions;
+    /* doSendRequest already pushes ap.content as its own system message
+       unconditionally (for both projects and regular prompts) before this
+       function's output is added. Earlier this function ALSO re-included
+       the full project content here - meaning the model received the
+       exact same, often long, ruleset twice in one request. That's not
+       just wasteful: a duplicated block of near-identical instructions is
+       a plausible reason a model returns nothing at all. The project's
+       instructions are already authoritative via the existing ap.content
+       path - this function should add nothing on top of them, not repeat
+       them. */
+    return "";
   }else if(overseerState.activeProject){
     overseerState.activeProject=null;overseerState.activeProjectInstructions=null;
   }
@@ -1711,6 +1709,11 @@ function interceptAndEnhanceMessage(userMessage){
   if(!autoPromptInjection||!overseerEnabled||!chatHistory.length)return null;
 
   var instructions=generateOptimalInstructions(userMessage,currentModel);
+  /* A project returns "" here on purpose (its content already goes out via
+     ap.content) - don't claim instructions were injected when nothing was
+     actually added, or the UI misleadingly shows a green "injected" notice
+     for a request that got no extra system message at all. */
+  if(!instructions)return null;
   var timestamp=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
 
   var notice=document.createElement("div");
