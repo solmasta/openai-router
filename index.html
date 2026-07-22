@@ -2227,7 +2227,14 @@ document.addEventListener("visibilitychange",function(){if(document.visibilitySt
 
 /* ---- Auto-save ---- */
 function autoSave(){
-  if(!chatHistory.length)return;
+  if(!chatHistory.length){
+    /* History reverted to empty (e.g. a send error popped the just-added
+       user message) - clear the stale autosave entry rather than leaving
+       a previous successful save around to confuse the next reload. */
+    try{localStorage.removeItem(pk(AUTOSAVE_KEY));}catch(e){}
+    if(openTabs.length){openTabs[activeTabIndex]=currentTabSnapshot();if(openTabs.length>1)renderTabBar();saveTabsToStorage();}
+    return;
+  }
   try{
     localStorage.setItem(pk(AUTOSAVE_KEY),JSON.stringify({
       modelId:currentModel.id,modelLabel:currentModel.label,
@@ -3435,10 +3442,16 @@ async function doSendRequest(userContent,isRegen,ap){
       }else{
         asstMsg.wrap.remove();
         if(!isRegen)chatHistory.pop();
+        autoSave();
       }
     }else{
+      /* Keep the user's message in history on a plain send error (rate
+         limit, timeout, dropped connection, etc.) instead of popping it -
+         the message bubble stays visible either way, so popping it here
+         only broke the Regen button (nothing left to resend) and left
+         storage/tab snapshots out of sync with what's on screen. */
       asstMsg.body.className="body err";asstMsg.body.innerHTML="Error: "+esc(e.message);
-      if(!isRegen)chatHistory.pop();
+      autoSave();
     }
   }finally{
     sending=false;abortController=null;document.getElementById("sendBtn").disabled=false;document.getElementById("sendBtn").textContent="Send";document.getElementById("sendBtn").style.background="";
