@@ -99,6 +99,29 @@ function assert(cond, label) {
   assert(modelDuring !== modelBefore, `model switched for image attach (before="${modelBefore}" during="${modelDuring}")`);
   assert(modelAfter === modelBefore, `model restored after image message (before="${modelBefore}" after="${modelAfter}")`);
 
+  console.log('\n-- github connect/disconnect + write-confirm gate --');
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  await page.click('#githubConnectBtn'); await page.waitForTimeout(150);
+  await page.fill('#ghOwnerInput', 'solmasta');
+  await page.fill('#ghRepoInput', 'openai-router');
+  await page.click('#githubSaveBtn'); await page.waitForTimeout(150);
+  const ghStatusAfterConnect = await page.textContent('#githubStatus');
+  assert(ghStatusAfterConnect === 'solmasta/openai-router', `GitHub status reflects connected repo (got "${ghStatusAfterConnect}")`);
+  const ghPersisted = await page.evaluate(() => localStorage.getItem('gh_repo_owner') === 'solmasta' && localStorage.getItem('gh_repo_name') === 'openai-router');
+  assert(ghPersisted, 'GitHub connection persisted to localStorage');
+  await page.evaluate(() => {
+    document.getElementById('ghwPath').textContent = 'test';
+    document.getElementById('githubWriteConfirmModal').classList.remove('hidden');
+  });
+  await page.click('#ghwDenyBtn'); await page.waitForTimeout(150);
+  const ghConfirmClosedAfterDeny = await page.evaluate(() => document.getElementById('githubWriteConfirmModal').classList.contains('hidden'));
+  assert(ghConfirmClosedAfterDeny, 'write-confirm modal closes on deny (does not hang the tool loop)');
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  await page.click('#githubConnectBtn'); await page.waitForTimeout(150);
+  await page.click('#githubDisconnectBtn'); await page.waitForTimeout(150);
+  const ghStatusAfterDisconnect = await page.textContent('#githubStatus');
+  assert(ghStatusAfterDisconnect === 'Not connected', `GitHub status reflects disconnect (got "${ghStatusAfterDisconnect}")`);
+
   console.log('\n-- memory add/delete --');
   await page.click('#settingsBtn'); await page.waitForTimeout(150);
   await page.click('#memoryBtn'); await page.waitForTimeout(150);

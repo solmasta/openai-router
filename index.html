@@ -238,7 +238,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.1</span></span>
+      <span class="wm">ai-router <span>v5.2</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -406,6 +406,32 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
   </div>
 </div></div>
 
+<div class="modal hidden" id="githubModal"><div class="sheet">
+  <div class="sh"><span>Connect GitHub Repo</span><button class="sc" id="closeGithubModal">&#10005;</button></div>
+  <div class="sbody">
+    <p style="color:var(--mu);font-size:13px;line-height:1.5;margin:0 0 12px">The AI can read and write files in this repo when a coding conversation calls for it. The actual GitHub access token lives on the server, not here - this just tells the app which repo to point at. Every write commits directly to the repo, but you'll be asked to approve each one before it happens.</p>
+    <input type="text" id="ghOwnerInput" class="fi" placeholder="Repo owner, e.g. solmasta" autocomplete="off" style="width:100%;margin-bottom:8px;box-sizing:border-box">
+    <input type="text" id="ghRepoInput" class="fi" placeholder="Repo name, e.g. openai-router" autocomplete="off" style="width:100%;box-sizing:border-box">
+  </div>
+  <div class="sf2" style="display:flex;gap:8px">
+    <button class="bg hidden" id="githubDisconnectBtn" style="flex:1">Disconnect</button>
+    <button class="bp" id="githubSaveBtn" style="flex:1">Save &amp; Connect</button>
+  </div>
+</div></div>
+
+<div class="modal hidden" id="githubWriteConfirmModal"><div class="sheet">
+  <div class="sh"><span>&#9889; Push to GitHub?</span><button class="sc" id="closeGithubWriteConfirmModal">&#10005;</button></div>
+  <div class="sbody">
+    <div style="font-size:13px;color:var(--mu);margin-bottom:6px">File: <span id="ghwPath" style="font-family:var(--mn);color:var(--tx)"></span></div>
+    <div style="font-size:13px;color:var(--mu);margin-bottom:10px">Commit message: <span id="ghwMessage" style="color:var(--tx)"></span></div>
+    <div style="font-family:var(--mn);font-size:11px;white-space:pre-wrap;background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px;max-height:240px;overflow:auto;color:var(--tx)" id="ghwContent"></div>
+  </div>
+  <div class="sf2 ef">
+    <button class="bg" id="ghwDenyBtn">Don't push</button>
+    <button class="bp" id="ghwApproveBtn">Push this commit</button>
+  </div>
+</div></div>
+
 <div class="modal hidden" id="memoryModal"><div class="sheet">
   <div class="sh"><span>Memory</span><button class="sc" id="closeMemoryModal">&#10005;</button></div>
   <div class="sbody">
@@ -439,7 +465,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.1</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.2</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -447,6 +473,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Clear favorites</div><div class="ssb">Remove all starred models</div></div><button class="bg" id="clearFavesBtn">Clear</button></div>
     <div class="sr"><div><div class="slb">Install app</div><div class="ssb" id="installSub">Checking&#8230;</div></div><button class="bg" id="installBtn">Install</button></div>
     <div class="sr"><div><div class="slb">Google Drive backup</div><div class="ssb" id="driveStatus">Not connected</div></div><div style="display:flex;gap:6px"><button class="bg hidden" id="driveRestoreBtn">Restore</button><button class="bg" id="driveConnectBtn">Connect</button></div></div>
+    <div class="sr"><div><div class="slb">GitHub repository</div><div class="ssb" id="githubStatus">Not connected</div></div><button class="bg" id="githubConnectBtn">Connect</button></div>
     <div class="sr"><div><div class="slb">Agent auto-select</div><div class="ssb">Automatically pick the best model for each task</div></div><button class="bg" id="agentToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Overseer monitoring</div><div class="ssb">Track progress, detect stuck situations, suggest next steps</div></div><button class="bg" id="overseerToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Brainstorming mode</div><div class="ssb">Generate prompts and suggestions during conversation</div></div><button class="bg" id="brainstormToggleBtn">ON</button></div>
@@ -493,7 +520,7 @@ var PROFILES_LIST_KEY="ai_profiles_list";
 var activeProfile="default";
 try{activeProfile=localStorage.getItem(PROFILE_KEY)||"default";}catch(e){}
 function pk(key){return activeProfile==="default"?key:("prof_"+activeProfile+"__"+key);}
-var PROFILE_DATA_KEYS=["ai_autosave","ai_recent","ai_tabs","ai_memories","ai_doclibrary","ai_prompts","ai_projects","ai_workprojects","ai_draft","drive_connected","drive_file_id","drive_file_ids","drive_folder_id","drive_token"];
+var PROFILE_DATA_KEYS=["ai_autosave","ai_recent","ai_tabs","ai_memories","ai_doclibrary","ai_prompts","ai_projects","ai_workprojects","ai_draft","drive_connected","drive_file_id","drive_file_ids","drive_folder_id","drive_token","gh_repo_owner","gh_repo_name"];
 function listProfiles(){
   var names=["default"];
   try{
@@ -654,12 +681,43 @@ var DEFAULT_PROMPTS=[{id:"1000000001",name:"HVAC Field Tech",content:"You are an
 var VISION_MODELS=["Qwen/Qwen3-VL-30B-A3B-Instruct","google/gemma-3-27b-it","meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"];
 var TOOL_MODELS=["mistralai/Mistral-Small-3.2-24B-Instruct-2506","meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo","meta-llama/Llama-3.3-70B-Instruct-Turbo","meta-llama/Llama-4-Scout-17B-16E-Instruct","Qwen/Qwen2.5-72B-Instruct","Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo","deepseek-ai/DeepSeek-V3.2"];
 var modelCanCodeAndControl=true;
-/* GitHub connection state - no UI to set these yet, so they stay unset
-   (features gated on them correctly report "not connected") until a
-   connect flow is built. Declared here so referencing them doesn't throw
-   a ReferenceError and crash every message send. */
+/* GitHub connection state. The actual GitHub PAT lives server-side as the
+   github-ops-worker's GITHUB_TOKEN secret - ghToken here is just a local
+   "connected" flag (the worker's checkAuth never reads the Authorization
+   header this sends), so all that's persisted is which repo to point at. */
 var ghToken=null,ghRepoOwner=null,ghRepoName=null;
 var GH_OPS_URL="https://github-ops-worker.lukedorsett.workers.dev";
+function loadGithubConnection(){
+  ghRepoOwner=localStorage.getItem(pk("gh_repo_owner"))||null;
+  ghRepoName=localStorage.getItem(pk("gh_repo_name"))||null;
+  ghToken=(ghRepoOwner&&ghRepoName)?"connected":null;
+}
+function updateGithubStatus(){
+  var s=document.getElementById("githubStatus");
+  if(s)s.textContent=(ghToken&&ghRepoOwner&&ghRepoName)?(ghRepoOwner+"/"+ghRepoName):"Not connected";
+  var d=document.getElementById("githubDisconnectBtn");
+  if(d)d.classList.toggle("hidden",!(ghToken&&ghRepoOwner&&ghRepoName));
+}
+function disconnectGithub(){
+  localStorage.removeItem(pk("gh_repo_owner"));
+  localStorage.removeItem(pk("gh_repo_name"));
+  ghToken=null;ghRepoOwner=null;ghRepoName=null;
+  updateGithubStatus();
+}
+/* Per-write confirmation gate - resolves true/false, driven by the modal's
+   two buttons. Only one write can be pending confirmation at a time, which
+   matches how the tool loop actually calls this (awaited, one write per
+   tool_call iteration). */
+var pendingGithubWriteResolve=null;
+function confirmGithubWrite(toolArgs){
+  return new Promise(function(resolve){
+    document.getElementById("ghwPath").textContent=(ghRepoOwner||"")+"/"+(ghRepoName||"")+" - "+(toolArgs.path||"");
+    document.getElementById("ghwMessage").textContent=toolArgs.message||"(no message)";
+    document.getElementById("ghwContent").textContent=toolArgs.content||"";
+    pendingGithubWriteResolve=resolve;
+    openModal("githubWriteConfirmModal");
+  });
+}
 var REPO_TOOLS=[
   {type:"function","function":{name:"read_file",description:"Read a file from the connected GitHub repository. Returns file content.",parameters:{type:"object",properties:{path:{type:"string",description:"File path relative to repo root"}},required:["path"]}}},
   {type:"function","function":{name:"write_file",description:"Write or update a file in the connected GitHub repository. Creates commit.",parameters:{type:"object",properties:{path:{type:"string",description:"File path"},content:{type:"string",description:"Full file content"},message:{type:"string",description:"Commit message"}},required:["path","content","message"]}}},
@@ -2932,6 +2990,38 @@ bindM("settingsModal","closeSettingsModal");
 bindM("wprojHubModal","closeWprojHub");
 bindM("wprojEditor","closeWprojEditor");
 bindM("wprojDetail","closeWprojDetail");
+bindM("githubModal","closeGithubModal");
+document.getElementById("githubConnectBtn").addEventListener("click",function(){
+  document.getElementById("settingsModal").classList.add("hidden");
+  document.getElementById("ghOwnerInput").value=ghRepoOwner||"";
+  document.getElementById("ghRepoInput").value=ghRepoName||"";
+  updateGithubStatus();
+  openModal("githubModal");
+});
+document.getElementById("githubSaveBtn").addEventListener("click",function(){
+  var owner=document.getElementById("ghOwnerInput").value.trim();
+  var repo=document.getElementById("ghRepoInput").value.trim();
+  if(!owner||!repo){alert("Enter both the repo owner and repo name.");return;}
+  localStorage.setItem(pk("gh_repo_owner"),owner);
+  localStorage.setItem(pk("gh_repo_name"),repo);
+  loadGithubConnection();
+  updateGithubStatus();
+  closeModal("githubModal");
+});
+document.getElementById("githubDisconnectBtn").addEventListener("click",function(){
+  disconnectGithub();
+  document.getElementById("ghOwnerInput").value="";
+  document.getElementById("ghRepoInput").value="";
+  closeModal("githubModal");
+});
+function resolveGithubWriteConfirm(approved){
+  closeModal("githubWriteConfirmModal");
+  if(pendingGithubWriteResolve){var r=pendingGithubWriteResolve;pendingGithubWriteResolve=null;r(approved);}
+}
+document.getElementById("ghwApproveBtn").addEventListener("click",function(){resolveGithubWriteConfirm(true);});
+document.getElementById("ghwDenyBtn").addEventListener("click",function(){resolveGithubWriteConfirm(false);});
+document.getElementById("closeGithubWriteConfirmModal").addEventListener("click",function(){resolveGithubWriteConfirm(false);});
+document.getElementById("githubWriteConfirmModal").addEventListener("click",function(e){if(e.target===e.currentTarget)resolveGithubWriteConfirm(false);});
 
 /* ---- Event listeners ---- */
 document.getElementById("deepinfraBtn").addEventListener("click",function(){if(activeBackend!=="deepinfra"){activeBackend="deepinfra";loadBackend();}});
@@ -3371,10 +3461,17 @@ async function doSendRequest(userContent,isRegen,ap){
                   displayToolExecution("read_file",toolArgs,readRes);
                   toolResult=readRes.success?readRes.content:(readRes.error||"Failed to read file");
                 }else if(toolName==="write_file"){
-                  asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\u270F\uFE0F Writing: '+esc(toolArgs.path||"")+'&#8230;</span>';
-                  var writeRes=await executeRepoTool("write_file",toolArgs);
-                  displayToolExecution("write_file",toolArgs,writeRes);
-                  toolResult=writeRes.success?("File written. Commit: "+writeRes.commit):(writeRes.error||"Failed to write file");
+                  asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\u270F\uFE0F Waiting for approval to write: '+esc(toolArgs.path||"")+'&#8230;</span>';
+                  var writeApproved=await confirmGithubWrite(toolArgs);
+                  if(!writeApproved){
+                    displayToolExecution("write_file",toolArgs,{error:"Declined by user - not pushed"});
+                    toolResult="The user declined this write. Do not retry the same change without asking first.";
+                  }else{
+                    asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\u270F\uFE0F Writing: '+esc(toolArgs.path||"")+'&#8230;</span>';
+                    var writeRes=await executeRepoTool("write_file",toolArgs);
+                    displayToolExecution("write_file",toolArgs,writeRes);
+                    toolResult=writeRes.success?("File written. Commit: "+writeRes.commit):(writeRes.error||"Failed to write file");
+                  }
                 }else if(toolName==="list_files"){
                   var listRes=await executeRepoTool("list_files",toolArgs);
                   displayToolExecution("list_files",toolArgs,listRes);
@@ -3547,6 +3644,7 @@ loadFavs();
   syncThemeColor();
 })();
 loadBackend();loadPrompts();loadProjects();loadWProjects();loadAutoSave();loadDraft();initTabs();loadMemories();renderMemoryList();loadDocLibrary();renderDocLibraryList();
+loadGithubConnection();updateGithubStatus();
 document.getElementById("activeProfileLabel").textContent=activeProfile==="default"?"default":activeProfile;
 
 /* Reconnect to Drive silently if previously connected, no popup if session still valid */
