@@ -109,6 +109,12 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 .cur{display:none}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:0}}
 .tb{display:flex;align-items:center;gap:8px;padding:2px 2px 6px;font-size:11px;color:var(--mu);flex-shrink:0;font-weight:500}
+.ob{display:flex;align-items:center;gap:6px;padding:2px 2px 6px;font-size:11px;color:var(--mu);flex-shrink:0;font-weight:500;cursor:pointer}
+.obd{width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0;transition:background .3s}
+.obd.warn{background:#f59e0b}
+.obd.stuck{background:#ef4444}
+.obd.off{background:var(--mu)}
+#overseerBarText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tt{flex:1;height:3px;background:var(--up);border-radius:2px;overflow:hidden}
 .tf{height:100%;background:var(--ac);border-radius:2px;transition:width .3s}
 .tf.warn{background:#f59e0b}
@@ -248,6 +254,10 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
   </button>
   <div class="tabbar hidden" id="tabBar"></div>
   <div class="chat" id="chat"><div class="es" id="emptyState"><div class="es-icon">✦</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div></div>
+  <div class="ob hidden" id="overseerBar">
+    <span class="obd" id="overseerBarDot"></span>
+    <span id="overseerBarText">Overseer monitoring</span>
+  </div>
   <div class="tb hidden" id="tokenBar">
     <span id="tokenCount">0 tokens</span>
     <div class="tt"><div class="tf" id="tokenFill" style="width:0%"></div></div>
@@ -1050,6 +1060,11 @@ function showAgentSelection(best){
 /* Auto-switch to a vision-capable model when an image is attached and the
    current model can't read images - no confirm dialog, no user decision,
    consistent with how model routing works everywhere else in the app. */
+/* Remembers whatever model was active before an image forced a switch to
+   a vision model, so the app can switch back automatically once the
+   image-message is done - fluent back-and-forth, not stuck on the
+   vision model for the rest of the conversation. */
+var preVisionModel=null;
 async function ensureVisionModel(){
   if(VISION_MODELS.indexOf(currentModel.id)>=0)return;
   var found=null;
@@ -1061,12 +1076,26 @@ async function ensureVisionModel(){
     if(found)break;
   }
   if(!found)return;
+  if(!preVisionModel){preVisionModel={backend:activeBackend,model:currentModel};}
   if(found.backend!==activeBackend){activeBackend=found.backend;await loadBackend();}
   setModel(found.model);
   renderModelList();
   var notice=document.createElement("div");
   notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(139,140,247,0.1);border-left:3px solid var(--ac);border-radius:4px;font-size:13px;color:var(--tx)";
   notice.innerHTML="🤖 <strong>Switched to "+esc(found.model.label)+"</strong> – to read your image";
+  document.getElementById("chat").appendChild(notice);
+  setTimeout(function(){notice.style.opacity="0.5";},3000);
+}
+async function restorePreVisionModelIfNeeded(hasImgThisMessage){
+  if(!preVisionModel||hasImgThisMessage)return;
+  var restore=preVisionModel;
+  preVisionModel=null;
+  if(restore.backend!==activeBackend){activeBackend=restore.backend;await loadBackend();}
+  setModel(restore.model);
+  renderModelList();
+  var notice=document.createElement("div");
+  notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(139,140,247,0.1);border-left:3px solid var(--ac);border-radius:4px;font-size:13px;color:var(--tx)";
+  notice.innerHTML="🤖 <strong>Switched back to "+esc(restore.model.label)+"</strong>";
   document.getElementById("chat").appendChild(notice);
   setTimeout(function(){notice.style.opacity="0.5";},3000);
 }
@@ -1287,6 +1316,25 @@ function updateOverseerStatus(){
     document.getElementById("chat").appendChild(statusEl);
   }
   document.getElementById("overseerStatus").innerHTML=statusHtml;
+  updateOverseerBar();
+}
+/* Persistent bar above the input, unlike the report panel above (which
+   gets buried at the top of the chat as the conversation grows and is
+   easy to lose track of) - this stays visible and up to date at a
+   glance without scrolling or long-pressing anything. */
+function updateOverseerBar(){
+  var bar=document.getElementById("overseerBar");
+  if(!bar)return;
+  if(!overseerEnabled||!overseerState.goal){
+    bar.classList.add("hidden");
+    return;
+  }
+  bar.classList.remove("hidden");
+  var dot=document.getElementById("overseerBarDot");
+  dot.className="obd"+(overseerState.stuck?" stuck":(overseerState.progress<40?" warn":""));
+  var stepText=(overseerState.steps.length>0&&overseerState.currentStep<overseerState.steps.length)?(" • Step "+overseerState.currentStep+"/"+overseerState.steps.length):"";
+  var projectText=overseerState.activeProject?(" • 📌 "+overseerState.activeProject):"";
+  document.getElementById("overseerBarText").textContent="🤖 "+overseerState.goalType+" • "+overseerState.progress+"% • "+overseerState.conversationQuality+stepText+projectText;
 }
 function showBetterRecommendation(rec,alternates){
   var recHtml='<div style="padding:10px 12px;margin:8px 0;background:rgba(245,158,11,0.1);border-left:3px solid #f59e0b;border-radius:4px;font-size:12px;color:var(--tx)">';
@@ -2889,10 +2937,12 @@ function setOverseerEnabled(val){
   var quick=document.getElementById("overseerBtn");
   if(quick)quick.style.opacity=overseerEnabled?"1":"0.4";
   if(!overseerEnabled){stopOverseerMonitoring();if(document.getElementById("overseerStatus")){document.getElementById("overseerStatus").remove();}}
+  updateOverseerBar();
 }
 document.getElementById("overseerToggleBtn").addEventListener("click",function(){
   setOverseerEnabled(!overseerEnabled);
 });
+document.getElementById("overseerBar").addEventListener("click",function(){showOverseerReport();});
 document.getElementById("brainstormToggleBtn").addEventListener("click",function(){
   brainstormMode=!brainstormMode;
   this.textContent=brainstormMode?"ON":"OFF";
@@ -3114,6 +3164,8 @@ async function send(){
   var hasImg=attachedFiles.some(function(f){return f.type==="image";});
   if(hasImg&&VISION_MODELS.indexOf(currentModel.id)<0){
     await ensureVisionModel();
+  }else{
+    await restorePreVisionModelIfNeeded(hasImg);
   }
   var ap=getAP();
   sending=true;
@@ -3169,7 +3221,11 @@ async function send(){
   autoSave();
   if(chatHistory.length===1&&overseerEnabled){initializeOverseer(userContent);startOverseerMonitoring();}
   promptEl.value="";promptEl.style.height="";clearAttach();
-  await switchToBestModel(outgoingText);
+  /* Skip general model auto-select for image messages - we already
+     forced a vision-capable model above, and letting the keyword-based
+     scorer suggest something else here could switch away from it and
+     leave the model unable to read the image after all. */
+  if(!hasImg){await switchToBestModel(outgoingText);}
   await doSendRequest(userContent,false,ap);
 }
 
