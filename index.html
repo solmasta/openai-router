@@ -1047,6 +1047,29 @@ function showAgentSelection(best){
   document.getElementById("chat").appendChild(notice);
   setTimeout(function(){notice.style.opacity="0.5";},3000);
 }
+/* Auto-switch to a vision-capable model when an image is attached and the
+   current model can't read images - no confirm dialog, no user decision,
+   consistent with how model routing works everywhere else in the app. */
+async function ensureVisionModel(){
+  if(VISION_MODELS.indexOf(currentModel.id)>=0)return;
+  var found=null;
+  for(var key in BACKENDS){
+    var models=BACKENDS[key].models;
+    for(var i=0;i<models.length;i++){
+      if(VISION_MODELS.indexOf(models[i].id)>=0){found={model:models[i],backend:key};break;}
+    }
+    if(found)break;
+  }
+  if(!found)return;
+  if(found.backend!==activeBackend){activeBackend=found.backend;await loadBackend();}
+  setModel(found.model);
+  renderModelList();
+  var notice=document.createElement("div");
+  notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(139,140,247,0.1);border-left:3px solid var(--ac);border-radius:4px;font-size:13px;color:var(--tx)";
+  notice.innerHTML="🤖 <strong>Switched to "+esc(found.model.label)+"</strong> – to read your image";
+  document.getElementById("chat").appendChild(notice);
+  setTimeout(function(){notice.style.opacity="0.5";},3000);
+}
 
 /* ---- Overseer Agent System: Strategic Conversation Orchestration ---- */
 function detectGoal(text){
@@ -3090,7 +3113,7 @@ async function send(){
   if(!text&&!attachedFiles.length)return;
   var hasImg=attachedFiles.some(function(f){return f.type==="image";});
   if(hasImg&&VISION_MODELS.indexOf(currentModel.id)<0){
-    if(!confirm(currentModel.label+" does not support images. Send anyway?"))return;
+    await ensureVisionModel();
   }
   var ap=getAP();
   sending=true;
