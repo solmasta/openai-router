@@ -208,7 +208,12 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 .el{color:var(--mu);font-size:14px;text-align:center;padding:24px 0}
 .mi{display:block;max-width:100%;border-radius:10px;margin-top:8px}
 .hidden{display:none!important}
-@media(max-width:520px){.app{padding:0 12px}.sheet{max-height:93vh}}
+/* max-height:93vh is only a fallback for browsers without dvh support -
+   the calc() below must stay in sync with .sheet's base rule, or a narrow
+   viewport (i.e. every phone) silently loses the safe-area clearance and
+   the sheet's header can render under the iPhone status bar/notch with no
+   way to reach the close button. */
+@media(max-width:520px){.app{padding:0 12px}.sheet{max-height:93vh;max-height:calc(100dvh - 72px - env(safe-area-inset-top,0px))}}
 /* Right-align user messages */
 .msg.mu{align-items:flex-end}
 .msg.mu .acts{justify-content:flex-end}
@@ -238,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.3</span></span>
+      <span class="wm">ai-router <span>v5.4</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -466,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.3</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.4</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
