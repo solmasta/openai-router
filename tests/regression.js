@@ -46,16 +46,31 @@ function assert(cond, label) {
   }
   function realErrors() { return errors.filter(e => !isNoise(e)); }
 
+  async function dismissConfirmIfAny() {
+    const v = await page.evaluate(() => !document.getElementById('agentConfirmModal').classList.contains('hidden'));
+    if (v) { await page.click('#agentConfirmSendCurrent'); await page.waitForTimeout(300); }
+    return v;
+  }
   async function waitForSendDone() {
-    for (let i = 0; i < 25; i++) {
+    // Check for the model-switch confirm modal on every iteration, not just
+    // once right after the click - switchToBestModel's scoring can finish
+    // later than a single fixed check under slower conditions, and a missed
+    // modal sits open blocking every later test in the file, not just this one.
+    // 25 * 300ms (7.5s) assumed the sandbox's proxy rejects the (expected
+    // to fail) worker requests almost instantly. That rejection latency
+    // varies and was creeping past 7.5s, so this returned early with the
+    // send still genuinely in flight - every assertion checking "did it
+    // finish" then read stale mid-request state and failed for a reason
+    // that had nothing to do with app correctness. A dismissed switch-
+    // model confirm still has to wait out the same slow rejection
+    // afterward, compounding the delay - 150 * 300ms = 45s gives real
+    // slow-rejection cases room to actually finish either way.
+    for (let i = 0; i < 150; i++) {
+      await dismissConfirmIfAny();
       const t = await page.textContent('#sendBtn');
       if (t.indexOf('Send') >= 0) return;
       await page.waitForTimeout(300);
     }
-  }
-  async function dismissConfirmIfAny() {
-    const v = await page.evaluate(() => !document.getElementById('agentConfirmModal').classList.contains('hidden'));
-    if (v) { await page.click('#agentConfirmSendCurrent'); await page.waitForTimeout(300); }
   }
   async function sendMsg(text) {
     await page.fill('#prompt', text);
@@ -65,7 +80,13 @@ function assert(cond, label) {
     await waitForSendDone();
   }
 
-  await page.goto(BASE_URL, { waitUntil: 'load', timeout: 15000 });
+  // 'load' waits for every subresource to settle, including the external
+  // Google/Workers scripts this sandbox's proxy is set up to reject - how
+  // long that rejection takes varies, and it was creeping close enough to
+  // the timeout to fail outright at random. domcontentloaded doesn't need
+  // those external loads to resolve at all, and the app is interactive
+  // well before they would anyway.
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
   await page.waitForTimeout(1500);
 
   console.log('\n-- basic send + Overseer bar --');
@@ -132,7 +153,7 @@ function assert(cond, label) {
   const modelBefore = await page.textContent('#modelBtnLabel');
   const fileInput = await page.$('#fileInput');
   await fileInput.setInputFiles(imgPath);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(800);
   await sendMsg('what is in this image');
   const modelDuring = await page.textContent('#modelBtnLabel');
   await sendMsg('thanks, tell me more');
@@ -154,7 +175,7 @@ function assert(cond, label) {
   });
   const fileInput2 = await page.$('#fileInput');
   await fileInput2.setInputFiles(imgPath);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(800);
   await page.fill('#prompt', '');
   await page.click('#sendBtn');
   await page.waitForTimeout(600);
@@ -199,7 +220,7 @@ function assert(cond, label) {
   // Poll for the intercepted request body specifically, not just UI
   // settle time - unrouting before the request lands (a race, not an app
   // bug) reads lastRegenBody as null and misreports a failure.
-  for (let i = 0; i < 15 && lastRegenBody === null; i++) await page.waitForTimeout(200);
+  for (let i = 0; i < 60 && lastRegenBody === null; i++) await page.waitForTimeout(200);
   await dismissConfirmIfAny();
   await waitForSendDone();
   await page.unroute('**/*');
@@ -238,7 +259,7 @@ function assert(cond, label) {
   });
   const fileInput3 = await page.$('#fileInput');
   await fileInput3.setInputFiles(imgPath);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(800);
   await sendMsg('what is in this image');
   await page.unroute('**/*');
   assert(lastReqBodyWithTools && !lastReqBodyWithTools.tools, 'vision model image request has no tools field with GitHub connected');
@@ -265,7 +286,7 @@ function assert(cond, label) {
   // Poll for the intercepted body specifically - unrouting before the
   // request lands (a timing race, not an app bug) reads it as null and
   // misreports a failure. Same fix already applied to the regen test.
-  for (let i = 0; i < 15 && lastUnrelatedBody === null; i++) await page.waitForTimeout(200);
+  for (let i = 0; i < 60 && lastUnrelatedBody === null; i++) await page.waitForTimeout(200);
   await page.unroute('**/*');
   assert(lastUnrelatedBody && !lastUnrelatedBody.tools, 'an unrelated (non-code/github) message gets no tools field even with GitHub connected');
 
@@ -281,7 +302,7 @@ function assert(cond, label) {
     await route.continue();
   });
   await sendMsg('please read the README file from the github repo');
-  for (let i = 0; i < 15 && lastRelatedBody === null; i++) await page.waitForTimeout(200);
+  for (let i = 0; i < 60 && lastRelatedBody === null; i++) await page.waitForTimeout(200);
   await page.unroute('**/*');
   assert(lastRelatedBody && Array.isArray(lastRelatedBody.tools) && lastRelatedBody.tools.length > 0, 'a genuinely code/github-relevant message still gets the repo tools');
 
@@ -317,8 +338,11 @@ function assert(cond, label) {
   const tabBEmpty = await page.evaluate(() => document.getElementById('chat').textContent.indexOf('quick test') < 0);
   assert(tabBEmpty, 'new tab starts empty, does not inherit prior tab content');
   await sendMsg('write a short poem');
-  const pills = await page.$$('#tabBar .tabpill');
-  await pills[0].click(); await page.waitForTimeout(600);
+  // A locator auto-waits for the element to actually be there; page.$$()
+  // takes an instant snapshot and can catch the tab bar mid-re-render,
+  // returning zero elements and crashing on pills[0].click().
+  await page.locator('#tabBar .tabpill').first().click();
+  await page.waitForTimeout(600);
   const backOnTabA = await page.evaluate(() => document.getElementById('chat').textContent.indexOf('quick test') >= 0);
   assert(backOnTabA, 'switching back to tab A shows its original content');
 

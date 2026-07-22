@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.21</span></span>
+      <span class="wm">ai-router <span>v5.22</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.21</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.22</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -2752,8 +2752,19 @@ async function driveEnsureFolder(){
   if(!driveToken||driveTokenExpiry<=Date.now())return null;
   if(driveFolderId)return driveFolderId;
   try{
+    /* Drive allows multiple folders with the identical name - it's not
+       a filesystem, names aren't unique. A device whose lookup query
+       raced or missed the existing folder for any reason would silently
+       create a SECOND "ai-router-backups" folder here, and from then on
+       be reading/writing a completely different folder than every other
+       device, with every push/restore still reporting success since it
+       has no way to know a duplicate exists. If more than one match
+       comes back, always converge on the oldest (first ever created) -
+       that's the one every other already-connected device is already
+       using, so this is what makes them agree again once a device with
+       a stale cached folder id reconnects and re-runs this lookup. */
     var q=encodeURIComponent("name='ai-router-backups' and mimeType='application/vnd.google-apps.folder' and trashed=false");
-    var res=await fetch("https://www.googleapis.com/drive/v3/files?q="+q+"&fields=files(id,name)",{headers:{Authorization:"Bearer "+driveToken}});
+    var res=await fetch("https://www.googleapis.com/drive/v3/files?q="+q+"&fields=files(id,name,createdTime)&orderBy=createdTime",{headers:{Authorization:"Bearer "+driveToken}});
     var data=await res.json();
     if(data.files&&data.files.length){
       driveFolderId=data.files[0].id;
