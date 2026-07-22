@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.6</span></span>
+      <span class="wm">ai-router <span>v5.7</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.6</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.7</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -2676,11 +2676,6 @@ function driveConnect(){
   if(!driveTokenClient){alert("Google sign-in is still loading - try again in a second.");return;}
   driveTokenClient.requestAccessToken({prompt:"consent"});
 }
-function driveSilentRenew(){
-  driveInitClient();
-  if(!driveTokenClient)return;
-  try{driveTokenClient.requestAccessToken({prompt:""});}catch(e){}
-}
 function driveDisconnect(){
   driveToken=null;driveTokenExpiry=0;driveFolderId=null;driveFileIds={};
   localStorage.removeItem(pk("drive_token"));
@@ -3709,12 +3704,21 @@ loadBackend();loadPrompts();loadProjects();loadWProjects();loadAutoSave();loadDr
 loadGithubConnection();updateGithubStatus();
 document.getElementById("activeProfileLabel").textContent=activeProfile==="default"?"default":activeProfile;
 
-/* Reconnect to Drive silently if previously connected, no popup if session still valid */
+/* If previously connected but the token's expired, don't try to silently
+   reopen a Google sign-in popup on page load - that fires outside any
+   click, so browsers correctly treat the popup as unsolicited: silently
+   blocked by default (the old, invisible failure mode), or - once a user
+   allows popups for this site - a flash of a window opening and
+   immediately closing since there's no session to renew invisibly.
+   driveAutoPush()/driveEnsureFolder() already no-op safely without a
+   valid token, so just show that a reconnect is needed and let the next
+   real tap on Connect (a genuine user gesture, never blocked) handle it. */
 if(localStorage.getItem(pk("drive_connected"))==="1"){
-  updateDriveUI(true);
   if(!driveToken||driveTokenExpiry<=Date.now()){
-    setTimeout(driveSilentRenew,1200);
+    updateDriveUI(false);
+    updateDriveStatus("Reconnect needed - backup paused");
   }else{
+    updateDriveUI(true);
     driveAutoRestoreIfEmpty();
   }
 }else{
