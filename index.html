@@ -3284,8 +3284,9 @@ function editMsg(wrap){
 }
 
 /* ---- Regen ---- */
-function regenLast(){
+async function regenLast(){
   if(sending)return;
+  await ensureAppSecret();
   var lastUser=null;
   for(var i=chatHistory.length-1;i>=0;i--){if(chatHistory[i].role==="user"){lastUser=chatHistory[i];break;}}
   if(!lastUser)return;
@@ -3302,6 +3303,7 @@ function stopGeneration(){
 
 async function send(){
   if(sending)return;
+  await ensureAppSecret();
   var promptEl=document.getElementById("prompt");
   var text=promptEl.value.trim();
   if(!text&&!attachedFiles.length)return;
@@ -3617,11 +3619,21 @@ document.getElementById("newProfileInput").addEventListener("keydown",function(e
 });
 
 /* ---- Init ---- */
-/* Fetch APP_SECRET from worker on page load - non-blocking with timeout */
-(function(){
+/* Fetch APP_SECRET from worker on page load. The old version fired this
+   once with a 3s timeout and no actual retry despite the comment claiming
+   there was one - if the fetch was still in flight or failed (slow mobile
+   connection, cold worker), APP_SECRET stayed null forever and every
+   subsequent request 401'd, with nothing to recover except a page reload.
+   ensureAppSecret() is awaited defensively at the top of send() so a slow
+   or failed load gets retried right before it would actually matter,
+   instead of racing it once and giving up. */
+var appSecretPromise=null;
+function ensureAppSecret(){
+  if(APP_SECRET)return Promise.resolve(APP_SECRET);
+  if(appSecretPromise)return appSecretPromise;
   var controller=new AbortController();
-  var timeout=setTimeout(function(){controller.abort();},3000);
-  fetch(CLAUDE_URL+"/secret",{
+  var timeout=setTimeout(function(){controller.abort();},8000);
+  appSecretPromise=fetch(CLAUDE_URL+"/secret",{
     method:"GET",
     headers:{"Content-Type":"application/json"},
     mode:"cors",
@@ -3632,11 +3644,16 @@ document.getElementById("newProfileInput").addEventListener("keydown",function(e
     throw new Error("HTTP "+r.status);
   }).then(function(d){
     if(d&&d.secret){APP_SECRET=d.secret;console.log("✓ APP_SECRET loaded");}
+    return APP_SECRET;
   }).catch(function(e){
     clearTimeout(timeout);
-    console.warn("APP_SECRET fetch failed (will retry on first API call):",e.message);
+    console.warn("APP_SECRET fetch failed, will retry on next send:",e.message);
+    appSecretPromise=null;
+    return null;
   });
-})();
+  return appSecretPromise;
+}
+ensureAppSecret();
 
 loadFavs();
 (function(){
