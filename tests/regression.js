@@ -135,6 +135,31 @@ function assert(cond, label) {
   assert(ghStatusAfterConnect === 'solmasta/openai-router', `GitHub status reflects connected repo (got "${ghStatusAfterConnect}")`);
   const ghPersisted = await page.evaluate(() => localStorage.getItem('gh_repo_owner') === 'solmasta' && localStorage.getItem('gh_repo_name') === 'openai-router');
   assert(ghPersisted, 'GitHub connection persisted to localStorage');
+
+  console.log('\n-- vision model + image request omits repo tools even with GitHub connected --');
+  // With GitHub connected, an image sent to a vision model (not in
+  // TOOL_MODELS - not vetted for function-calling) must not receive
+  // tools/tool_choice: a vision model handed tools could reply via a
+  // tool_call instead of plain text, and the streaming reader only reads
+  // delta.content, silently producing "(empty response)".
+  let lastReqBodyWithTools = null;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      try {
+        const parsed = JSON.parse(req.postData());
+        if (parsed.messages) lastReqBodyWithTools = parsed;
+      } catch (e) {}
+    }
+    await route.continue();
+  });
+  const fileInput3 = await page.$('#fileInput');
+  await fileInput3.setInputFiles(imgPath);
+  await page.waitForTimeout(300);
+  await sendMsg('what is in this image');
+  await page.unroute('**/*');
+  assert(lastReqBodyWithTools && !lastReqBodyWithTools.tools, 'vision model image request has no tools field with GitHub connected');
+
   await page.evaluate(() => {
     document.getElementById('ghwPath').textContent = 'test';
     document.getElementById('githubWriteConfirmModal').classList.remove('hidden');

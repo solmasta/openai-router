@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.9</span></span>
+      <span class="wm">ai-router <span>v5.10</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.9</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.10</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -3543,7 +3543,14 @@ async function doSendRequest(userContent,isRegen,ap){
     }
     abortController=new AbortController();
     var toolsToSend=[];
-    if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){toolsToSend=REPO_TOOLS;}
+    /* Only offer function-calling tools to models actually vetted for it
+       (TOOL_MODELS) - this used to fire for ANY model whenever GitHub was
+       connected, including vision models like Qwen3 VL 30B. Handed tools it
+       wasn't meant to use, a vision model could respond via a tool_call
+       instead of plain text; the streaming loop below only reads
+       delta.content and has no tool_calls handling, so the reply silently
+       came out as "(empty response)" even though the model had answered. */
+    if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName&&TOOL_MODELS.indexOf(currentModel.id)>=0){toolsToSend=REPO_TOOLS;}
     var reqBody={model:currentModel.id,messages:messages,temperature:temperature,stream:true};
     if(toolsToSend.length>0){reqBody.tools=toolsToSend;reqBody.tool_choice="auto";}
     var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify(reqBody),signal:abortController.signal});
