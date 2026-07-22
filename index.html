@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.13</span></span>
+      <span class="wm">ai-router <span>v5.14</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.13</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.14</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1596,7 +1596,13 @@ function displayBrainstormingSuggestions(){
   }
   document.getElementById("overseerBrainstorm").innerHTML=brainstormHtml;
 }
-function insertPrompt(prompt){
+/* Exposed on window (like window.cpCode below) because the suggestion
+   buttons that call this are built as raw HTML strings with an inline
+   onclick="insertPrompt(...)" attribute - inline handlers run in global
+   scope, so a bare function declared inside this file's outer IIFE is
+   invisible to them and the click just throws a silent ReferenceError,
+   with nothing visibly happening when tapped. */
+window.insertPrompt=function(prompt){
   var promptEl=document.getElementById("prompt");
   promptEl.value=prompt;
   promptEl.style.height="auto";

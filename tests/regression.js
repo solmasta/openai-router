@@ -76,6 +76,27 @@ function assert(cond, label) {
   });
   assert(!!barText && barText.length > 0, 'Overseer bar populated after first message');
 
+  console.log('\n-- Overseer suggestion buttons (inline onclick="insertPrompt(...)") actually work --');
+  // displayGeneratedPrompts/displayBrainstormingSuggestions build raw HTML
+  // strings with onclick="insertPrompt(...)" - inline handlers run in
+  // global scope, so this only works if insertPrompt is reachable as
+  // window.insertPrompt, not just a function local to the app's IIFE.
+  // Build a button with the exact same inline-onclick shape those
+  // functions produce, rather than waiting on live Overseer timers.
+  await page.evaluate(() => {
+    var btn = document.createElement('button');
+    btn.id = 'regtestInsertPromptBtn';
+    btn.setAttribute('onclick', "insertPrompt('regtest inserted suggestion')");
+    document.body.appendChild(btn);
+  });
+  await page.click('#regtestInsertPromptBtn');
+  const insertedPromptValue = await page.inputValue('#prompt');
+  assert(insertedPromptValue === 'regtest inserted suggestion', 'tapping a suggestion button (inline onclick="insertPrompt(...)") fills the compose box');
+  await page.evaluate(() => {
+    document.getElementById('regtestInsertPromptBtn').remove();
+    document.getElementById('prompt').value = '';
+  });
+
   console.log('\n-- send error keeps message usable (Regen + tab sync) --');
   // The sandboxed network always fails here (no egress to the worker URLs),
   // which exercises the same catch-block path a real timeout/rate-limit would.
