@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.15</span></span>
+      <span class="wm">ai-router <span>v5.16</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.15</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.16</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -3524,7 +3524,16 @@ async function doSendRequest(userContent,isRegen,ap){
     if(TOOL_MODELS.indexOf(currentModel.id)>=0){
       try{
         var initTools=[];
-        if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){initTools=initTools.concat(REPO_TOOLS);}
+        /* Gate on the same task-relevance analysis already used for the
+           search auto-trigger below (searchGateTasks) - without it, repo
+           tools were offered on EVERY message whenever GitHub was
+           connected, regardless of topic. A small model asked an
+           unrelated question (e.g. crypto/market talk) could hallucinate
+           a git clone and go hunting for nonexistent repo files instead
+           of just answering, and read_file/list_files/execute_command
+           have no confirm gate the way write_file does - they'd run
+           silently for a request that had nothing to do with the repo. */
+        if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName&&(searchGateTasks.github>0||searchGateTasks.code>0)){initTools=initTools.concat(REPO_TOOLS);}
         if(initTools.length>0){
           var p1res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:messages,tools:initTools,tool_choice:"auto",temperature:temperature,stream:false,max_tokens:1000})});
           if(p1res.ok){
@@ -3586,7 +3595,7 @@ async function doSendRequest(userContent,isRegen,ap){
        instead of plain text; the streaming loop below only reads
        delta.content and has no tool_calls handling, so the reply silently
        came out as "(empty response)" even though the model had answered. */
-    if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName&&TOOL_MODELS.indexOf(currentModel.id)>=0){toolsToSend=REPO_TOOLS;}
+    if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName&&TOOL_MODELS.indexOf(currentModel.id)>=0&&(searchGateTasks.github>0||searchGateTasks.code>0)){toolsToSend=REPO_TOOLS;}
     var reqBody={model:currentModel.id,messages:messages,temperature:temperature,stream:true};
     if(toolsToSend.length>0){reqBody.tools=toolsToSend;reqBody.tool_choice="auto";}
     var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify(reqBody),signal:abortController.signal});

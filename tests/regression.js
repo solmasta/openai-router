@@ -243,6 +243,43 @@ function assert(cond, label) {
   await page.unroute('**/*');
   assert(lastReqBodyWithTools && !lastReqBodyWithTools.tools, 'vision model image request has no tools field with GitHub connected');
 
+  console.log('\n-- repo tools are only offered when the message is actually code/github-relevant --');
+  // GitHub connected + a tool-capable model must not get REPO_TOOLS for a
+  // message unrelated to code or the repo - tools used to be offered
+  // unconditionally whenever GitHub was connected, so an unrelated
+  // question (e.g. about crypto/markets) could make a small model
+  // hallucinate a git clone and go hunting for nonexistent repo files
+  // instead of just answering.
+  let lastUnrelatedBody = null;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      try {
+        const parsed = JSON.parse(req.postData());
+        if (parsed.messages) lastUnrelatedBody = parsed;
+      } catch (e) {}
+    }
+    await route.continue();
+  });
+  await sendMsg('what is dtcc and how does it relate to xrp');
+  await page.unroute('**/*');
+  assert(lastUnrelatedBody && !lastUnrelatedBody.tools, 'an unrelated (non-code/github) message gets no tools field even with GitHub connected');
+
+  let lastRelatedBody = null;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      try {
+        const parsed = JSON.parse(req.postData());
+        if (parsed.messages) lastRelatedBody = parsed;
+      } catch (e) {}
+    }
+    await route.continue();
+  });
+  await sendMsg('please read the README file from the github repo');
+  await page.unroute('**/*');
+  assert(lastRelatedBody && Array.isArray(lastRelatedBody.tools) && lastRelatedBody.tools.length > 0, 'a genuinely code/github-relevant message still gets the repo tools');
+
   await page.evaluate(() => {
     document.getElementById('ghwPath').textContent = 'test';
     document.getElementById('githubWriteConfirmModal').classList.remove('hidden');
