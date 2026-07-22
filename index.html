@@ -243,7 +243,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.5</span></span>
+      <span class="wm">ai-router <span>v5.6</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -471,7 +471,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.5</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.6</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1615,8 +1615,19 @@ function generateOptimalInstructions(userMessage,selectedModel){
   if(curProject){
     overseerState.activeProject=curProject.name;
     overseerState.activeProjectInstructions=curProject.content;
+    /* A project's instructions are the user's deliberate, explicit override
+       of default behavior - the whole point of creating one. Truncating to
+       500 chars silently dropped everything past the first few rules (for
+       WORQ, that cut off the mandatory output-format and prohibited-content
+       sections entirely), and appending the generic task/goal/tool
+       boilerplate below actively worked against a project with its own
+       strict format rules - the model ends up torn between "output only a
+       two-line code box" and "explore the repo, use tools directly, add
+       logging". A project's own instructions are authoritative: send them
+       in full and skip the generic overlay entirely. */
     instructions+="PROJECT: "+curProject.name+"\n";
-    instructions+="Stay consistent with this project's stated purpose and instructions:\n"+(curProject.content||"").slice(0,500)+"\n\n";
+    instructions+="Follow this project's instructions exactly - they override any general guidance below:\n"+(curProject.content||"")+"\n\n";
+    return instructions;
   }else if(overseerState.activeProject){
     overseerState.activeProject=null;overseerState.activeProjectInstructions=null;
   }
@@ -1752,8 +1763,21 @@ async function executeRepoTool(toolName,toolInput){
   }catch(e){return{error:e.message};}
 }
 function getModelSystemPrompt(){
+  /* A project defines its own purpose and behavior - it arrives as its own
+     system message right after this one (see generateOptimalInstructions).
+     Priming the model here with an unconditional "you're a repo-control
+     coding assistant, execute tools immediately for ALL tasks" identity
+     actively worked against a project whose purpose has nothing to do with
+     code (e.g. a photo-to-work-order project), pushing it toward repo
+     exploration the project never asked for. The repo tools are still
+     available either way - toolsToSend is set independently of this text -
+     this only removes the unconditional nudge to use them. */
+  var curAp2=getAP();
+  var inProject=curAp2&&typeof curAp2.id==="string"&&curAp2.id.indexOf("wproj_")===0;
   var sys="You are an expert AI assistant with advanced coding and repository control capabilities.\n\n";
-  if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
+  if(inProject){
+    sys="You are a helpful assistant. An active project's instructions (sent separately) define your task and behavior for this conversation - follow them exactly.\n";
+  }else if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
     sys+="🔧 REPOSITORY ACCESS ENABLED:\n";
     sys+="Repository: "+ghRepoOwner+"/"+ghRepoName+"\n\n";
     sys+="You have direct access to read, modify, and commit code. For ALL code tasks:\n\n";
