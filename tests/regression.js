@@ -43,6 +43,9 @@
      a finished utterance auto-sends with no Send tap, the reply is
      spoken even with the separate speak toggle off, and speaking's own
      end restarts listening for the next turn
+   - picking a voice persists it and is actually set on the utterance
+     when speaking; Overseer personality text persists and shows up in
+     the system prompt sent to the model
 
    Run: NODE_PATH=/opt/node22/lib/node_modules node tests/regression.js
 */
@@ -1106,6 +1109,7 @@ function assert(cond, label) {
   // toggle on, and must stop calling it again once turned back off.
   await page.evaluate(() => {
     window.__speakCalls = [];
+    window.__speakVoiceCalls = [];
     // Mimics real speechSynthesis by actually firing the utterance's own
     // onstart/onend - later code (voice-conversation mode's auto-relisten,
     // the speak button's "speaking" pulse) hangs off those callbacks, and
@@ -1113,6 +1117,7 @@ function assert(cond, label) {
     // break that for every test running after this one.
     window.speechSynthesis.speak = (utter) => {
       window.__speakCalls.push(utter.text);
+      window.__speakVoiceCalls.push(utter.voice && utter.voice.name);
       if (utter.onstart) utter.onstart();
       if (utter.onend) utter.onend();
     };
@@ -1257,6 +1262,86 @@ function assert(cond, label) {
   assert(!voiceModeOffState, 'toggling voice-conversation mode off turns it back off');
   const micOffAfterDisable = await page.evaluate(() => document.getElementById('micBtn').classList.contains('on'));
   assert(!micOffAfterDisable, 'turning voice-conversation mode off stops listening (mic shows off)');
+
+  console.log('\n-- picking a voice persists it and actually gets used when speaking --');
+  // getVoices() returns nothing in this headless sandbox (no system TTS
+  // voices installed), and SpeechSynthesisVoice has no public constructor,
+  // so there's no way to hand the native utterance.voice setter something
+  // it will actually accept - it silently no-ops for a plain object.
+  // Replace that property with a permissive one so what the app *tries*
+  // to assign is actually observable, independent of what a real browser
+  // would ultimately accept.
+  await page.evaluate(() => {
+    Object.defineProperty(SpeechSynthesisUtterance.prototype, 'voice', {
+      configurable: true,
+      get() { return this.__testVoice; },
+      set(v) { this.__testVoice = v; },
+    });
+    window.speechSynthesis.getVoices = () => [{ name: 'regtest-voice', lang: 'en-US' }];
+    const sel = document.getElementById('voiceSelect');
+    const opt = document.createElement('option');
+    opt.value = 'regtest-voice'; opt.textContent = 'regtest-voice (en-US)';
+    sel.appendChild(opt);
+    sel.value = 'regtest-voice';
+    sel.dispatchEvent(new Event('change'));
+  });
+  const persistedVoiceName = await page.evaluate(() => localStorage.getItem('ai_voice_name'));
+  assert(persistedVoiceName === 'regtest-voice', `picking a voice persists its name (got "${persistedVoiceName}")`);
+
+  await page.click('#speakBtn'); await page.waitForTimeout(150);
+  const speakBtnOnForVoiceTest = await page.evaluate(() => document.getElementById('speakBtn').classList.contains('on'));
+  assert(speakBtnOnForVoiceTest, 'test setup: speak-aloud is on for this check');
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      let parsed = null;
+      try { parsed = JSON.parse(req.postData()); } catch (e) {}
+      if (parsed && parsed.stream === true) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream',
+          body: 'data: {"choices":[{"delta":{"content":"regtest voice-picker reply"}}]}\n\ndata: [DONE]\n\n',
+        });
+        return;
+      }
+    }
+    await route.continue();
+  });
+  await sendMsg('regtest message to check the picked voice is used');
+  await page.unroute('**/*');
+  const usedVoiceName = await page.evaluate(() => window.__speakVoiceCalls[window.__speakVoiceCalls.length - 1]);
+  assert(usedVoiceName === 'regtest-voice', `the picked voice is actually set on the utterance (got "${usedVoiceName}")`);
+  await page.click('#speakBtn'); await page.waitForTimeout(150);
+
+  console.log('\n-- Overseer personality is persisted and shapes the system prompt --');
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  await page.fill('#personalityInput', 'regtest warm and playful');
+  await page.evaluate(() => document.getElementById('personalityInput').dispatchEvent(new Event('input')));
+  const persistedPersonality = await page.evaluate(() => localStorage.getItem('ai_overseer_personality'));
+  assert(persistedPersonality === 'regtest warm and playful', `personality text persists (got "${persistedPersonality}")`);
+  await page.click('#closeSettingsModal'); await page.waitForTimeout(150);
+
+  let lastPersonalityBody = null;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      try {
+        const parsed = JSON.parse(req.postData());
+        if (parsed.messages) lastPersonalityBody = parsed;
+      } catch (e) {}
+    }
+    await route.continue();
+  });
+  await sendMsg('regtest message to check personality shows up in the system prompt');
+  for (let i = 0; i < 60 && lastPersonalityBody === null; i++) await page.waitForTimeout(200);
+  await page.unroute('**/*');
+  const personalitySysContent = ((lastPersonalityBody && lastPersonalityBody.messages) || []).filter((m) => m.role === 'system').map((m) => m.content).join('\n');
+  assert(personalitySysContent.indexOf('regtest warm and playful') >= 0, 'the persisted personality text is included in the system prompt sent to the model');
+  // Clear it so it doesn't leak into other tests' system-prompt assertions.
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  await page.fill('#personalityInput', '');
+  await page.evaluate(() => document.getElementById('personalityInput').dispatchEvent(new Event('input')));
+  await page.click('#closeSettingsModal'); await page.waitForTimeout(150);
 
   console.log(`\n-- page errors: ${realErrors().length} real (excluding expected sandbox network noise) --`);
   if (realErrors().length) console.log(realErrors());
