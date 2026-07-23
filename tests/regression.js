@@ -13,6 +13,8 @@
    - profile creation and data isolation
    - Overseer chat: long-press opens it, sends reach the model with the
      Overseer's own dedicated system prompt (not the main chat one)
+   - write_file tool never defaults to main/master; the approved branch is
+     what actually reaches the GitHub ops worker
 
    Run: NODE_PATH=/opt/node22/lib/node_modules node tests/regression.js
 */
@@ -460,6 +462,101 @@ function assert(cond, label) {
   await page.click('#closeOverseerChatModal'); await page.waitForTimeout(150);
   const overseerChatClosed = await page.evaluate(() => document.getElementById('overseerChatModal').classList.contains('hidden'));
   assert(overseerChatClosed, 'Overseer chat modal closes via its close button');
+
+  console.log('\n-- write_file tool never defaults to main/master, and the approved branch is what actually reaches the worker --');
+  // write_file used to have no branch parameter at all - the ops worker
+  // defaulted every write straight onto the repo's default branch, and
+  // nothing in the approval dialog said so. This mocks a full model
+  // tool_call for write_file with no branch specified and checks the whole
+  // path: the approval dialog must default to a non-main working branch,
+  // and that same branch (not "main") must be what's actually POSTed to
+  // the GitHub ops worker once approved.
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  await page.click('#githubConnectBtn'); await page.waitForTimeout(150);
+  await page.fill('#ghOwnerInput', 'solmasta');
+  await page.fill('#ghRepoInput', 'openai-router');
+  await page.click('#githubSaveBtn'); await page.waitForTimeout(150);
+  // githubConnectBtn hides Settings underneath before opening its own
+  // modal (see its click handler) and Save & Connect only closes that
+  // sub-modal, so Settings is already out of the way here - nothing left
+  // to close.
+  // Force a known tool-capable model instead of trusting whatever
+  // switchToBestModel might auto-pick for this message - only some
+  // DeepInfra models are in TOOL_MODELS, and picking one outside that list
+  // would skip the tool-call path entirely for reasons unrelated to this fix.
+  await page.click('#modelBtn'); await page.waitForTimeout(150);
+  await page.locator('.mc:has-text("Mistral Small")').first().click();
+  await page.waitForTimeout(150);
+
+  let capturedWriteBody = null;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    const url = req.url();
+    if (url.indexOf('github-ops-worker') >= 0 && req.method() === 'POST') {
+      try { capturedWriteBody = JSON.parse(req.postData()); } catch (e) {}
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, commit: 'regtestcommitsha', branch: capturedWriteBody && capturedWriteBody.branch }),
+      });
+      return;
+    }
+    if (req.method() === 'POST' && req.postData()) {
+      let parsed = null;
+      try { parsed = JSON.parse(req.postData()); } catch (e) {}
+      if (parsed && parsed.stream === false) {
+        // The initial non-streaming tool-discovery call - fake a model
+        // response that calls write_file with NO branch specified, the
+        // exact case that used to silently land on the default branch.
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            choices: [{
+              finish_reason: 'tool_calls',
+              message: {
+                role: 'assistant',
+                tool_calls: [{
+                  id: 'regtest_call_1',
+                  type: 'function',
+                  function: { name: 'write_file', arguments: JSON.stringify({ path: 'regtest.txt', content: 'hello world', message: 'regtest commit' }) },
+                }],
+              },
+            }],
+          }),
+        });
+        return;
+      }
+      if (parsed && parsed.stream === true) {
+        // The final streaming call after tool results are folded in - a
+        // minimal SSE body so the reader loop completes cleanly.
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream',
+          body: 'data: {"choices":[{"delta":{"content":"done"}}]}\n\ndata: [DONE]\n\n',
+        });
+        return;
+      }
+    }
+    await route.continue();
+  });
+  await page.fill('#prompt', 'please create a new file in the github repo, hello world content');
+  await page.click('#sendBtn');
+  let confirmShowed = false;
+  for (let i = 0; i < 100; i++) {
+    await dismissConfirmIfAny();
+    confirmShowed = await page.evaluate(() => !document.getElementById('githubWriteConfirmModal').classList.contains('hidden'));
+    if (confirmShowed) break;
+    await page.waitForTimeout(200);
+  }
+  assert(confirmShowed, 'a model-issued write_file tool call surfaces the approval dialog');
+  const branchDefaultForNoBranch = await page.inputValue('#ghwBranch');
+  assert(branchDefaultForNoBranch === 'ai-changes', `a write_file call with no branch specified defaults the approval dialog to a non-main working branch (got "${branchDefaultForNoBranch}")`);
+  await page.click('#ghwApproveBtn');
+  await waitForSendDone();
+  await page.unroute('**/*');
+  assert(!!capturedWriteBody, 'approving the write actually reaches the GitHub ops worker');
+  assert(capturedWriteBody && capturedWriteBody.branch === 'ai-changes', `the approved branch (not "main") is what's actually sent to the worker (got "${capturedWriteBody && capturedWriteBody.branch}")`);
 
   console.log(`\n-- page errors: ${realErrors().length} real (excluding expected sandbox network noise) --`);
   if (realErrors().length) console.log(realErrors());

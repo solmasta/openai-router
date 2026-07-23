@@ -21,6 +21,32 @@ async function describeError(res) {
   return message ? `HTTP ${res.status} - ${message}` : `HTTP ${res.status}`;
 }
 
+// Every write lands on an explicit branch, never straight onto the repo's
+// default branch just because a caller omitted one - creates the branch
+// from the repo's default branch if it doesn't already exist yet, so a
+// fresh working-branch name just works with no separate "create branch"
+// step needed from the client.
+async function ensureBranchExists(owner, repo, branch, headers) {
+  const refUrl = `https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`;
+  const refRes = await fetch(refUrl, { headers });
+  if (refRes.ok) return;
+
+  const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
+  if (!repoRes.ok) throw new Error(`Failed to look up repo default branch: ${await describeError(repoRes)}`);
+  const defaultBranch = (await repoRes.json()).default_branch;
+
+  const baseRefRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(defaultBranch)}`, { headers });
+  if (!baseRefRes.ok) throw new Error(`Failed to read base branch ${defaultBranch}: ${await describeError(baseRefRes)}`);
+  const baseSha = (await baseRefRes.json()).object.sha;
+
+  const createRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: baseSha }),
+  });
+  if (!createRes.ok) throw new Error(`Failed to create branch ${branch}: ${await describeError(createRes)}`);
+}
+
 async function handleGitHubOp(body, env) {
   const { op, owner, repo, path, content, message, branch } = body;
   const token = env.GITHUB_TOKEN;
@@ -52,11 +78,24 @@ async function handleGitHubOp(body, env) {
 
       case "write_file":
         if (!path || content === undefined) return { error: "Missing path or content" };
+
+        // Same non-default-branch fallback as the client's own confirm
+        // dialog, kept here too as defense in depth - this worker must
+        // never land a write on "main"/"master" just because a caller
+        // (this client or any other) omitted a branch or forgot to guard
+        // for it.
+        const targetBranch = (branch && !/^(main|master)$/i.test(branch)) ? branch : "ai-changes";
+        try {
+          await ensureBranchExists(owner, repo, targetBranch, headers);
+        } catch (e) {
+          return { error: e.message };
+        }
+
         const writeUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
 
-        // First, get the current SHA if file exists
+        // First, get the current SHA if the file already exists on this branch
         let sha = null;
-        const checkRes = await fetch(writeUrl, { headers });
+        const checkRes = await fetch(`${writeUrl}?ref=${encodeURIComponent(targetBranch)}`, { headers });
         if (checkRes.ok) {
           const existing = await checkRes.json();
           sha = existing.sha;
@@ -65,7 +104,7 @@ async function handleGitHubOp(body, env) {
         const payload = {
           message: message || `Update ${path}`,
           content: btoa(content),
-          branch: branch || "main",
+          branch: targetBranch,
         };
         if (sha) payload.sha = sha;
 
@@ -76,7 +115,7 @@ async function handleGitHubOp(body, env) {
         });
         if (!writeRes.ok) return { error: `Failed to write ${path}: ${await describeError(writeRes)}`, status: writeRes.status };
         const writeData = await writeRes.json();
-        return { success: true, commit: writeData.commit.sha };
+        return { success: true, commit: writeData.commit.sha, branch: targetBranch };
 
       case "list_files":
         if (!path) return { error: "Missing path" };

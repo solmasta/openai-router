@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.29</span></span>
+      <span class="wm">ai-router <span>v5.30</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -449,6 +449,8 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div style="font-size:12px;font-weight:600;color:var(--er);background:rgba(248,113,113,0.1);border:1px solid var(--er);border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.4">&#9888;&#65039; Not verified - no tests were run and nothing checked that this doesn't break the app. Read the content below yourself before approving.</div>
     <div style="font-size:13px;color:var(--mu);margin-bottom:6px">File: <span id="ghwPath" style="font-family:var(--mn);color:var(--tx)"></span></div>
     <div style="font-size:13px;color:var(--mu);margin-bottom:10px">Commit message: <span id="ghwMessage" style="color:var(--tx)"></span></div>
+    <div style="font-size:13px;color:var(--mu);margin-bottom:4px">Branch <span style="color:var(--er)">(never leave this as "main" unless you mean it - this pushes with no PR/review step)</span></div>
+    <input type="text" id="ghwBranch" class="fi" autocomplete="off" style="width:100%;box-sizing:border-box;margin-bottom:10px">
     <div style="font-family:var(--mn);font-size:11px;white-space:pre-wrap;background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px;max-height:240px;overflow:auto;color:var(--tx)" id="ghwContent"></div>
   </div>
   <div class="sf2 ef">
@@ -512,7 +514,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.29</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.30</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -754,25 +756,31 @@ function disconnectGithub(){
   ghToken=null;ghRepoOwner=null;ghRepoName=null;
   updateGithubStatus();
 }
-/* Per-write confirmation gate - resolves true/false, driven by the modal's
-   two buttons. Only one write can be pending confirmation at a time, which
-   matches how the tool loop actually calls this (awaited, one write per
-   tool_call iteration). */
+/* Per-write confirmation gate - resolves to the branch name to write to on
+   approval, or null on decline. Only one write can be pending confirmation
+   at a time, which matches how the tool loop actually calls this (awaited,
+   one write per tool_call iteration). */
 var pendingGithubWriteResolve=null;
 function confirmGithubWrite(toolArgs){
   return new Promise(function(resolve){
     document.getElementById("ghwPath").textContent=(ghRepoOwner||"")+"/"+(ghRepoName||"")+" - "+(toolArgs.path||"");
     document.getElementById("ghwMessage").textContent=toolArgs.message||"(no message)";
     document.getElementById("ghwContent").textContent=toolArgs.content||"";
+    /* Never default this field to "main"/"master" - the model may omit a
+       branch or even ask for one directly, but every write needs an
+       explicit, visible target the user actually looks at and approves.
+       Landing changes straight on the default branch with no review step
+       is exactly the workflow this app's own repo avoids. */
+    var wantsDefault=/^(main|master)$/i.test((toolArgs.branch||"").trim());
+    document.getElementById("ghwBranch").value=(toolArgs.branch&&!wantsDefault)?toolArgs.branch:"ai-changes";
     pendingGithubWriteResolve=resolve;
     openModal("githubWriteConfirmModal");
   });
 }
 var REPO_TOOLS=[
   {type:"function","function":{name:"read_file",description:"Read a file from the connected GitHub repository. Returns file content.",parameters:{type:"object",properties:{path:{type:"string",description:"File path relative to repo root"}},required:["path"]}}},
-  {type:"function","function":{name:"write_file",description:"Write or update a file in the connected GitHub repository. Creates commit.",parameters:{type:"object",properties:{path:{type:"string",description:"File path"},content:{type:"string",description:"Full file content"},message:{type:"string",description:"Commit message"}},required:["path","content","message"]}}},
-  {type:"function","function":{name:"list_files",description:"List files in a directory of the connected repository.",parameters:{type:"object",properties:{path:{type:"string",description:"Directory path"}},required:["path"]}}},
-  {type:"function","function":{name:"execute_command",description:"Execute a git or shell command in the repository.",parameters:{type:"object",properties:{command:{type:"string",description:"Command to execute (git, npm, node, etc.)"}},required:["command"]}}}
+  {type:"function","function":{name:"write_file",description:"Write or update a file in the connected GitHub repository. Creates a commit on a branch (never commits straight to the repo's default branch unless the user explicitly asked for that).",parameters:{type:"object",properties:{path:{type:"string",description:"File path"},content:{type:"string",description:"Full file content"},message:{type:"string",description:"Commit message"},branch:{type:"string",description:"Branch to commit to. NEVER use \"main\"/\"master\" unless the user explicitly asked you to change the default branch directly - otherwise use a short descriptive working-branch name. The branch is created automatically from the repo's default branch if it doesn't already exist."}},required:["path","content","message"]}}},
+  {type:"function","function":{name:"list_files",description:"List files in a directory of the connected repository.",parameters:{type:"object",properties:{path:{type:"string",description:"Directory path"}},required:["path"]}}}
 ];
 var DI_COST={"meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo":0.025,"mistralai/Mistral-Small-3.2-24B-Instruct-2506":0.14,"Qwen/Qwen3.5-9B":0.13,"Qwen/Qwen3.5-27B":1.43,"meta-llama/Llama-3.3-70B-Instruct-Turbo":0.21,"meta-llama/Llama-4-Scout-17B-16E-Instruct":0.20,"Qwen/Qwen2.5-72B-Instruct":0.38,"deepseek-ai/DeepSeek-V3.2":0.32,"Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo":0.65,"Qwen/Qwen3-32B":0.18,"deepseek-ai/DeepSeek-R1-0528":1.33,"Qwen/Qwen3-VL-30B-A3B-Instruct":0.38,"google/gemma-3-27b-it":0.12,"meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8":0.50};
 /* Rough relative cost tier per model, 0 (free/cheapest) to 3 (most
@@ -1742,9 +1750,9 @@ function generateOptimalInstructions(userMessage,selectedModel){
   if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
     instructions+="TOOLS AVAILABLE:\n";
     instructions+="- read_file(path): Read files from "+ghRepoOwner+"/"+ghRepoName+"\n";
-    instructions+="- write_file(path, content, message): Create files/commits\n";
+    instructions+="- write_file(path, content, message, branch): Create files/commits. NEVER set branch to \"main\"/\"master\" unless explicitly asked - use a descriptive working-branch name instead, it's created automatically.\n";
     instructions+="- list_files(path): Explore directory structure\n";
-    instructions+="Use these tools directly - don't ask permission.\n\n";
+    instructions+="Use these tools directly - don't ask permission (the user still approves every write and its branch before it's pushed).\n\n";
   }
 
   instructions+="EXECUTION:\n";
@@ -1795,9 +1803,8 @@ function displayToolExecution(toolName,input,result){
   var status=result.error?"⚠️ Error":"✓ Success";
   toolEl.innerHTML="<strong>"+status+" Tool: "+esc(toolName)+"</strong>";
   if(toolName==="read_file"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Reading: "+esc(input.path)+"</div>";}
-  else if(toolName==="write_file"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Writing: "+esc(input.path)+"</div><div style='font-size:10px;color:var(--mu)'>"+esc(input.message)+"</div>";}
+  else if(toolName==="write_file"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Writing: "+esc(input.path)+" (branch: "+esc(input.branch||"?")+")</div><div style='font-size:10px;color:var(--mu)'>"+esc(input.message)+"</div>";}
   else if(toolName==="list_files"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Listing: "+esc(input.path)+"</div>";}
-  else if(toolName==="execute_command"){toolEl.innerHTML+="<div style='font-family:var(--mn);font-size:10px;color:var(--mu);padding:4px'>$ "+esc(input.command)+"</div>";}
   if(result.error){toolEl.innerHTML+="<div style='color:var(--er);margin-top:4px'>Error: "+esc(result.error)+"</div>";}
   document.getElementById("chat").appendChild(toolEl);
 }
@@ -1809,9 +1816,9 @@ async function executeRepoTool(toolName,toolInput){
       var data=await res.json();
       return data.success?{success:true,content:data.content}:{error:data.error};
     }else if(toolName==="write_file"){
-      var wres=await fetch(GH_OPS_URL,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET,"Authorization":"Bearer "+ghToken},body:JSON.stringify({op:"write_file",owner:ghRepoOwner,repo:ghRepoName,path:toolInput.path,content:toolInput.content,message:toolInput.message})});
+      var wres=await fetch(GH_OPS_URL,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET,"Authorization":"Bearer "+ghToken},body:JSON.stringify({op:"write_file",owner:ghRepoOwner,repo:ghRepoName,path:toolInput.path,content:toolInput.content,message:toolInput.message,branch:toolInput.branch})});
       var wdata=await wres.json();
-      return wdata.success?{success:true,commit:wdata.commit}:{error:wdata.error};
+      return wdata.success?{success:true,commit:wdata.commit,branch:wdata.branch}:{error:wdata.error};
     }else if(toolName==="list_files"){
       var lres=await fetch(GH_OPS_URL,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET,"Authorization":"Bearer "+ghToken},body:JSON.stringify({op:"list_files",owner:ghRepoOwner,repo:ghRepoName,path:toolInput.path})});
       var ldata=await lres.json();
@@ -1847,12 +1854,13 @@ function getModelSystemPrompt(ap){
     sys+="You have direct access to read, modify, and commit code. For ALL code tasks:\n\n";
     sys+="1. Use read_file(path) to examine existing code before making changes\n";
     sys+="2. Use list_files(path) to explore repository structure\n";
-    sys+="3. Use write_file(path, content, message) to make changes - includes automatic git commit\n";
-    sys+="4. Always provide COMPLETE working code in write_file calls - not snippets\n\n";
+    sys+="3. Use write_file(path, content, message, branch) to make changes - includes automatic git commit\n";
+    sys+="4. Always provide COMPLETE working code in write_file calls - not snippets\n";
+    sys+="5. NEVER set branch to \"main\"/\"master\" unless the user explicitly asked you to change the default branch directly - use a short descriptive working-branch name instead, it's created automatically from the default branch if it doesn't exist\n\n";
     sys+="WORKFLOW:\n";
     sys+="- Understand the problem by reading relevant files\n";
     sys+="- Plan your approach in <think> tags\n";
-    sys+="- Make changes using write_file with clear commit messages\n";
+    sys+="- Make changes using write_file with clear commit messages, on a dedicated working branch\n";
     sys+="- Each write_file creates one git commit\n\n";
     sys+="Execute tools immediately - don't ask for permission.\n";
     sys+="Show your reasoning in <think> tags. Be direct and action-oriented.\n";
@@ -3295,7 +3303,11 @@ document.getElementById("githubDisconnectBtn").addEventListener("click",function
 });
 function resolveGithubWriteConfirm(approved){
   closeModal("githubWriteConfirmModal");
-  if(pendingGithubWriteResolve){var r=pendingGithubWriteResolve;pendingGithubWriteResolve=null;r(approved);}
+  if(pendingGithubWriteResolve){
+    var r=pendingGithubWriteResolve;pendingGithubWriteResolve=null;
+    var branchVal=(document.getElementById("ghwBranch").value||"").trim()||"ai-changes";
+    r(approved?branchVal:null);
+  }
 }
 document.getElementById("ghwApproveBtn").addEventListener("click",function(){resolveGithubWriteConfirm(true);});
 document.getElementById("ghwDenyBtn").addEventListener("click",function(){resolveGithubWriteConfirm(false);});
@@ -3879,24 +3891,21 @@ async function doSendRequest(userContent,isRegen,ap){
                   toolResult=readRes.success?readRes.content:(readRes.error||"Failed to read file");
                 }else if(toolName==="write_file"){
                   asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\u270F\uFE0F Waiting for approval to write: '+esc(toolArgs.path||"")+'&#8230;</span>';
-                  var writeApproved=await confirmGithubWrite(toolArgs);
-                  if(!writeApproved){
+                  var approvedBranch=await confirmGithubWrite(toolArgs);
+                  if(!approvedBranch){
                     displayToolExecution("write_file",toolArgs,{error:"Declined by user - not pushed"});
                     toolResult="The user declined this write. Do not retry the same change without asking first.";
                   }else{
-                    asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\u270F\uFE0F Writing: '+esc(toolArgs.path||"")+'&#8230;</span>';
+                    toolArgs.branch=approvedBranch;
+                    asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\u270F\uFE0F Writing to branch '+esc(approvedBranch)+': '+esc(toolArgs.path||"")+'&#8230;</span>';
                     var writeRes=await executeRepoTool("write_file",toolArgs);
                     displayToolExecution("write_file",toolArgs,writeRes);
-                    toolResult=writeRes.success?("File written. Commit: "+writeRes.commit):(writeRes.error||"Failed to write file");
+                    toolResult=writeRes.success?("File written to branch '"+approvedBranch+"'. Commit: "+writeRes.commit):(writeRes.error||"Failed to write file");
                   }
                 }else if(toolName==="list_files"){
                   var listRes=await executeRepoTool("list_files",toolArgs);
                   displayToolExecution("list_files",toolArgs,listRes);
                   toolResult=listRes.success?JSON.stringify(listRes.files):(listRes.error||"Failed to list files");
-                }else if(toolName==="execute_command"){
-                  asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">\u2699\uFE0F Executing: '+esc(toolArgs.command||"")+'&#8230;</span>';
-                  displayToolExecution("execute_command",toolArgs,{success:true});
-                  toolResult="Command execution not yet implemented via browser. Model should use read_file/write_file for changes.";
                 }
                 messages.push({role:"tool",tool_call_id:tc.id,content:toolResult||"No result"});
               }
