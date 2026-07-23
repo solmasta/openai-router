@@ -46,6 +46,8 @@
    - picking a voice persists it and is actually set on the utterance
      when speaking; Overseer personality text persists and shows up in
      the system prompt sent to the model
+   - the compose bar's icon row wraps instead of pushing the Send button
+     off-screen at a narrow phone viewport width
 
    Run: NODE_PATH=/opt/node22/lib/node_modules node tests/regression.js
 */
@@ -1342,6 +1344,19 @@ function assert(cond, label) {
   await page.fill('#personalityInput', '');
   await page.evaluate(() => document.getElementById('personalityInput').dispatchEvent(new Event('input')));
   await page.click('#closeSettingsModal'); await page.waitForTimeout(150);
+
+  console.log('\n-- compose bar icon row wraps instead of pushing Send off-screen on a narrow phone --');
+  // Adding speak/voice-mode icons to the compose bar this session grew it
+  // past what fits in one row on an actual phone width - .ia had no
+  // flex-wrap, so Send silently overflowed past the right edge instead of
+  // wrapping to a second line.
+  const defaultViewport = page.viewportSize();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.waitForTimeout(150);
+  const sendBoxNarrow = await page.locator('#sendBtn').boundingBox();
+  assert(sendBoxNarrow && (sendBoxNarrow.x + sendBoxNarrow.width) <= 375, `Send stays fully on-screen at a 375px phone width instead of overflowing (right edge at ${sendBoxNarrow ? (sendBoxNarrow.x + sendBoxNarrow.width).toFixed(0) : 'N/A'}px)`);
+  if (defaultViewport) await page.setViewportSize(defaultViewport);
+  await page.waitForTimeout(150);
 
   console.log(`\n-- page errors: ${realErrors().length} real (excluding expected sandbox network noise) --`);
   if (realErrors().length) console.log(realErrors());
