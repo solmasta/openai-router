@@ -48,7 +48,7 @@ async function ensureBranchExists(owner, repo, branch, headers) {
 }
 
 async function handleGitHubOp(body, env) {
-  const { op, owner, repo, path, content, message, branch } = body;
+  const { op, owner, repo, path, content, message, branch, title, merge_method } = body;
   const token = env.GITHUB_TOKEN;
 
   if (!token) return { error: "GitHub token not configured" };
@@ -127,6 +127,55 @@ async function handleGitHubOp(body, env) {
           ? listData.map(f => ({ name: f.name, type: f.type, path: f.path }))
           : { error: "Not a directory" };
         return { success: true, files };
+
+      case "merge_branch": {
+        if (!branch) return { error: "Missing branch" };
+
+        const branchRefRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`, { headers });
+        if (!branchRefRes.ok) return { error: `Branch '${branch}' does not exist: ${await describeError(branchRefRes)}` };
+
+        const mergeRepoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
+        if (!mergeRepoRes.ok) return { error: `Failed to look up repo default branch: ${await describeError(mergeRepoRes)}` };
+        const defaultBranch = (await mergeRepoRes.json()).default_branch;
+        if (branch === defaultBranch) return { error: `'${branch}' is already the default branch` };
+
+        // Reuse an existing open PR for this branch instead of creating a
+        // duplicate every time the model is asked to merge the same branch
+        // more than once.
+        const searchUrl = `https://api.github.com/repos/${owner}/${repo}/pulls?head=${encodeURIComponent(owner + ":" + branch)}&base=${encodeURIComponent(defaultBranch)}&state=open`;
+        const searchRes = await fetch(searchUrl, { headers });
+        if (!searchRes.ok) return { error: `Failed to look up existing pull requests: ${await describeError(searchRes)}` };
+        const existingPRs = await searchRes.json();
+
+        let pr = Array.isArray(existingPRs) && existingPRs.length ? existingPRs[0] : null;
+        if (!pr) {
+          const createPrRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              title: title || `Merge ${branch} into ${defaultBranch}`,
+              head: branch,
+              base: defaultBranch,
+              body: message || "",
+            }),
+          });
+          if (!createPrRes.ok) return { error: `Failed to create pull request: ${await describeError(createPrRes)}` };
+          pr = await createPrRes.json();
+        }
+
+        const mergeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${pr.number}/merge`, {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({
+            merge_method: merge_method || "merge",
+            commit_title: title || undefined,
+            commit_message: message || undefined,
+          }),
+        });
+        if (!mergeRes.ok) return { error: `Failed to merge PR #${pr.number}: ${await describeError(mergeRes)}` };
+        const mergeData = await mergeRes.json();
+        return { success: true, prNumber: pr.number, prUrl: pr.html_url, merged: true, sha: mergeData.sha };
+      }
 
       case "create_commit":
         if (!message) return { error: "Missing commit message" };

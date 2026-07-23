@@ -15,6 +15,9 @@
      Overseer's own dedicated system prompt (not the main chat one)
    - write_file tool never defaults to main/master; the approved branch is
      what actually reaches the GitHub ops worker
+   - merge_branch tool requires its own dedicated approval dialog before
+     anything happens, and the approved branch/op reach the GitHub ops
+     worker correctly
    - Manual import's "Fetch from Drive" guards against an unconnected/
      expired Drive session instead of silently failing
    - "Open" deep-links straight to the Drive folder by id, falling back to
@@ -648,6 +651,91 @@ function assert(cond, label) {
   await page.unroute('**/*');
   assert(!!capturedWriteBody, 'approving the write actually reaches the GitHub ops worker');
   assert(capturedWriteBody && capturedWriteBody.branch === 'ai-changes', `the approved branch (not "main") is what's actually sent to the worker (got "${capturedWriteBody && capturedWriteBody.branch}")`);
+
+  console.log('\n-- merge_branch tool requires its own approval dialog, and the approved branch/op reach the worker --');
+  // merge_branch touches the repo's actual default branch - a materially
+  // higher-stakes action than write_file - so it gets its own dedicated
+  // confirm modal (githubMergeConfirmModal) instead of reusing
+  // githubWriteConfirmModal. Verify the model-issued tool_call surfaces
+  // that dialog, and that approving it sends the right op/branch to the
+  // GitHub ops worker.
+  await page.click('#modelBtn'); await page.waitForTimeout(150);
+  await page.locator('.mc:has-text("Mistral Small")').first().click();
+  await page.waitForTimeout(150);
+
+  let capturedMergeBody = null;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    const url = req.url();
+    if (url.indexOf('github-ops-worker') >= 0 && req.method() === 'POST') {
+      try { capturedMergeBody = JSON.parse(req.postData()); } catch (e) {}
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, prNumber: 42, prUrl: 'https://github.com/solmasta/openai-router/pull/42', merged: true, sha: 'regtestmergesha' }),
+      });
+      return;
+    }
+    if (req.method() === 'POST' && req.postData()) {
+      let parsed = null;
+      try { parsed = JSON.parse(req.postData()); } catch (e) {}
+      if (parsed && parsed.stream === false) {
+        // The initial non-streaming tool-discovery call - fake a model
+        // response that calls merge_branch for a fixed branch name.
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            choices: [{
+              finish_reason: 'tool_calls',
+              message: {
+                role: 'assistant',
+                tool_calls: [{
+                  id: 'regtest_call_2',
+                  type: 'function',
+                  function: { name: 'merge_branch', arguments: JSON.stringify({ branch: 'ai-changes', title: 'regtest merge', message: 'regtest merge body' }) },
+                }],
+              },
+            }],
+          }),
+        });
+        return;
+      }
+      if (parsed && parsed.stream === true) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream',
+          body: 'data: {"choices":[{"delta":{"content":"done"}}]}\n\ndata: [DONE]\n\n',
+        });
+        return;
+      }
+    }
+    await route.continue();
+  });
+  await page.fill('#prompt', 'please merge the ai-changes branch into main now');
+  await page.click('#sendBtn');
+  let mergeConfirmShowed = false;
+  for (let i = 0; i < 100; i++) {
+    await dismissConfirmIfAny();
+    mergeConfirmShowed = await page.evaluate(() => !document.getElementById('githubMergeConfirmModal').classList.contains('hidden'));
+    if (mergeConfirmShowed) break;
+    await page.waitForTimeout(200);
+  }
+  assert(mergeConfirmShowed, 'a model-issued merge_branch tool call surfaces its own dedicated approval dialog');
+  const mergeBranchShown = await page.evaluate(() => document.getElementById('ghmBranch').textContent);
+  assert(mergeBranchShown.indexOf('ai-changes') >= 0, `the confirm dialog shows the branch being merged (got "${mergeBranchShown}")`);
+  await page.click('#ghmApproveBtn');
+  await waitForSendDone();
+  await page.unroute('**/*');
+  assert(!!capturedMergeBody, 'approving the merge actually reaches the GitHub ops worker');
+  assert(capturedMergeBody && capturedMergeBody.op === 'merge_branch', `the worker request is tagged with the merge_branch op (got "${capturedMergeBody && capturedMergeBody.op}")`);
+  assert(capturedMergeBody && capturedMergeBody.branch === 'ai-changes', `the branch sent to the worker matches what was requested (got "${capturedMergeBody && capturedMergeBody.branch}")`);
+  // waitForSendDone() above returns as soon as the Send button label flips
+  // back, but autosave/tab-sync work triggered by the merge response can
+  // still be settling - give it a beat before the next test starts
+  // interacting, same as the settle wait already used after the Overseer
+  // chat's failed (no-egress) request above.
+  await page.waitForTimeout(500);
 
   console.log('\n-- App-control tools (create_project/remember/switch_model) actually execute, no confirm needed --');
   // These are the Overseer's new "full autonomy" tools - unlike write_file
