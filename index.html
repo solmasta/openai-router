@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.32</span></span>
+      <span class="wm">ai-router <span>v5.33</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -516,7 +516,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.32</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.33</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -784,6 +784,22 @@ var REPO_TOOLS=[
   {type:"function","function":{name:"write_file",description:"Write or update a file in the connected GitHub repository. Creates a commit on a branch (never commits straight to the repo's default branch unless the user explicitly asked for that).",parameters:{type:"object",properties:{path:{type:"string",description:"File path"},content:{type:"string",description:"Full file content"},message:{type:"string",description:"Commit message"},branch:{type:"string",description:"Branch to commit to. NEVER use \"main\"/\"master\" unless the user explicitly asked you to change the default branch directly - otherwise use a short descriptive working-branch name. The branch is created automatically from the repo's default branch if it doesn't already exist."}},required:["path","content","message"]}}},
   {type:"function","function":{name:"list_files",description:"List files in a directory of the connected repository.",parameters:{type:"object",properties:{path:{type:"string",description:"Directory path"}},required:["path"]}}}
 ];
+/* App-control tools - let the model actually operate this app's own
+   features (save a project, switch model, remember a fact) instead of
+   only ever talking about doing them. Unlike REPO_TOOLS these are always
+   available to any tool-capable model, independent of GitHub connection -
+   they're additive/reversible (create, don't destroy), so they run
+   without a confirmation gate the way write_file has one. The model_id
+   enum is built fresh each call so it always matches the real catalog,
+   never a separately-maintained copy that can drift out of sync. */
+function getAppControlTools(){
+  var modelIds=getAllAvailableModels().map(function(x){return x.model.id;});
+  return[
+    {type:"function","function":{name:"create_project",description:"Turn the current conversation into a saved, reusable Work Project - a persistent ruleset the user can return to later. Use this when the user asks to save/turn this into a project (e.g. \"make this a project\"). Write a clear name and complete instructions yourself, based on what this conversation has actually been about - don't ask the user to write them.",parameters:{type:"object",properties:{name:{type:"string",description:"Short project name"},instructions:{type:"string",description:"Complete instructions/ruleset for this project"}},required:["name","instructions"]}}},
+    {type:"function","function":{name:"switch_model",description:"Switch the active chat model. Use this when the user asks to switch models, or when a different available model would clearly serve their actual request better right now.",parameters:{type:"object",properties:{model_id:{type:"string",description:"Exact model id to switch to",enum:modelIds}},required:["model_id"]}}},
+    {type:"function","function":{name:"remember",description:"Save a durable fact about the user for future conversations. Use this when the user explicitly asks you to remember something.",parameters:{type:"object",properties:{fact:{type:"string",description:"The fact to remember, written as a standalone statement"}},required:["fact"]}}}
+  ];
+}
 var DI_COST={"meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo":0.025,"mistralai/Mistral-Small-3.2-24B-Instruct-2506":0.14,"Qwen/Qwen3.5-9B":0.13,"Qwen/Qwen3.5-27B":1.43,"meta-llama/Llama-3.3-70B-Instruct-Turbo":0.21,"meta-llama/Llama-4-Scout-17B-16E-Instruct":0.20,"Qwen/Qwen2.5-72B-Instruct":0.38,"deepseek-ai/DeepSeek-V3.2":0.32,"Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo":0.65,"Qwen/Qwen3-32B":0.18,"deepseek-ai/DeepSeek-R1-0528":1.33,"Qwen/Qwen3-VL-30B-A3B-Instruct":0.38,"google/gemma-3-27b-it":0.12,"meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8":0.50};
 /* Rough relative cost tier per model, 0 (free/cheapest) to 3 (most
    expensive), spanning all three backends so the agent router can prefer
@@ -1183,8 +1199,9 @@ async function switchToBestModel(text){
   var best=selectBestModel(tasks);
   if(!best)return;
   best.reason=tasks;
-  var confirmed=await confirmModelSwitch(best);
-  if(!confirmed)return;
+  /* Full autonomy: switch on the Overseer's own judgment and report what
+     happened afterward (showAgentSelection) instead of blocking every
+     send on a confirm dialog first. */
   lastAgentSelection={model:best.model,backend:best.backend,reason:tasks,score:best.score};
   if(best.backend!==activeBackend){
     activeBackend=best.backend;
@@ -1749,6 +1766,12 @@ function generateOptimalInstructions(userMessage,selectedModel){
     instructions+="- Suggest improvements\n\n";
   }
 
+  instructions+="APP CONTROL AVAILABLE (always, regardless of GitHub connection):\n";
+  instructions+="- create_project(name, instructions): Turns this conversation into a saved, reusable Work Project when the user asks (e.g. \"make this a project\") - write the name and full instructions yourself based on the actual conversation, don't ask the user to write them.\n";
+  instructions+="- switch_model(model_id): Switch the active model when the user asks, or when a clearly better-fitting model exists for what they need right now.\n";
+  instructions+="- remember(fact): Save a durable fact the user asks you to remember.\n";
+  instructions+="Use these directly the moment the user's request calls for them - don't just describe what you'd do, actually call the tool. No permission needed for these three; they're additive and reversible.\n\n";
+
   if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
     instructions+="TOOLS AVAILABLE:\n";
     instructions+="- read_file(path): Read files from "+ghRepoOwner+"/"+ghRepoName+"\n";
@@ -1807,8 +1830,35 @@ function displayToolExecution(toolName,input,result){
   if(toolName==="read_file"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Reading: "+esc(input.path)+"</div>";}
   else if(toolName==="write_file"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Writing: "+esc(input.path)+" (branch: "+esc(input.branch||"?")+")</div><div style='font-size:10px;color:var(--mu)'>"+esc(input.message)+"</div>";}
   else if(toolName==="list_files"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Listing: "+esc(input.path)+"</div>";}
+  else if(toolName==="create_project"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Creating project: "+esc(input.name)+"</div>";}
+  else if(toolName==="switch_model"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Switching model to: "+esc(input.model_id)+"</div>";}
+  else if(toolName==="remember"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Remembering: "+esc(input.fact)+"</div>";}
   if(result.error){toolEl.innerHTML+="<div style='color:var(--er);margin-top:4px'>Error: "+esc(result.error)+"</div>";}
   document.getElementById("chat").appendChild(toolEl);
+}
+/* Direct, additive/reversible app-control actions - no confirm gate,
+   unlike write_file. create_project/remember reuse the exact same
+   functions the manual UI paths use (saveWProjects/addMemory), so a
+   tool-created project or memory is indistinguishable from - and just as
+   editable/deletable as - one made by hand through the normal UI. */
+function createProjectFromTool(name,instructions){
+  name=(name||"").trim();
+  if(!name)return{error:"Missing project name"};
+  var id=Date.now().toString();
+  var proj={id:id,title:name,instructions:(instructions||"").trim(),createdAt:Date.now(),conversations:[]};
+  wproj.push(proj);
+  saveWProjects();
+  activeWProjId=id;
+  setWprojPromptBadge(proj);
+  return{success:true,id:id};
+}
+async function switchModelFromTool(modelId){
+  var found=getAllAvailableModels().find(function(x){return x.model.id===modelId;});
+  if(!found)return{error:"Unknown model id: "+modelId};
+  if(found.backend!==activeBackend){activeBackend=found.backend;await loadBackend();}
+  setModel(found.model);
+  renderModelList();
+  return{success:true,label:found.model.label};
 }
 async function executeRepoTool(toolName,toolInput){
   if(!ghToken||!ghRepoOwner||!ghRepoName){return{error:"GitHub not connected"};}
@@ -3901,7 +3951,11 @@ async function doSendRequest(userContent,isRegen,ap){
   try{
     if(TOOL_MODELS.indexOf(currentModel.id)>=0){
       try{
-        var initTools=[];
+        /* App-control tools (create_project/switch_model/remember) are
+           always offered here - they're additive/reversible and narrowly
+           described (each names its own explicit trigger phrase), unlike
+           the repo tools below which get gated on actual relevance. */
+        var initTools=getAppControlTools();
         /* Gate on the same task-relevance analysis already used for the
            search auto-trigger below (searchGateTasks) - without it, repo
            tools were offered on EVERY message whenever GitHub was
@@ -3952,6 +4006,18 @@ async function doSendRequest(userContent,isRegen,ap){
                   var listRes=await executeRepoTool("list_files",toolArgs);
                   displayToolExecution("list_files",toolArgs,listRes);
                   toolResult=listRes.success?JSON.stringify(listRes.files):(listRes.error||"Failed to list files");
+                }else if(toolName==="create_project"){
+                  var cpRes=createProjectFromTool(toolArgs.name,toolArgs.instructions);
+                  displayToolExecution("create_project",toolArgs,cpRes);
+                  toolResult=cpRes.success?("Created project \""+toolArgs.name+"\" and set it as the active project - this conversation will be saved under it from now on."):(cpRes.error||"Failed to create project");
+                }else if(toolName==="switch_model"){
+                  var smRes=await switchModelFromTool(toolArgs.model_id);
+                  displayToolExecution("switch_model",toolArgs,smRes);
+                  toolResult=smRes.success?("Switched to "+smRes.label+"."):(smRes.error||"Failed to switch model");
+                }else if(toolName==="remember"){
+                  addMemory(toolArgs.fact);
+                  displayToolExecution("remember",toolArgs,{success:true});
+                  toolResult="Remembered: "+toolArgs.fact;
                 }
                 messages.push({role:"tool",tool_call_id:tc.id,content:toolResult||"No result"});
               }
@@ -3970,7 +4036,10 @@ async function doSendRequest(userContent,isRegen,ap){
        instead of plain text; the streaming loop below only reads
        delta.content and has no tool_calls handling, so the reply silently
        came out as "(empty response)" even though the model had answered. */
-    if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName&&TOOL_MODELS.indexOf(currentModel.id)>=0&&(searchGateTasks.github>0||searchGateTasks.code>0)){toolsToSend=REPO_TOOLS;}
+    if(TOOL_MODELS.indexOf(currentModel.id)>=0){
+      toolsToSend=toolsToSend.concat(getAppControlTools());
+      if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName&&(searchGateTasks.github>0||searchGateTasks.code>0)){toolsToSend=toolsToSend.concat(REPO_TOOLS);}
+    }
     var reqBody={model:currentModel.id,messages:messages,temperature:temperature,stream:true};
     if(toolsToSend.length>0){reqBody.tools=toolsToSend;reqBody.tool_choice="auto";}
     var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify(reqBody),signal:abortController.signal});

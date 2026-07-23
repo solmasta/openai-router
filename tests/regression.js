@@ -19,6 +19,8 @@
      expired Drive session instead of silently failing
    - "Open" deep-links straight to the Drive folder by id, falling back to
      a name search only when no id is known yet
+   - App-control tools (create_project/remember/switch_model) execute
+     immediately on a model tool_call, with real observable side effects
 
    Run: NODE_PATH=/opt/node22/lib/node_modules node tests/regression.js
 */
@@ -86,6 +88,19 @@ function assert(cond, label) {
     await page.waitForTimeout(600);
     await dismissConfirmIfAny();
     await waitForSendDone();
+  }
+  // Waits for the actual attach-list count to reach n instead of trusting a
+  // fixed delay after setInputFiles - compressImg()'s async decode pipeline
+  // competes with whatever else the page is doing (now more, per message,
+  // since app-control tools add an extra request), so a flat timeout can
+  // read attachedFiles as still-empty and send a message with no image at
+  // all, which then falsely looks like the vision-switch itself failed.
+  async function waitForAttachCount(n) {
+    for (let i = 0; i < 20; i++) {
+      const c = await page.evaluate(() => document.querySelectorAll('#attachItems .ai').length);
+      if (c >= n) return;
+      await page.waitForTimeout(150);
+    }
   }
 
   // 'load' waits for every subresource to settle, including the external
@@ -161,7 +176,7 @@ function assert(cond, label) {
   const modelBefore = await page.textContent('#modelBtnLabel');
   const fileInput = await page.$('#fileInput');
   await fileInput.setInputFiles(imgPath);
-  await page.waitForTimeout(800);
+  await waitForAttachCount(1);
   await sendMsg('what is in this image');
   const modelDuring = await page.textContent('#modelBtnLabel');
   await sendMsg('thanks, tell me more');
@@ -183,7 +198,7 @@ function assert(cond, label) {
   });
   const fileInput2 = await page.$('#fileInput');
   await fileInput2.setInputFiles(imgPath);
-  await page.waitForTimeout(800);
+  await waitForAttachCount(1);
   await page.fill('#prompt', '');
   await page.click('#sendBtn');
   await page.waitForTimeout(600);
@@ -220,7 +235,7 @@ function assert(cond, label) {
   // The app must still work normally afterward - one bad file shouldn't leave anything stuck.
   const fileInputRecover = await page.$('#fileInput');
   await fileInputRecover.setInputFiles(imgPath);
-  await page.waitForTimeout(800);
+  await waitForAttachCount(1);
   const attachCountAfterGoodFile = await page.evaluate(() => document.querySelectorAll('#attachItems .ai').length);
   assert(attachCountAfterGoodFile === 1, 'a valid image still attaches normally right after a failed one');
   await page.evaluate(() => { document.querySelectorAll('#attachItems .ac2').forEach(function(b){b.click();}); });
@@ -298,7 +313,7 @@ function assert(cond, label) {
   });
   const fileInput3 = await page.$('#fileInput');
   await fileInput3.setInputFiles(imgPath);
-  await page.waitForTimeout(800);
+  await waitForAttachCount(1);
   await sendMsg('what is in this image');
   await page.unroute('**/*');
   assert(lastReqBodyWithTools && !lastReqBodyWithTools.tools, 'vision model image request has no tools field with GitHub connected');
@@ -327,7 +342,12 @@ function assert(cond, label) {
   // misreports a failure. Same fix already applied to the regen test.
   for (let i = 0; i < 60 && lastUnrelatedBody === null; i++) await page.waitForTimeout(200);
   await page.unroute('**/*');
-  assert(lastUnrelatedBody && !lastUnrelatedBody.tools, 'an unrelated (non-code/github) message gets no tools field even with GitHub connected');
+  // App-control tools (create_project/switch_model/remember) are always
+  // attached for a tool-capable model now, regardless of relevance - only
+  // the repo tools (read_file/write_file/list_files) stay gated on
+  // whether the message is actually code/github-relevant.
+  const unrelatedToolNames = ((lastUnrelatedBody && lastUnrelatedBody.tools) || []).map((t) => t.function.name);
+  assert(unrelatedToolNames.indexOf('read_file') < 0 && unrelatedToolNames.indexOf('write_file') < 0 && unrelatedToolNames.indexOf('list_files') < 0, `an unrelated (non-code/github) message gets no repo tools even with GitHub connected (got tools: ${JSON.stringify(unrelatedToolNames)})`);
 
   let lastRelatedBody = null;
   await page.route('**/*', async (route) => {
@@ -626,6 +646,72 @@ function assert(cond, label) {
   await page.unroute('**/*');
   assert(!!capturedWriteBody, 'approving the write actually reaches the GitHub ops worker');
   assert(capturedWriteBody && capturedWriteBody.branch === 'ai-changes', `the approved branch (not "main") is what's actually sent to the worker (got "${capturedWriteBody && capturedWriteBody.branch}")`);
+
+  console.log('\n-- App-control tools (create_project/remember/switch_model) actually execute, no confirm needed --');
+  // These are the Overseer's new "full autonomy" tools - unlike write_file
+  // they run immediately on a model-issued tool_call, no approval dialog.
+  // Mock all three in one tool_calls response and verify each one's real,
+  // observable side effect: a project actually saved and made active, a
+  // memory actually stored, and the model actually switched.
+  await page.click('#modelBtn'); await page.waitForTimeout(150);
+  await page.locator('.mc:has-text("Mistral Small")').first().click();
+  await page.waitForTimeout(150);
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      let parsed = null;
+      try { parsed = JSON.parse(req.postData()); } catch (e) {}
+      if (parsed && parsed.stream === false) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            choices: [{
+              finish_reason: 'tool_calls',
+              message: {
+                role: 'assistant',
+                tool_calls: [
+                  { id: 'regtest_call_a', type: 'function', function: { name: 'create_project', arguments: JSON.stringify({ name: 'Regtest Tool Project', instructions: 'Regtest project instructions' }) } },
+                  { id: 'regtest_call_b', type: 'function', function: { name: 'remember', arguments: JSON.stringify({ fact: 'Regtest remembered fact' }) } },
+                  { id: 'regtest_call_c', type: 'function', function: { name: 'switch_model', arguments: JSON.stringify({ model_id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' }) } },
+                ],
+              },
+            }],
+          }),
+        });
+        return;
+      }
+      if (parsed && parsed.stream === true) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream',
+          body: 'data: {"choices":[{"delta":{"content":"done"}}]}\n\ndata: [DONE]\n\n',
+        });
+        return;
+      }
+    }
+    await route.continue();
+  });
+  await sendMsg('please make this a project, remember something, and switch models for me');
+  await page.unroute('**/*');
+
+  const projectCreated = await page.evaluate(() => {
+    const raw = localStorage.getItem(Object.keys(localStorage).find((k) => k.indexOf('ai_workprojects') >= 0));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return parsed.some((p) => p.title === 'Regtest Tool Project' && p.instructions === 'Regtest project instructions');
+  });
+  assert(projectCreated, 'create_project tool call actually saves a new Work Project');
+  const projectBadge = await page.textContent('#activePromptName');
+  assert(projectBadge.indexOf('Regtest Tool Project') >= 0, `create_project sets the new project active (got badge "${projectBadge}")`);
+
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  await page.click('#memoryBtn'); await page.waitForTimeout(150);
+  const memoryRemembered = await page.evaluate(() => document.getElementById('memoryList').textContent.indexOf('Regtest remembered fact') >= 0);
+  assert(memoryRemembered, 'remember tool call actually saves a memory');
+  await page.click('#closeMemoryModal'); await page.waitForTimeout(150);
+
+  const modelLabelAfterToolSwitch = await page.textContent('#modelBtnLabel');
+  assert(modelLabelAfterToolSwitch === 'Llama 3.3 70B Turbo', `switch_model tool call actually switches the active model (got "${modelLabelAfterToolSwitch}")`);
 
   console.log(`\n-- page errors: ${realErrors().length} real (excluding expected sandbox network noise) --`);
   if (realErrors().length) console.log(realErrors());
