@@ -37,6 +37,8 @@
      immediately on a model tool_call, with real observable side effects
    - Hardcoded app-structure knowledge only appears when GitHub is
      connected to this actual repo, not some other repo
+   - the speak-replies-aloud toggle is off by default, actually calls
+     speechSynthesis.speak once turned on, and stops again once turned off
 
    Run: NODE_PATH=/opt/node22/lib/node_modules node tests/regression.js
 */
@@ -1074,6 +1076,52 @@ function assert(cond, label) {
   await page.fill('#ghOwnerInput', 'solmasta');
   await page.fill('#ghRepoInput', 'openai-router');
   await page.click('#githubSaveBtn'); await page.waitForTimeout(150);
+
+  console.log('\n-- speak-replies-aloud toggle actually speaks completed responses, off by default --');
+  // Off by default (speakEnabled starts false) - a completed response must
+  // not call speechSynthesis.speak until the user explicitly turns the
+  // toggle on, and must stop calling it again once turned back off.
+  await page.evaluate(() => {
+    window.__speakCalls = [];
+    window.speechSynthesis.speak = (utter) => { window.__speakCalls.push(utter.text); };
+  });
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      let parsed = null;
+      try { parsed = JSON.parse(req.postData()); } catch (e) {}
+      if (parsed && parsed.stream === true) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream',
+          body: 'data: {"choices":[{"delta":{"content":"regtest spoken reply"}}]}\n\ndata: [DONE]\n\n',
+        });
+        return;
+      }
+    }
+    await route.continue();
+  });
+  await sendMsg('regtest message before enabling speak');
+  const speakCallsBeforeToggle = await page.evaluate(() => window.__speakCalls.length);
+  assert(speakCallsBeforeToggle === 0, 'speak-aloud is off by default - a completed response does not call speechSynthesis.speak');
+
+  const speakBtnOffState = await page.evaluate(() => document.getElementById('speakBtn').classList.contains('on'));
+  assert(!speakBtnOffState, 'speak button does not show as "on" before being toggled');
+  await page.click('#speakBtn');
+  const speakBtnOnState = await page.evaluate(() => document.getElementById('speakBtn').classList.contains('on'));
+  assert(speakBtnOnState, 'clicking the speak button turns it on');
+
+  await sendMsg('regtest message after enabling speak');
+  const spokenTexts = await page.evaluate(() => window.__speakCalls);
+  assert(spokenTexts.indexOf('regtest spoken reply') >= 0, `once enabled, a completed response is actually spoken (got calls: ${JSON.stringify(spokenTexts)})`);
+
+  await page.click('#speakBtn');
+  const speakBtnOffAgain = await page.evaluate(() => document.getElementById('speakBtn').classList.contains('on'));
+  assert(!speakBtnOffAgain, 'clicking the speak button again turns it back off');
+  await sendMsg('regtest message after disabling speak');
+  const spokenCountAfterDisable = await page.evaluate(() => window.__speakCalls.length);
+  assert(spokenCountAfterDisable === spokenTexts.length, 'once disabled again, a completed response does not call speechSynthesis.speak');
+  await page.unroute('**/*');
 
   console.log(`\n-- page errors: ${realErrors().length} real (excluding expected sandbox network noise) --`);
   if (realErrors().length) console.log(realErrors());
