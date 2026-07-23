@@ -15,6 +15,8 @@
      Overseer's own dedicated system prompt (not the main chat one)
    - write_file tool never defaults to main/master; the approved branch is
      what actually reaches the GitHub ops worker
+   - Manual import's "Fetch from Drive" guards against an unconnected/
+     expired Drive session instead of silently failing
 
    Run: NODE_PATH=/opt/node22/lib/node_modules node tests/regression.js
 */
@@ -185,6 +187,11 @@ function assert(cond, label) {
   await page.waitForTimeout(600);
   await dismissConfirmIfAny();
   await waitForSendDone();
+  // Poll for the intercepted request body specifically, not just UI settle
+  // time - unrouting before the request lands (a timing race, not an app
+  // bug) reads lastRequestBody as null and misreports a failure. Same fix
+  // already applied to the regen and repo-tools tests below.
+  for (let i = 0; i < 60 && lastRequestBody === null; i++) await page.waitForTimeout(200);
   await page.unroute('**/*');
   const lastUserMsg = lastRequestBody && lastRequestBody.messages ? lastRequestBody.messages.filter(m => m.role === 'user').pop() : null;
   const contentParts = lastUserMsg && Array.isArray(lastUserMsg.content) ? lastUserMsg.content : [];
@@ -403,6 +410,24 @@ function assert(cond, label) {
   const importedRaw = await page.evaluate(() => localStorage.getItem(Object.keys(localStorage).find((k) => k.indexOf('ai_workprojects') >= 0)));
   const importedParsed = importedRaw ? JSON.parse(importedRaw) : null;
   assert(importedParsed && importedParsed.length === 1 && importedParsed[0].id === 'regtestImported', `manually imported workprojects data is written to localStorage (got ${importedRaw})`);
+
+  console.log('\n-- Manual import: "Fetch from Drive" guards against an unconnected/expired session --');
+  // Fetch from Drive pulls the file straight from the connected folder
+  // instead of making the user copy its content out of the Drive app by
+  // hand - but this sandbox has no real Google OAuth, so the only
+  // reachable path here is the guard: with no Drive connection at all,
+  // it must alert and leave the textarea untouched rather than silently
+  // failing or hanging.
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  await page.click('#driveManualImportBtn'); await page.waitForTimeout(150);
+  let fetchGuardDialogMessage = null;
+  page.once('dialog', async (dialog) => { fetchGuardDialogMessage = dialog.message(); await dialog.accept(); });
+  await page.click('#driveFetchFromDriveBtn');
+  await page.waitForTimeout(300);
+  assert(!!fetchGuardDialogMessage && fetchGuardDialogMessage.toLowerCase().indexOf('not connected') >= 0, `Fetch from Drive alerts when there's no Drive connection (got ${JSON.stringify(fetchGuardDialogMessage)})`);
+  const importTextAfterFailedFetch = await page.inputValue('#driveImportText');
+  assert(importTextAfterFailedFetch === '', 'the textarea stays empty when the fetch is blocked by the connection guard');
+  await page.click('#closeDriveManualImportModal'); await page.waitForTimeout(150);
 
   console.log('\n-- Drive folder can be manually locked by ID, bypassing name-based search --');
   // Name-based folder search is what created a duplicate "ai-router-backups"

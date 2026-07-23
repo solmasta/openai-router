@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.30</span></span>
+      <span class="wm">ai-router <span>v5.31</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -462,7 +462,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="modal hidden" id="driveManualImportModal"><div class="sheet">
   <div class="sh"><span>Manual import</span><button class="sc" id="closeDriveManualImportModal">&#10005;</button></div>
   <div class="sbody">
-    <div style="font-size:12px;color:var(--mu);margin-bottom:12px;line-height:1.5">Open the file directly in the Google Drive app or drive.google.com (inside the "ai-router-backups" folder), copy its full content, pick which file it is below, and paste it in. This writes straight to this device - no Drive API calls involved, so it works even while Drive is rate-limited or disconnected.</div>
+    <div style="font-size:12px;color:var(--mu);margin-bottom:12px;line-height:1.5">Pick which file this is, then either tap "Fetch from Drive" to pull it straight from the connected "ai-router-backups" folder (needs a working Drive connection), or paste its content in yourself - pasting writes straight to this device with no Drive API calls involved, so it still works even while Drive is rate-limited or disconnected.</div>
     <label class="fl">Which file is this?</label>
     <select id="driveImportType" class="fi">
       <option value="workprojects">projects.json &#8594; Projects (WORQ, Electrical Survey, etc.)</option>
@@ -472,8 +472,9 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
       <option value="memories">memories.json &#8594; Memories</option>
       <option value="doclibrary">documents.json &#8594; Document library</option>
     </select>
-    <label class="fl">Pasted file content</label>
-    <textarea id="driveImportText" class="ta" rows="10" placeholder="Paste the raw JSON content of that file here&#8230;"></textarea>
+    <button class="bg" id="driveFetchFromDriveBtn" style="width:100%;margin:8px 0">Fetch from Drive</button>
+    <label class="fl">File content</label>
+    <textarea id="driveImportText" class="ta" rows="10" placeholder="Paste the raw JSON content of that file here, or tap Fetch from Drive above&#8230;"></textarea>
   </div>
   <div class="sf2 ef">
     <button class="bg" id="closeDriveManualImportModal2">Cancel</button>
@@ -514,7 +515,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.30</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.31</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -3064,6 +3065,34 @@ document.getElementById("driveManualImportBtn").addEventListener("click",functio
 document.getElementById("closeDriveManualImportModal").addEventListener("click",function(){closeModal("driveManualImportModal");});
 document.getElementById("closeDriveManualImportModal2").addEventListener("click",function(){closeModal("driveManualImportModal");});
 document.getElementById("driveManualImportModal").addEventListener("click",function(e){if(e.target===e.currentTarget)closeModal("driveManualImportModal");});
+document.getElementById("driveFetchFromDriveBtn").addEventListener("click",async function(){
+  /* Pulls the file the same way Restore does - by exact name inside the
+     connected folder - instead of making the user open the Drive app,
+     find the file, and copy its content out by hand. Only the fetch step
+     is automated; Import still requires its own tap so there's always a
+     review before anything is applied. */
+  if(!driveToken||driveTokenExpiry<=Date.now()){
+    alert("Not connected to Google Drive (or the connection expired) - connect in Settings first, or paste the file's content in below instead.");
+    return;
+  }
+  var btn=this;btn.disabled=true;btn.textContent="Fetching…";
+  try{
+    var folderId=driveFolderId||await driveEnsureFolder();
+    if(!folderId){alert("Couldn't reach the Drive folder - check your connection, or paste the file's content in below instead.");return;}
+    var type=document.getElementById("driveImportType").value;
+    var filename=DRIVE_FILES[type];
+    var data=await driveDownloadNamedFile(filename);
+    if(data===null||data===undefined){
+      alert("Couldn't find \""+filename+"\" in the connected Drive folder - it may not exist yet, or paste its content in below instead.");
+      return;
+    }
+    document.getElementById("driveImportText").value=JSON.stringify(data,null,2);
+  }catch(e){
+    alert("Fetch failed: "+e.message+" - paste the file's content in below instead.");
+  }finally{
+    btn.disabled=false;btn.textContent="Fetch from Drive";
+  }
+});
 document.getElementById("driveManualImportApplyBtn").addEventListener("click",function(){
   var type=document.getElementById("driveImportType").value;
   var raw=document.getElementById("driveImportText").value.trim();
