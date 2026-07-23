@@ -253,7 +253,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.44</span></span>
+      <span class="wm">ai-router <span>v5.45</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -535,7 +535,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.44</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.45</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -986,7 +986,26 @@ async function doSummarize(){
 }
 
 /* ---- Voice ---- */
-var recognition=null,micOn=false,voiceConversationMode=false;
+var recognition=null,micOn=false,voiceConversationMode=false,voiceSilenceTimer=null;
+/* continuous=false is SUPPOSED to make the browser stop listening (firing
+   onend) on its own as soon as it detects a pause - that's what
+   voice-conversation mode relies on to auto-send. In practice this varies
+   a lot across real browsers/OSes: some stop reliably on a pause, some
+   don't stop until a much longer built-in limit, some barely stop at all
+   with interimResults on. Relying on that alone left real users stuck
+   with text sitting in the compose box, never auto-sent. This timer is a
+   self-managed backstop: only while voice-conversation mode is on, every
+   new transcript update (interim or final) resets a short countdown: no
+   further speech within it, and the app stops listening itself instead of
+   waiting on whatever the browser would otherwise do. */
+function resetVoiceSilenceTimer(){
+  if(voiceSilenceTimer){clearTimeout(voiceSilenceTimer);voiceSilenceTimer=null;}
+  if(!voiceConversationMode)return;
+  voiceSilenceTimer=setTimeout(function(){
+    voiceSilenceTimer=null;
+    if(micOn)recognition.stop();
+  },1800);
+}
 (function(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){document.getElementById("micBtn").classList.add("off");return;}
@@ -1000,15 +1019,18 @@ var recognition=null,micOn=false,voiceConversationMode=false;
     var el=document.getElementById("prompt");
     el.value=(el.dataset.base||"")+fin+int;
     el.style.height="auto";el.style.height=Math.min(el.scrollHeight,150)+"px";
+    resetVoiceSilenceTimer();
   };
-  /* SpeechRecognition with continuous=false already stops itself as soon
-     as it detects a pause in speech - that natural "onend" is exactly the
-     cue voice-conversation mode needs to auto-send a finished turn
-     without the user ever touching Send. Only fires when there's actual
-     transcribed text, so stopping the mic with nothing said (or manually,
-     via toggleMic) never sends an empty message. */
+  /* Fires either because the browser detected a pause on its own, or
+     because resetVoiceSilenceTimer's backstop above called stop() itself -
+     either way this is the single place that reacts to "listening just
+     ended," so voice-conversation mode's auto-send only needs to live
+     here once. Only fires when there's actual transcribed text, so
+     stopping the mic with nothing said (or manually, via toggleMic) never
+     sends an empty message. */
   recognition.onend=function(){
     micOn=false;document.getElementById("micBtn").classList.remove("on");
+    if(voiceSilenceTimer){clearTimeout(voiceSilenceTimer);voiceSilenceTimer=null;}
     var el=document.getElementById("prompt");
     var hasText=(el.value||"").trim().length>0;
     delete el.dataset.base;

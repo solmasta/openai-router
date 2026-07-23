@@ -46,6 +46,10 @@
      a finished utterance auto-sends with no Send tap, the reply is
      spoken even with the separate speak toggle off, and speaking's own
      end restarts listening for the next turn
+   - voice-conversation mode's own silence timer auto-sends a finished
+     utterance even if the browser never fires onend on its own - a real
+     user report that continuous=false's "stops on a pause" behavior
+     isn't reliable enough across real browsers/OSes to depend on alone
    - picking a voice persists it and is actually set on the utterance
      when speaking; Overseer personality text persists and shows up in
      the system prompt sent to the model
@@ -1323,6 +1327,58 @@ function assert(cond, label) {
   assert(!voiceModeOffState, 'toggling voice-conversation mode off turns it back off');
   const micOffAfterDisable = await page.evaluate(() => document.getElementById('micBtn').classList.contains('on'));
   assert(!micOffAfterDisable, 'turning voice-conversation mode off stops listening (mic shows off)');
+
+  console.log('\n-- voice-conversation mode auto-sends via its own silence timer, even if the browser never fires onend on its own --');
+  // Real-world report: text landed in the compose box but never actually
+  // sent - continuous=false's "stops itself on a pause" behavior varies a
+  // lot across real browsers/OSes and isn't reliable enough to depend on
+  // alone. Simulate a transcript arriving and then NEVER call the fake
+  // recognition's onend directly (unlike the test above) - only the app's
+  // own resetVoiceSilenceTimer backstop should end listening and trigger
+  // the send, proving that mechanism works independent of the browser's
+  // own onend behavior.
+  await page.click('#modelBtn'); await page.waitForTimeout(150);
+  await page.locator('.mc:has-text("Mistral Small")').first().click();
+  await page.waitForTimeout(150);
+  const startCountBeforeTimerTest = await page.evaluate(() => window.__recognitionStartCount || 0);
+  await page.click('#voiceModeBtn'); await page.waitForTimeout(150);
+  await page.evaluate(() => {
+    window.__origFetch = window.fetch;
+    window.fetch = async (url, opts) => {
+      const u = String(url);
+      if (u.indexOf('/secret') >= 0) {
+        return new Response(JSON.stringify({ secret: 'regtest-secret' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (opts && opts.method === 'POST' && opts.body) {
+        let parsed = null;
+        try { parsed = JSON.parse(opts.body); } catch (e) {}
+        if (parsed && parsed.stream === false) {
+          return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: 'regtest done' } }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
+        if (parsed && parsed.stream === true) {
+          return new Response('data: {"choices":[{"delta":{"content":"regtest timer-triggered reply"}}]}\n\ndata: [DONE]\n\n', { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+        }
+      }
+      return window.__origFetch(url, opts);
+    };
+  });
+  await page.evaluate(() => {
+    window.__fakeRecognition.onresult({
+      resultIndex: 0,
+      results: { length: 1, 0: { length: 1, isFinal: true, 0: { transcript: 'regtest silence-timer message' } } },
+    });
+  });
+  // The app's own timer is 1800ms after the last result - give it real
+  // room past that instead of racing it exactly.
+  await page.waitForTimeout(2500);
+  await waitForSendDone();
+  await page.evaluate(() => { window.fetch = window.__origFetch; delete window.__origFetch; });
+  const promptClearedByTimer = await page.inputValue('#prompt');
+  assert(promptClearedByTimer === '', 'the silence timer alone (no manual/browser onend) still auto-sends the finished utterance');
+  const startCountAfterTimerTest = await page.evaluate(() => window.__recognitionStartCount);
+  assert(startCountAfterTimerTest > startCountBeforeTimerTest, 'listening actually stopped and restarted via the timer path, not left hanging');
+  await page.click('#voiceModeBtn'); await page.waitForTimeout(150);
+  await page.fill('#prompt', '');
 
   console.log('\n-- picking a voice persists it and actually gets used when speaking --');
   // getVoices() returns nothing in this headless sandbox (no system TTS
