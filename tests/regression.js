@@ -400,6 +400,24 @@ function assert(cond, label) {
   const importedParsed = importedRaw ? JSON.parse(importedRaw) : null;
   assert(importedParsed && importedParsed.length === 1 && importedParsed[0].id === 'regtestImported', `manually imported workprojects data is written to localStorage (got ${importedRaw})`);
 
+  console.log('\n-- Drive folder can be manually locked by ID, bypassing name-based search --');
+  // Name-based folder search is what created a duplicate "ai-router-backups"
+  // folder in the first place - pinning an exact folder ID sidesteps that
+  // entirely for any device that sets it.
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  page.once('dialog', (dialog) => dialog.accept('https://drive.google.com/drive/folders/regtestFolderId123'));
+  await page.click('#driveFolderSetBtn');
+  await page.waitForTimeout(200);
+  const folderStatusAfterSet = await page.textContent('#driveFolderStatus');
+  assert(folderStatusAfterSet.indexOf('regtestFolderId123') >= 0, `folder status reflects the locked-in folder id (got "${folderStatusAfterSet}")`);
+  const lockedFolderId = await page.evaluate(() => localStorage.getItem(Object.keys(localStorage).find((k) => k.indexOf('drive_folder_id') >= 0 && k.indexOf('locked') < 0)));
+  assert(lockedFolderId === 'regtestFolderId123', `the extracted folder id (not the full URL) is what gets saved (got "${lockedFolderId}")`);
+  page.once('dialog', (dialog) => dialog.accept(''));
+  await page.click('#driveFolderSetBtn');
+  await page.waitForTimeout(200);
+  const folderStatusAfterClear = await page.textContent('#driveFolderStatus');
+  assert(folderStatusAfterClear.indexOf('Auto') >= 0, `clearing the input reverts to automatic folder detection (got "${folderStatusAfterClear}")`);
+
   console.log(`\n-- page errors: ${realErrors().length} real (excluding expected sandbox network noise) --`);
   if (realErrors().length) console.log(realErrors());
   failures += realErrors().length;

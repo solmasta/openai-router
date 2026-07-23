@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.27</span></span>
+      <span class="wm">ai-router <span>v5.28</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -500,7 +500,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.27</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.28</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -509,6 +509,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Install app</div><div class="ssb" id="installSub">Checking&#8230;</div></div><button class="bg" id="installBtn">Install</button></div>
     <div class="sr"><div><div class="slb">Google Drive backup</div><div class="ssb" id="driveStatus">Not connected</div></div><div style="display:flex;gap:6px"><button class="bg hidden" id="driveBackupBtn">Back up</button><button class="bg hidden" id="driveRestoreBtn">Restore</button><button class="bg" id="driveConnectBtn">Connect</button></div></div>
     <div class="sr"><div><div class="slb">Manual import</div><div class="ssb">Paste a backup file's content directly - works even if Drive is rate-limited or disconnected</div></div><button class="bg" id="driveManualImportBtn">Import</button></div>
+    <div class="sr"><div><div class="slb">Drive folder</div><div class="ssb" id="driveFolderStatus">Auto (finds/creates by name)</div></div><button class="bg" id="driveFolderSetBtn">Set</button></div>
     <div class="sr"><div><div class="slb">GitHub repository</div><div class="ssb" id="githubStatus">Not connected</div></div><button class="bg" id="githubConnectBtn">Connect</button></div>
     <div class="sr"><div><div class="slb">Agent auto-select</div><div class="ssb">Automatically pick the best model for each task</div></div><button class="bg" id="agentToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Overseer monitoring</div><div class="ssb">Track progress, detect stuck situations, suggest next steps</div></div><button class="bg" id="overseerToggleBtn">ON</button></div>
@@ -3065,6 +3066,54 @@ document.getElementById("driveManualImportApplyBtn").addEventListener("click",fu
   alert("Imported. Reloading now.");
   location.reload();
 });
+/* Pin the exact Drive folder by ID instead of trusting name-based search -
+   that search is what created a second "ai-router-backups" folder in the
+   first place (Drive allows duplicate names; a device whose query missed
+   the existing one just made a new one). Setting driveFolderId directly
+   here writes to the exact same localStorage key driveEnsureFolder()
+   already reads/caches from, so it's respected automatically - no changes
+   needed there. Pasting the SAME folder URL on every device guarantees
+   they all agree, rather than hoping the name search converges. */
+function extractDriveFolderId(input){
+  input=(input||"").trim();
+  var m=input.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if(m)return m[1];
+  if(/^[a-zA-Z0-9_-]{10,}$/.test(input))return input;
+  return null;
+}
+function updateDriveFolderStatus(){
+  var el=document.getElementById("driveFolderStatus");
+  if(!el)return;
+  var locked=localStorage.getItem(pk("drive_folder_id_locked"));
+  el.textContent=locked?("Locked to folder: "+locked):"Auto (finds/creates by name)";
+}
+document.getElementById("driveFolderSetBtn").addEventListener("click",function(){
+  var cur=localStorage.getItem(pk("drive_folder_id_locked"))||"";
+  var input=prompt("Paste the Drive folder's URL (open it in the Drive app or drive.google.com, copy the address) or just its folder ID.\n\nLeave this blank and press OK to go back to automatic detection by name.",cur);
+  if(input===null)return;
+  input=input.trim();
+  if(!input){
+    localStorage.removeItem(pk("drive_folder_id_locked"));
+    localStorage.removeItem(pk("drive_folder_id"));
+    driveFolderId=null;
+    updateDriveFolderStatus();
+    alert("Reverted to automatic folder detection.");
+    return;
+  }
+  var id=extractDriveFolderId(input);
+  if(!id){alert("Couldn't find a folder ID in that - paste the full Drive folder URL or just its ID.");return;}
+  localStorage.setItem(pk("drive_folder_id_locked"),id);
+  localStorage.setItem(pk("drive_folder_id"),id);
+  driveFolderId=id;
+  /* Cached file IDs were found inside whichever folder was previously
+     active - if that was a different folder, those IDs would point to
+     the wrong place now. Clear so the next backup/restore re-resolves
+     file IDs inside the newly-locked folder. */
+  driveFileIds={};localStorage.setItem(pk("drive_file_ids"),JSON.stringify({}));
+  updateDriveFolderStatus();
+  alert("Drive folder locked in. Backups and restores will use this exact folder from now on.");
+});
+updateDriveFolderStatus();
 driveLoadCache();
 
 /* ---- Install (Android/Desktop native, iPhone guided) ---- */
