@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.34</span></span>
+      <span class="wm">ai-router <span>v5.35</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -265,7 +265,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <span class="sa">&#8250;</span>
   </button>
   <div class="tabbar hidden" id="tabBar"></div>
-  <div class="chat" id="chat"><div class="es" id="emptyState"><div class="es-icon">✦</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div></div>
+  <div class="chat" id="chat"><div class="es" id="emptyState"><div class="es-icon">🤖</div><div class="es-title">I'm your Overseer.</div><div class="es-sub">Tell me what you need — I'll pick the right model, use your tools, and get it done.</div></div></div>
   <div class="ob hidden" id="overseerBar">
     <span class="obd" id="overseerBarDot"></span>
     <span id="overseerBarText">Overseer monitoring</span>
@@ -516,7 +516,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.34</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.35</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1897,7 +1897,7 @@ function getModelSystemPrompt(ap){
      the caller), not whatever happens to be selected right now. */
   var curAp2=ap!==undefined?ap:getAP();
   var inProject=curAp2&&typeof curAp2.id==="string"&&curAp2.id.indexOf("wproj_")===0;
-  var sys="You are an expert AI assistant with advanced coding and repository control capabilities.\n\n";
+  var sys="You are the Overseer - the user's single point of contact in this app. You act directly using your tools instead of just describing what should be done, and you have advanced coding and repository control capabilities.\n\n";
   if(inProject){
     sys="You are a helpful assistant. An active project's instructions (sent separately) define your task and behavior for this conversation - follow them exactly.\n";
   }else if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
@@ -1934,8 +1934,7 @@ function getModelSystemPrompt(ap){
     sys+="Execute tools immediately - don't ask for permission.\n";
     sys+="Show your reasoning in <think> tags. Be direct and action-oriented.\n";
   }else{
-    sys+="You are a helpful coding assistant. Provide clear explanations and code examples.\n";
-    sys+="For coding tasks, write complete, working code examples.\n";
+    sys+="Provide clear explanations and code examples. For coding tasks, write complete, working code.\n";
   }
   sys+="Always use <think> tags to show reasoning before acting.\n";
   sys+="\nIf you notice a durable fact about the user worth remembering for future conversations (a preference, an ongoing project, important context) - not something only relevant to this one message - wrap it in <memory>fact here</memory> tags. Use this sparingly, only for things genuinely worth remembering long-term. The user will be asked to approve before it's actually saved.\n";
@@ -2435,7 +2434,7 @@ function startWprojChat(){
   if(!p)return;
   if(chatHistory.length&&!confirm("Start a new chat in this project? Current chat will be cleared."))return;
   saveToRecent();
-  chatHistory=[];document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✶</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
+  chatHistory=[];document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">🤖</div><div class="es-title">I\'m your Overseer.</div><div class="es-sub">Tell me what you need — I\'ll pick the right model, use your tools, and get it done.</div></div>';
   lastUsedModelId="";sessionId=Date.now().toString();responseCount=0;
   document.getElementById("tokenBar").classList.add("hidden");
   activeWProjId=p.id;
@@ -2558,7 +2557,7 @@ function saveTabsToStorage(){
   try{localStorage.setItem(pk(TABS_KEY),JSON.stringify({tabs:openTabs,active:activeTabIndex}));}catch(e){}
 }
 function renderChatFromHistory(hist){
-  document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✦</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
+  document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">🤖</div><div class="es-title">I\'m your Overseer.</div><div class="es-sub">Tell me what you need — I\'ll pick the right model, use your tools, and get it done.</div></div>';
   chatHistory=[];
   (hist||[]).forEach(function(m){chatHistory.push({role:m.role,content:m.content});appendMsg(m.role,m.content);});
   setTimeout(function(){var c=document.getElementById("chat");c.scrollTop=c.scrollHeight;},50);
@@ -4134,7 +4133,7 @@ document.getElementById("clearBtn").addEventListener("click",function(){
   sessionId=Date.now().toString();responseCount=0;lastUsedModelId="";summarizing=false;
   clearActiveWproj();stopOverseerMonitoring();overseerState=defaultOverseerState();
   preVisionModel=null;declinedSwitchTargets={};switchSuggestionCooldown=0;
-  document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✶</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
+  document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">🤖</div><div class="es-title">I\'m your Overseer.</div><div class="es-sub">Tell me what you need — I\'ll pick the right model, use your tools, and get it done.</div></div>';
   document.getElementById("tokenBar").classList.add("hidden");
   updateOverseerBar();
   if(openTabs.length){openTabs[activeTabIndex]=currentTabSnapshot();renderTabBar();saveTabsToStorage();}
