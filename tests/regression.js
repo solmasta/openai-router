@@ -17,6 +17,8 @@
      what actually reaches the GitHub ops worker
    - Manual import's "Fetch from Drive" guards against an unconnected/
      expired Drive session instead of silently failing
+   - "Open" deep-links straight to the Drive folder by id, falling back to
+     a name search only when no id is known yet
 
    Run: NODE_PATH=/opt/node22/lib/node_modules node tests/regression.js
 */
@@ -441,11 +443,53 @@ function assert(cond, label) {
   assert(folderStatusAfterSet.indexOf('regtestFolderId123') >= 0, `folder status reflects the locked-in folder id (got "${folderStatusAfterSet}")`);
   const lockedFolderId = await page.evaluate(() => localStorage.getItem(Object.keys(localStorage).find((k) => k.indexOf('drive_folder_id') >= 0 && k.indexOf('locked') < 0)));
   assert(lockedFolderId === 'regtestFolderId123', `the extracted folder id (not the full URL) is what gets saved (got "${lockedFolderId}")`);
+
+  console.log('\n-- "Open" jumps straight to the Drive folder instead of making you search for it --');
+  // With a folder id already known (just locked in above), Open must deep-
+  // link straight to that folder, not a name search - the whole point of
+  // this button is skipping the "hunt through Drive for the right folder"
+  // step entirely. This sandbox has no egress, so the popup's real
+  // navigation to drive.google.com fails instantly and Chromium replaces
+  // its url() with chrome-error://chromewebdata/ before we can read it -
+  // fulfill the navigation at the context level (covers popups too, unlike
+  // page-level routing) so it actually "loads" and keeps the real target URL.
+  await page.context().route('https://drive.google.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>ok</body></html>' }));
+  const [popupWithKnownId] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.click('#driveFolderOpenBtn'),
+  ]);
+  await popupWithKnownId.waitForLoadState('domcontentloaded').catch(() => {});
+  assert(popupWithKnownId.url().indexOf('regtestFolderId123') >= 0, `"Open" in Settings deep-links to the known folder id (got "${popupWithKnownId.url()}")`);
+  await popupWithKnownId.close();
+  await page.click('#driveManualImportBtn'); await page.waitForTimeout(150);
+  const [popupFromImportModal] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.click('#driveFolderOpenBtn2'),
+  ]);
+  await popupFromImportModal.waitForLoadState('domcontentloaded').catch(() => {});
+  assert(popupFromImportModal.url().indexOf('regtestFolderId123') >= 0, `"Open the Drive folder itself" in Manual import deep-links to the same known folder id (got "${popupFromImportModal.url()}")`);
+  await popupFromImportModal.close();
+  await page.click('#closeDriveManualImportModal'); await page.waitForTimeout(150);
+  // driveManualImportBtn hides Settings underneath before opening its own
+  // modal (same pattern as githubConnectBtn), and closing it doesn't
+  // reopen Settings - it has to be reopened explicitly to reach
+  // driveFolderSetBtn next.
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+
   page.once('dialog', (dialog) => dialog.accept(''));
   await page.click('#driveFolderSetBtn');
   await page.waitForTimeout(200);
   const folderStatusAfterClear = await page.textContent('#driveFolderStatus');
   assert(folderStatusAfterClear.indexOf('Auto') >= 0, `clearing the input reverts to automatic folder detection (got "${folderStatusAfterClear}")`);
+
+  const [popupWithNoId] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.click('#driveFolderOpenBtn'),
+  ]);
+  await popupWithNoId.waitForLoadState('domcontentloaded').catch(() => {});
+  assert(popupWithNoId.url().indexOf('ai-router-backups') >= 0, `with no folder id known, "Open" falls back to a name search instead of a dead link (got "${popupWithNoId.url()}")`);
+  await popupWithNoId.close();
+  await page.context().unroute('https://drive.google.com/**');
 
   console.log('\n-- Overseer chat: long-press opens it, a sent message renders and reaches the model with a dedicated system prompt --');
   // Settings was left open by the previous test - it shares the same

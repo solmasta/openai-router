@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.31</span></span>
+      <span class="wm">ai-router <span>v5.32</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -462,7 +462,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="modal hidden" id="driveManualImportModal"><div class="sheet">
   <div class="sh"><span>Manual import</span><button class="sc" id="closeDriveManualImportModal">&#10005;</button></div>
   <div class="sbody">
-    <div style="font-size:12px;color:var(--mu);margin-bottom:12px;line-height:1.5">Pick which file this is, then either tap "Fetch from Drive" to pull it straight from the connected "ai-router-backups" folder (needs a working Drive connection), or paste its content in yourself - pasting writes straight to this device with no Drive API calls involved, so it still works even while Drive is rate-limited or disconnected.</div>
+    <div style="font-size:12px;color:var(--mu);margin-bottom:12px;line-height:1.5">Pick which file this is, then either tap "Fetch from Drive" to pull it straight from the connected "ai-router-backups" folder (needs a working Drive connection), or open the folder yourself and copy the file's content in - pasting writes straight to this device with no Drive API calls involved, so it still works even while Drive is rate-limited or disconnected.</div>
     <label class="fl">Which file is this?</label>
     <select id="driveImportType" class="fi">
       <option value="workprojects">projects.json &#8594; Projects (WORQ, Electrical Survey, etc.)</option>
@@ -473,6 +473,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
       <option value="doclibrary">documents.json &#8594; Document library</option>
     </select>
     <button class="bg" id="driveFetchFromDriveBtn" style="width:100%;margin:8px 0">Fetch from Drive</button>
+    <button class="bg" id="driveFolderOpenBtn2" style="width:100%;margin:0 0 12px">Open the Drive folder itself</button>
     <label class="fl">File content</label>
     <textarea id="driveImportText" class="ta" rows="10" placeholder="Paste the raw JSON content of that file here, or tap Fetch from Drive above&#8230;"></textarea>
   </div>
@@ -515,7 +516,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.31</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.32</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -524,7 +525,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Install app</div><div class="ssb" id="installSub">Checking&#8230;</div></div><button class="bg" id="installBtn">Install</button></div>
     <div class="sr"><div><div class="slb">Google Drive backup</div><div class="ssb" id="driveStatus">Not connected</div></div><div style="display:flex;gap:6px"><button class="bg hidden" id="driveBackupBtn">Back up</button><button class="bg hidden" id="driveRestoreBtn">Restore</button><button class="bg" id="driveConnectBtn">Connect</button></div></div>
     <div class="sr"><div><div class="slb">Manual import</div><div class="ssb">Paste a backup file's content directly - works even if Drive is rate-limited or disconnected</div></div><button class="bg" id="driveManualImportBtn">Import</button></div>
-    <div class="sr"><div><div class="slb">Drive folder</div><div class="ssb" id="driveFolderStatus">Auto (finds/creates by name)</div></div><button class="bg" id="driveFolderSetBtn">Set</button></div>
+    <div class="sr"><div><div class="slb">Drive folder</div><div class="ssb" id="driveFolderStatus">Auto (finds/creates by name)</div></div><div style="display:flex;gap:6px"><button class="bg" id="driveFolderOpenBtn">Open</button><button class="bg" id="driveFolderSetBtn">Set</button></div></div>
     <div class="sr"><div><div class="slb">GitHub repository</div><div class="ssb" id="githubStatus">Not connected</div></div><button class="bg" id="githubConnectBtn">Connect</button></div>
     <div class="sr"><div><div class="slb">Agent auto-select</div><div class="ssb">Automatically pick the best model for each task</div></div><button class="bg" id="agentToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Overseer monitoring</div><div class="ssb">Track progress, detect stuck situations, suggest next steps</div></div><button class="bg" id="overseerToggleBtn">ON</button></div>
@@ -3163,6 +3164,22 @@ document.getElementById("driveFolderSetBtn").addEventListener("click",function()
   updateDriveFolderStatus();
   alert("Drive folder locked in. Backups and restores will use this exact folder from now on.");
 });
+/* Jumps straight to the actual "ai-router-backups" folder instead of
+   making the user search Drive for it by name - uses the same cached
+   driveFolderId Restore/backup already rely on, so it works even with an
+   expired connection (the id is cached from the last successful connect,
+   independent of whether the live token is still valid). With no id
+   cached at all (never connected), falls back to a name search so
+   there's still something useful to open. */
+function openDriveFolderInNewTab(){
+  if(driveFolderId){
+    window.open("https://drive.google.com/drive/folders/"+driveFolderId,"_blank");
+  }else{
+    window.open("https://drive.google.com/drive/search?q=ai-router-backups","_blank");
+  }
+}
+document.getElementById("driveFolderOpenBtn").addEventListener("click",openDriveFolderInNewTab);
+document.getElementById("driveFolderOpenBtn2").addEventListener("click",openDriveFolderInNewTab);
 updateDriveFolderStatus();
 driveLoadCache();
 
