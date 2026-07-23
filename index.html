@@ -154,6 +154,8 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 .mic:hover{background:var(--up);color:var(--tx)}
 .mic.on{color:var(--er);animation:pu .8s ease-in-out infinite}
 .mic.off{opacity:.3;cursor:default}
+.spk.on{color:var(--ac)}
+.spk.speaking{color:var(--er);animation:pu .8s ease-in-out infinite}
 @keyframes pu{0%,100%{opacity:1}50%{opacity:.5}}
 .ws{background:none;border:none;border-radius:20px;padding:9px 10px;font-size:13px;cursor:pointer;line-height:1;color:var(--mu);transition:background .15s,color .15s;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}
 .ws:hover{background:var(--up);color:var(--tx)}
@@ -250,7 +252,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.39</span></span>
+      <span class="wm">ai-router <span>v5.40</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -283,6 +285,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
         <button class="ib" id="attachBtn" title="Attach">&#128206;</button>
         <input type="file" id="fileInput" hidden multiple accept="image/*,.txt,.js,.ts,.jsx,.tsx,.py,.html,.css,.json,.md,.yaml,.yml,.csv,.xml,.sh">
         <button class="mic" id="micBtn" title="Voice">&#127908;</button>
+        <button class="mic spk" id="speakBtn" title="Speak replies aloud">&#128266;</button>
         <button class="ws" id="overseerBtn" title="Overseer status (long-press to chat)">🤖</button>
         <button class="ws" id="brainstormBtn" title="Brainstorming suggestions">💭</button>
         <button class="ws" id="newTabBtn" title="New conversation tab" style="color:var(--ac);font-size:17px;font-weight:400">&#43;</button>
@@ -530,7 +533,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.39</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.40</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1003,6 +1006,32 @@ function toggleMic(){
   var el=document.getElementById("prompt");el.dataset.base=el.value?el.value+" ":"";
   micOn=true;document.getElementById("micBtn").classList.add("on");
   try{recognition.start();}catch(e){micOn=false;document.getElementById("micBtn").classList.remove("on");}
+}
+
+/* ---- Speak replies aloud ---- */
+/* Off by default, same as overseerEnabled/autoPromptInjection - not
+   persisted to localStorage, a plain session toggle. */
+var speakEnabled=false;
+if(!window.speechSynthesis)document.getElementById("speakBtn").classList.add("off");
+function toggleSpeak(){
+  var btn=document.getElementById("speakBtn");
+  if(!window.speechSynthesis){btn.classList.add("off");return;}
+  speakEnabled=!speakEnabled;
+  btn.classList.toggle("on",speakEnabled);
+  if(!speakEnabled)window.speechSynthesis.cancel();
+}
+/* Called with the already-cleaned reply text (think-tags/memory-tags
+   already stripped by the caller) right as a response finishes, so it
+   reads naturally instead of narrating markdown syntax or reasoning. */
+function speakText(text){
+  if(!speakEnabled||!text||!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  var utter=new SpeechSynthesisUtterance(text);
+  var btn=document.getElementById("speakBtn");
+  utter.onstart=function(){if(btn)btn.classList.add("speaking");};
+  utter.onend=function(){if(btn)btn.classList.remove("speaking");};
+  utter.onerror=function(){if(btn)btn.classList.remove("speaking");};
+  window.speechSynthesis.speak(utter);
 }
 
 /* ---- Favorites ---- */
@@ -3535,6 +3564,7 @@ document.getElementById("convSearch").addEventListener("input",function(){
   if(proj)renderConvsList(proj,this.value);
 });
 document.getElementById("micBtn").addEventListener("click",toggleMic);
+document.getElementById("speakBtn").addEventListener("click",toggleSpeak);
 document.getElementById("agentToggleBtn").addEventListener("click",function(){
   agentAutoSelect=!agentAutoSelect;
   this.textContent=agentAutoSelect?"ON":"OFF";
@@ -3701,6 +3731,7 @@ async function sendOverseerChatMsg(){
     }
     body.innerHTML=renderMd(full||"(empty response)");
     overseerState.strategyChat.push({role:"assistant",content:full||"(empty response)"});
+    speakText(full);
   }catch(e){
     body.className="body err";body.innerHTML="Error: "+esc(e.message);
   }finally{
@@ -3880,10 +3911,12 @@ async function regenLast(){
 /* ---- Send ---- */
 function stopGeneration(){
   if(abortController){abortController.abort();}
+  if(window.speechSynthesis)window.speechSynthesis.cancel();
 }
 
 async function send(){
   if(sending)return;
+  if(window.speechSynthesis)window.speechSynthesis.cancel();
   await ensureAppSecret();
   var promptEl=document.getElementById("prompt");
   var text=promptEl.value.trim();
@@ -4177,6 +4210,7 @@ async function doSendRequest(userContent,isRegen,ap){
 
     var memSuggestions=extractMemorySuggestions(full);
     full=stripMemoryTags(full);
+    speakText(full);
 
     asstMsg.wrap.classList.remove("ma2");
     asstMsg.body.innerHTML=renderMd(full||(isRegen?"(no response)":"(empty response)"));
