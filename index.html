@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.38</span></span>
+      <span class="wm">ai-router <span>v5.39</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -530,7 +530,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.38</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.39</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1119,7 +1119,18 @@ function scoreModelForTask(model,tasks){
   var score=50;
   var capStr=(model.id+" "+model.label+" "+(model.desc||"")).toLowerCase();
   if(tasks.github>0){
-    if(capStr.indexOf("deepinfra")>=0||model.id.indexOf("deepinfra")>=0)score+=tasks.github*10;
+    /* This used to check capStr/model.id for the literal string
+       "deepinfra" - no model's id, label, or description actually
+       contains that word, so the check never matched anything and this
+       boost silently never fired. The real intent is "prefer a model that
+       can actually use the repo tools this task needs" - TOOL_MODELS is
+       the actual gate that determines that (doSendRequest only offers
+       tools when currentModel.id is in it), so score against that
+       directly instead of a dead string match. Without this, the router
+       could switch to a Claude/OpenRouter model for a repo-flavored
+       message and silently lose all tool access - TOOL_MODELS only lists
+       DeepInfra models today. */
+    if(TOOL_MODELS.indexOf(model.id)>=0)score+=tasks.github*10;
   }
   if(tasks.code>0){
     if(capStr.indexOf("code")>=0||capStr.indexOf("coder")>=0||capStr.indexOf("python")>=0||capStr.indexOf("javascript")>=0||model.id.indexOf("code")>=0)score+=tasks.code*8;
