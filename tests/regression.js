@@ -383,6 +383,23 @@ function assert(cond, label) {
   const profileLabel = await page.textContent('#activeProfileLabel');
   assert(profileLabel.toLowerCase().indexOf('regressiontest') >= 0, `active profile label reflects the new profile (got "${profileLabel}")`);
 
+  console.log('\n-- manual Drive-file import writes straight to localStorage, no API calls --');
+  // Recovery path for when Drive itself is rate-limited/disconnected -
+  // paste a file's raw content and it's written directly, matching
+  // exactly what driveApplyRestoredData would have written from a real
+  // Drive download, but with zero network involved.
+  const importedProjects = [{ id: 'regtestImported', title: 'Imported Project', instructions: 'regtest imported instructions', createdAt: Date.now(), conversations: [] }];
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  await page.click('#driveManualImportBtn'); await page.waitForTimeout(150);
+  await page.selectOption('#driveImportType', 'workprojects');
+  await page.fill('#driveImportText', JSON.stringify(importedProjects));
+  page.once('dialog', (dialog) => dialog.accept());
+  await Promise.all([page.waitForNavigation({ timeout: 8000 }).catch(() => {}), page.click('#driveManualImportApplyBtn')]);
+  await page.waitForTimeout(1000);
+  const importedRaw = await page.evaluate(() => localStorage.getItem(Object.keys(localStorage).find((k) => k.indexOf('ai_workprojects') >= 0)));
+  const importedParsed = importedRaw ? JSON.parse(importedRaw) : null;
+  assert(importedParsed && importedParsed.length === 1 && importedParsed[0].id === 'regtestImported', `manually imported workprojects data is written to localStorage (got ${importedRaw})`);
+
   console.log(`\n-- page errors: ${realErrors().length} real (excluding expected sandbox network noise) --`);
   if (realErrors().length) console.log(realErrors());
   failures += realErrors().length;
