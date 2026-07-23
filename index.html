@@ -253,7 +253,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.43</span></span>
+      <span class="wm">ai-router <span>v5.44</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -535,7 +535,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.43</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.44</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1938,18 +1938,30 @@ function generateOptimalInstructions(userMessage,selectedModel){
     instructions+="- Suggest improvements\n\n";
   }
 
-  instructions+="APP CONTROL AVAILABLE (always, regardless of GitHub connection):\n";
-  instructions+="- create_project(name, instructions): Turns this conversation into a saved, reusable Work Project when the user asks (e.g. \"make this a project\") - write the name and full instructions yourself based on the actual conversation, don't ask the user to write them.\n";
-  instructions+="- switch_model(model_id): Switch the active model when the user asks, or when a clearly better-fitting model exists for what they need right now.\n";
-  instructions+="- remember(fact): Save a durable fact the user asks you to remember.\n";
-  instructions+="Use these directly the moment the user's request calls for them - don't just describe what you'd do, actually call the tool. No permission needed for these three; they're additive and reversible.\n\n";
+  /* Both blocks below claim tools the model may never actually be offered
+     - doSendRequest only attaches app-control/repo tools to the API
+       request when selectedModel.id is in TOOL_MODELS at all. Without this
+     check, a non-tool-capable model (Claude, OpenRouter, or any DeepInfra
+     model not in TOOL_MODELS) was told it had create_project/switch_model/
+     remember and read_file/write_file/list_files it was never given - it
+     would then try to call one anyway and, with no structured tool-calling
+     mechanism available, dump the attempt as literal text (e.g.
+     "<tool_call><function=read_file>...") straight into its reply instead
+     of an error, since nothing told it the tools didn't exist. */
+  if(TOOL_MODELS.indexOf(selectedModel.id)>=0){
+    instructions+="APP CONTROL AVAILABLE (always, regardless of GitHub connection):\n";
+    instructions+="- create_project(name, instructions): Turns this conversation into a saved, reusable Work Project when the user asks (e.g. \"make this a project\") - write the name and full instructions yourself based on the actual conversation, don't ask the user to write them.\n";
+    instructions+="- switch_model(model_id): Switch the active model when the user asks, or when a clearly better-fitting model exists for what they need right now.\n";
+    instructions+="- remember(fact): Save a durable fact the user asks you to remember.\n";
+    instructions+="Use these directly the moment the user's request calls for them - don't just describe what you'd do, actually call the tool. No permission needed for these three; they're additive and reversible.\n\n";
 
-  if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
-    instructions+="TOOLS AVAILABLE:\n";
-    instructions+="- read_file(path): Read files from "+ghRepoOwner+"/"+ghRepoName+"\n";
-    instructions+="- write_file(path, content, message, branch): Create files/commits. NEVER set branch to \"main\"/\"master\" unless explicitly asked - use a descriptive working-branch name instead, it's created automatically.\n";
-    instructions+="- list_files(path): Explore directory structure\n";
-    instructions+="Use these tools directly - don't ask permission (the user still approves every write and its branch before it's pushed).\n\n";
+    if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
+      instructions+="TOOLS AVAILABLE:\n";
+      instructions+="- read_file(path): Read files from "+ghRepoOwner+"/"+ghRepoName+"\n";
+      instructions+="- write_file(path, content, message, branch): Create files/commits. NEVER set branch to \"main\"/\"master\" unless explicitly asked - use a descriptive working-branch name instead, it's created automatically.\n";
+      instructions+="- list_files(path): Explore directory structure\n";
+      instructions+="Use these tools directly - don't ask permission (the user still approves every write and its branch before it's pushed).\n\n";
+    }
   }
 
   instructions+="EXECUTION:\n";
@@ -2078,7 +2090,17 @@ function getModelSystemPrompt(ap){
   if(overseerPersonality)sys+="Personality: "+overseerPersonality+" - let this come through naturally in your tone and word choice, without announcing or explaining it.\n\n";
   if(inProject){
     sys="You are a helpful assistant. An active project's instructions (sent separately) define your task and behavior for this conversation - follow them exactly.\n";
-  }else if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
+  /* TOOL_MODELS.indexOf(currentModel.id)>=0 has to match here too - this
+     branch's whole text is "you have read_file/write_file/merge_branch,
+     use them immediately," but doSendRequest only actually attaches those
+     tools to the API request for models in TOOL_MODELS. Without this
+     check, a non-tool-capable model (Claude/OpenRouter, or any DeepInfra
+     model not in TOOL_MODELS) got told it had tools it was never given -
+     it would then try to call one anyway and, with no structured
+     tool-calling mechanism available, dump the attempt as literal text
+     (e.g. "<tool_call><function=read_file>...") straight into the reply
+     instead of an error, since nothing told it tools didn't exist. */
+  }else if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName&&TOOL_MODELS.indexOf(currentModel.id)>=0){
     sys+="🔧 REPOSITORY ACCESS ENABLED:\n";
     sys+="Repository: "+ghRepoOwner+"/"+ghRepoName+"\n\n";
     sys+="You have direct access to read, modify, and commit code. For ALL code tasks:\n\n";
