@@ -26,6 +26,9 @@
      model that keeps wanting to call tools can't loop indefinitely
    - list_files no longer requires a path - its schema allows omitting it
      to mean the repo root
+   - the auto-router actually prefers a tool-capable (DeepInfra) model for
+     a repo-flavored message instead of silently landing on Claude/
+     OpenRouter and losing all tool access
    - Manual import's "Fetch from Drive" guards against an unconnected/
      expired Drive session instead of silently failing
    - "Open" deep-links straight to the Drive folder by id, falling back to
@@ -907,6 +910,25 @@ function assert(cond, label) {
   await page.unroute('**/*');
   assert(unboundedRoundCount === 4, `the tool loop stops after MAX_TOOL_ROUNDS (4) rounds even if the model keeps returning tool_calls every time (got ${unboundedRoundCount} rounds)`);
   await page.waitForTimeout(500);
+
+  console.log('\n-- auto-router prefers a tool-capable model for a repo-flavored message --');
+  // scoreModelForTask used to try to reward a DeepInfra model for a
+  // github-flavored message by checking model.id/label/desc for the
+  // literal string "deepinfra" - no model's id/label/desc actually
+  // contains that word, so the boost silently never fired for anything.
+  // That meant the auto-router could switch to a Claude/OpenRouter model
+  // for a repo-flavored message and silently lose all tool access (only
+  // DeepInfra models are in TOOL_MODELS). Start on Claude, send a message
+  // that's unambiguously repo-flavored, and confirm the router actually
+  // switches to a tool-capable (DeepInfra) model instead of staying put.
+  await page.click('#modelBtn'); await page.waitForTimeout(150);
+  await page.click('#claudeBtn'); await page.waitForTimeout(300);
+  await page.click('#closeModelModal'); await page.waitForTimeout(150);
+  const backendBeforeGithubMsg = await page.evaluate(() => document.getElementById('claudeBtn').classList.contains('act') ? 'claude' : 'other');
+  assert(backendBeforeGithubMsg === 'claude', 'test setup: starts on the Claude backend');
+  await sendMsg('please check the current branch and commit history in the repo');
+  const backendAfterGithubMsg = await page.evaluate(() => document.getElementById('deepinfraBtn').classList.contains('act') ? 'deepinfra' : 'other');
+  assert(backendAfterGithubMsg === 'deepinfra', `a repo-flavored message auto-switches away from a non-tool-capable model to a DeepInfra (tool-capable) one (backend after send: "${backendAfterGithubMsg}")`);
 
   console.log('\n-- App-control tools (create_project/remember/switch_model) actually execute, no confirm needed --');
   // These are the Overseer's new "full autonomy" tools - unlike write_file
