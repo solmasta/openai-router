@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.28</span></span>
+      <span class="wm">ai-router <span>v5.29</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -283,7 +283,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
         <button class="ib" id="attachBtn" title="Attach">&#128206;</button>
         <input type="file" id="fileInput" hidden multiple accept="image/*,.txt,.js,.ts,.jsx,.tsx,.py,.html,.css,.json,.md,.yaml,.yml,.csv,.xml,.sh">
         <button class="mic" id="micBtn" title="Voice">&#127908;</button>
-        <button class="ws" id="overseerBtn" title="Overseer status">🤖</button>
+        <button class="ws" id="overseerBtn" title="Overseer status (long-press to chat)">🤖</button>
         <button class="ws" id="brainstormBtn" title="Brainstorming suggestions">💭</button>
         <button class="ws" id="newTabBtn" title="New conversation tab" style="color:var(--ac);font-size:17px;font-weight:400">&#43;</button>
         <div class="ir">
@@ -418,6 +418,18 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
   </div>
 </div></div>
 
+<div class="modal hidden" id="overseerChatModal"><div class="sheet">
+  <div class="sh"><span>🤖 Chat with Overseer</span><button class="sc" id="closeOverseerChatModal">&#10005;</button></div>
+  <div class="sbody">
+    <div id="overseerChatSummary" style="white-space:pre-wrap;font-family:var(--mn);font-size:11px;line-height:1.5;max-height:160px;overflow:auto;background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px;margin-bottom:12px"></div>
+    <div id="overseerChatLog" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+  <div class="sf2" style="display:flex;gap:8px;align-items:flex-end">
+    <textarea id="overseerChatInput" class="fi" placeholder="Ask about strategy, next steps, or what's not working&#8230;" style="flex:1;resize:none;min-height:38px;max-height:120px;box-sizing:border-box"></textarea>
+    <button class="bp" id="overseerChatSendBtn">Send</button>
+  </div>
+</div></div>
+
 <div class="modal hidden" id="githubModal"><div class="sheet">
   <div class="sh"><span>Connect GitHub Repo</span><button class="sc" id="closeGithubModal">&#10005;</button></div>
   <div class="sbody">
@@ -500,7 +512,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.28</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.29</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -644,7 +656,8 @@ function defaultOverseerState(){
     attemptedApproaches:[],successProbability:0,efficiencyScore:100,
     qualityScore:0,steps:[],currentStep:0,contextHistory:[],
     lastResponseLength:0,conversationQuality:"good",
-    activeProject:null,activeProjectInstructions:null
+    activeProject:null,activeProjectInstructions:null,
+    strategyChat:[]
   };
 }
 var overseerState=defaultOverseerState();
@@ -1506,7 +1519,7 @@ function generateContextualPrompts(){
   var prompts=[];
   var lastUserMsg=chatHistory[chatHistory.length-2];
   var lastAIMsg=chatHistory[chatHistory.length-1];
-  var userText=(typeof lastUserMsg.content==="string"?lastUserMsg.content:"").toLowerCase();
+  var userText=(lastUserMsg&&typeof lastUserMsg.content==="string"?lastUserMsg.content:"").toLowerCase();
 
   if(overseerState.goal==="debug"){
     prompts.push("Ask the model to add logging statements to help isolate where the bug occurs");
@@ -3351,7 +3364,7 @@ function setOverseerEnabled(val){
 document.getElementById("overseerToggleBtn").addEventListener("click",function(){
   setOverseerEnabled(!overseerEnabled);
 });
-document.getElementById("overseerBar").addEventListener("click",function(){showOverseerReport();});
+document.getElementById("overseerBar").addEventListener("click",function(){openOverseerChat();});
 document.getElementById("brainstormToggleBtn").addEventListener("click",function(){
   brainstormMode=!brainstormMode;
   this.textContent=brainstormMode?"ON":"OFF";
@@ -3377,7 +3390,7 @@ document.getElementById("brainstormBtn").addEventListener("click",function(){
   });
   alert(msg);
 });
-function showOverseerReport(){
+function buildOverseerReportText(){
   var msg="📊 OVERSEER INTELLIGENCE REPORT\n";
   msg+="═════════════════════════════════════\n\n";
   msg+="📌 GOAL TRACKING:\n";
@@ -3424,22 +3437,110 @@ function showOverseerReport(){
       });
     }
   }
-  alert(msg);
+  return msg;
 }
+function renderOverseerChatLog(){
+  var log=document.getElementById("overseerChatLog");
+  log.innerHTML="";
+  (overseerState.strategyChat||[]).forEach(function(m){
+    var wrap=document.createElement("div");wrap.className="msg "+(m.role==="user"?"mu":"ma3");
+    var body=document.createElement("div");body.className="body";
+    body.innerHTML=renderMd(m.content||"");
+    wrap.appendChild(body);
+    log.appendChild(wrap);
+  });
+  log.scrollTop=log.scrollHeight;
+}
+function openOverseerChat(){
+  document.getElementById("overseerChatSummary").textContent=buildOverseerReportText();
+  renderOverseerChatLog();
+  openModal("overseerChatModal");
+  document.getElementById("overseerChatInput").focus();
+}
+var overseerChatSending=false;
+async function sendOverseerChatMsg(){
+  if(overseerChatSending)return;
+  var input=document.getElementById("overseerChatInput");
+  var text=input.value.trim();
+  if(!text)return;
+  input.value="";input.style.height="";
+  if(!overseerState.strategyChat)overseerState.strategyChat=[];
+  overseerState.strategyChat.push({role:"user",content:text});
+  renderOverseerChatLog();
+  overseerChatSending=true;
+  var sendBtn=document.getElementById("overseerChatSendBtn");
+  sendBtn.disabled=true;sendBtn.textContent="...";
+  /* This is a side-channel consult, deliberately separate from the main
+     chat's system prompt/persona/tools - the user has stepped OUT of the
+     task to talk to the Overseer itself about strategy, not continue the
+     task. Recent conversation is included as read-only context, not as
+     something for the model to keep responding to. */
+  var recentCtx=chatHistory.slice(-8).map(function(m){
+    var t=typeof m.content==="string"?m.content:((m.content&&m.content.find&&m.content.find(function(c){return c.type==="text";})||{}).text||"");
+    return (m.role==="user"?"User: ":"Assistant: ")+t.slice(0,400);
+  }).join("\n");
+  var sys="You are the Overseer, a strategic advisor built into this app. The user has stepped out of their main conversation with the AI model to talk strategy with you directly - about approach, what to try next, or whether they're stuck. Be direct and concise. Base advice on the actual context below, not generic platitudes.\n\n"+
+    "Goal: "+(overseerState.goalType||"not yet detected")+"\n"+
+    "Progress: "+overseerState.progress+"%\n"+
+    "Stuck: "+(overseerState.stuck?"yes":"no")+"\n"+
+    (overseerState.activeProject?("Active project: "+overseerState.activeProject+"\nProject instructions: "+(overseerState.activeProjectInstructions||"").slice(0,600)+"\n"):"")+
+    (overseerState.steps.length?("Task steps: "+overseerState.steps.join(" > ")+" (currently on step "+(overseerState.currentStep+1)+")\n"):"")+
+    "\nRecent conversation with the model (most recent last):\n"+(recentCtx||"(no messages yet)");
+  var msgs=[{role:"system",content:sys}].concat(overseerState.strategyChat.slice(0,-1)).concat([{role:"user",content:text}]);
+  var wrap=document.createElement("div");wrap.className="msg ma3";
+  var body=document.createElement("div");body.className="body";body.innerHTML='<span class="cur">▇</span>';
+  wrap.appendChild(body);
+  var log=document.getElementById("overseerChatLog");
+  log.appendChild(wrap);log.scrollTop=log.scrollHeight;
+  var full="";
+  try{
+    var res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:msgs,temperature:temperature,stream:true})});
+    if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error((err.error&&err.error.message)||"HTTP "+res.status);}
+    var reader=res.body.getReader(),dec=new TextDecoder(),buf="",done=false;
+    while(!done){
+      var chunk=await reader.read();if(chunk.done)break;
+      buf+=dec.decode(chunk.value,{stream:true});
+      var lines=buf.split("\n");buf=lines.pop();
+      for(var i=0;i<lines.length;i++){
+        var ln=lines[i].trim();if(!ln.startsWith("data: "))continue;
+        var d=ln.slice(6);if(d==="[DONE]"){done=true;break;}
+        try{
+          var tok=((JSON.parse(d).choices||[])[0]||{});
+          tok=tok.delta&&tok.delta.content;
+          if(tok){full+=tok;body.innerHTML=renderMd(full)+'<span class="cur">▇</span>';log.scrollTop=log.scrollHeight;}
+        }catch(ex){}
+      }
+    }
+    body.innerHTML=renderMd(full||"(empty response)");
+    overseerState.strategyChat.push({role:"assistant",content:full||"(empty response)"});
+  }catch(e){
+    body.className="body err";body.innerHTML="Error: "+esc(e.message);
+  }finally{
+    overseerChatSending=false;sendBtn.disabled=false;sendBtn.textContent="Send";
+    if(openTabs.length){syncActiveTabFromLiveState();saveTabsToStorage();}
+  }
+}
+document.getElementById("overseerChatSendBtn").addEventListener("click",sendOverseerChatMsg);
+document.getElementById("overseerChatInput").addEventListener("keydown",function(e){
+  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendOverseerChatMsg();}
+});
+document.getElementById("overseerChatInput").addEventListener("input",function(){this.style.height="auto";this.style.height=Math.min(this.scrollHeight,120)+"px";});
+bindM("overseerChatModal","closeOverseerChatModal");
 /* Tap = quick ON/OFF toggle so Overseer can be gotten out of the way fast
-   mid-conversation. Long-press (500ms) = full report, same as the old
-   tap-only behavior. Covers both touch and mouse. */
+   mid-conversation. Long-press (500ms) = open the full report + strategy
+   chat, same idea as the old tap-only report-only behavior. Covers both
+   touch and mouse. */
 (function(){
   var btn=document.getElementById("overseerBtn");
   var pressTimer=null,longPressed=false;
-  function start(){longPressed=false;pressTimer=setTimeout(function(){longPressed=true;showOverseerReport();},500);}
+  function start(){longPressed=false;pressTimer=setTimeout(function(){longPressed=true;openOverseerChat();},500);}
   function end(){
     clearTimeout(pressTimer);
     if(!longPressed){
       setOverseerEnabled(!overseerEnabled);
       var notice=document.createElement("div");
       notice.style.cssText="padding:8px 12px;margin:8px 0;background:rgba(139,140,247,0.08);border-left:3px solid var(--ac);border-radius:4px;font-size:11px;color:var(--mu)";
-      notice.textContent="🤖 Overseer turned "+(overseerEnabled?"ON":"OFF")+" (long-press for full report)";
+      notice.textContent="🤖 Overseer turned "+(overseerEnabled?"ON":"OFF")+" (long-press to chat/see report)";
       document.getElementById("chat").appendChild(notice);
       scrollBot();
     }

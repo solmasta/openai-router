@@ -11,6 +11,8 @@
    - memory add/delete
    - tab creation, per-tab isolation, and switching back
    - profile creation and data isolation
+   - Overseer chat: long-press opens it, sends reach the model with the
+     Overseer's own dedicated system prompt (not the main chat one)
 
    Run: NODE_PATH=/opt/node22/lib/node_modules node tests/regression.js
 */
@@ -417,6 +419,47 @@ function assert(cond, label) {
   await page.waitForTimeout(200);
   const folderStatusAfterClear = await page.textContent('#driveFolderStatus');
   assert(folderStatusAfterClear.indexOf('Auto') >= 0, `clearing the input reverts to automatic folder detection (got "${folderStatusAfterClear}")`);
+
+  console.log('\n-- Overseer chat: long-press opens it, a sent message renders and reaches the model with a dedicated system prompt --');
+  // Settings was left open by the previous test - it shares the same
+  // z-index as the new chat modal and sits later in the DOM, so leaving it
+  // open would silently intercept clicks meant for the chat modal
+  // underneath (the same class of bug fixed earlier for wprojDetail).
+  await page.click('#closeSettingsModal'); await page.waitForTimeout(150);
+  // Long-press (500ms hold) on the Overseer button opens the strategy chat,
+  // distinct from the quick-tap ON/OFF toggle - dispatch the same
+  // mousedown/mouseup timing the real handler listens for.
+  await page.dispatchEvent('#overseerBtn', 'mousedown');
+  await page.waitForTimeout(700);
+  await page.dispatchEvent('#overseerBtn', 'mouseup');
+  await page.waitForTimeout(200);
+  const overseerChatOpen = await page.evaluate(() => !document.getElementById('overseerChatModal').classList.contains('hidden'));
+  assert(overseerChatOpen, 'long-pressing the Overseer button opens the strategy chat modal');
+
+  let lastOverseerChatBody = null;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      try {
+        const parsed = JSON.parse(req.postData());
+        if (parsed.messages && parsed.messages.some((m) => typeof m.content === 'string' && m.content.indexOf('strategic advisor') >= 0)) {
+          lastOverseerChatBody = parsed;
+        }
+      } catch (e) {}
+    }
+    await route.continue();
+  });
+  await page.fill('#overseerChatInput', 'regtest strategy question, what should I try next');
+  await page.click('#overseerChatSendBtn');
+  for (let i = 0; i < 60 && lastOverseerChatBody === null; i++) await page.waitForTimeout(200);
+  await page.unroute('**/*');
+  const overseerChatUserBubbleShown = await page.evaluate(() => document.getElementById('overseerChatLog').textContent.indexOf('regtest strategy question') >= 0);
+  assert(overseerChatUserBubbleShown, 'sent strategy question renders in the Overseer chat log');
+  assert(!!lastOverseerChatBody, 'the strategy question reaches the model tagged with the Overseer\'s own dedicated system prompt, not the main chat one');
+  await page.waitForTimeout(1500); // let the failed (no-egress) request settle into its error state
+  await page.click('#closeOverseerChatModal'); await page.waitForTimeout(150);
+  const overseerChatClosed = await page.evaluate(() => document.getElementById('overseerChatModal').classList.contains('hidden'));
+  assert(overseerChatClosed, 'Overseer chat modal closes via its close button');
 
   console.log(`\n-- page errors: ${realErrors().length} real (excluding expected sandbox network noise) --`);
   if (realErrors().length) console.log(realErrors());
