@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.37</span></span>
+      <span class="wm">ai-router <span>v5.38</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -530,7 +530,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.37</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.38</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -810,7 +810,7 @@ function confirmGithubMerge(toolArgs){
 var REPO_TOOLS=[
   {type:"function","function":{name:"read_file",description:"Read a file from the connected GitHub repository. Returns file content.",parameters:{type:"object",properties:{path:{type:"string",description:"File path relative to repo root"}},required:["path"]}}},
   {type:"function","function":{name:"write_file",description:"Write or update a file in the connected GitHub repository. Creates a commit on a branch (never commits straight to the repo's default branch unless the user explicitly asked for that).",parameters:{type:"object",properties:{path:{type:"string",description:"File path"},content:{type:"string",description:"Full file content"},message:{type:"string",description:"Commit message"},branch:{type:"string",description:"Branch to commit to. NEVER use \"main\"/\"master\" unless the user explicitly asked you to change the default branch directly - otherwise use a short descriptive working-branch name. The branch is created automatically from the repo's default branch if it doesn't already exist."}},required:["path","content","message"]}}},
-  {type:"function","function":{name:"list_files",description:"List files in a directory of the connected repository.",parameters:{type:"object",properties:{path:{type:"string",description:"Directory path"}},required:["path"]}}},
+  {type:"function","function":{name:"list_files",description:"List files in a directory of the connected repository. Omit path (or use \".\") to list the repo root.",parameters:{type:"object",properties:{path:{type:"string",description:"Directory path, relative to repo root. Optional - omit or use \".\" for the repo root."}},required:[]}}},
   {type:"function","function":{name:"merge_branch",description:"Merge a branch into the connected repository's default branch via a pull request (creates one if it doesn't already exist, then merges it). This is a significant, hard-to-reverse action on the default branch - only call this when the user explicitly asked you to merge/ship/land the change, never automatically right after a write_file. Always requires explicit user approval before anything happens.",parameters:{type:"object",properties:{branch:{type:"string",description:"The branch to merge into the default branch"},title:{type:"string",description:"Pull request title / merge commit title"},message:{type:"string",description:"Pull request description / merge commit message"},merge_method:{type:"string",description:"How to merge",enum:["merge","squash","rebase"]}},required:["branch"]}}}
 ];
 /* App-control tools - let the model actually operate this app's own
@@ -1158,6 +1158,12 @@ function getAllAvailableModels(){
    every message as the conversation alternates between message types. */
 var SWITCH_SCORE_MARGIN=15;
 var declinedSwitchTargets={};
+/* Cap on how many non-streaming tool_choice:"auto" rounds a single message
+   gets before being forced into the final tool_choice:"none" render call -
+   without a cap, a model that keeps wanting to call tools could loop
+   indefinitely. Matches the Overseer's own existing "Step X/4" convention
+   already shown in the UI. */
+var MAX_TOOL_ROUNDS=4;
 /* After any decline, skip suggesting a switch at all for the next few
    messages - the actual ping-pong isn't necessarily the same model being
    re-suggested (different message types can make different candidate
@@ -4030,13 +4036,25 @@ async function doSendRequest(userContent,isRegen,ap){
            silently for a request that had nothing to do with the repo. */
         if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName&&(searchGateTasks.github>0||searchGateTasks.code>0)){initTools=initTools.concat(REPO_TOOLS);}
         if(initTools.length>0){
-          var p1res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:messages,tools:initTools,tool_choice:"auto",temperature:temperature,stream:false,max_tokens:1000})});
-          if(p1res.ok){
+          /* One round used to be all a message got: capable models (e.g.
+             Qwen3 Coder) often need list_files, THEN read_file, THEN answer
+             - capped at one, the model either silently dropped its next
+             intended call (old bug: streamed "(empty response)") or, once
+             the final render call was locked to tool_choice:"none", dumped
+             the attempted call as literal text instead (e.g. its own
+             <tool_call><function=...> training format) since the structured
+             path was closed but it still wanted to act. Looping up to
+             MAX_TOOL_ROUNDS gives it a realistic number of real rounds
+             first; the final call below still forces tool_choice:"none" as
+             the actual safety net if the cap is hit. */
+          for(var toolRound=0;toolRound<MAX_TOOL_ROUNDS;toolRound++){
+            var p1res=await fetch(workerUrl,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET},body:JSON.stringify({model:currentModel.id,messages:messages,tools:initTools,tool_choice:"auto",temperature:temperature,stream:false,max_tokens:1000})});
+            if(!p1res.ok)break;
             var p1data=await p1res.json();
             var p1choice=(p1data.choices||[])[0]||{};
-            if(p1choice.finish_reason==="tool_calls"&&p1choice.message&&p1choice.message.tool_calls&&p1choice.message.tool_calls.length){
-              messages.push(p1choice.message);
-              for(var ti=0;ti<p1choice.message.tool_calls.length;ti++){
+            if(!(p1choice.finish_reason==="tool_calls"&&p1choice.message&&p1choice.message.tool_calls&&p1choice.message.tool_calls.length))break;
+            messages.push(p1choice.message);
+            for(var ti=0;ti<p1choice.message.tool_calls.length;ti++){
                 var tc=p1choice.message.tool_calls[ti];
                 var toolName=tc["function"].name;
                 var toolArgs=JSON.parse(tc["function"].arguments||"{}");
@@ -4097,7 +4115,6 @@ async function doSendRequest(userContent,isRegen,ap){
                 messages.push({role:"tool",tool_call_id:tc.id,content:toolResult||"No result"});
               }
               asstMsg.body.innerHTML='<span class="cur">\u2587</span>';
-            }
           }
         }
       }catch(te){console.error("Tool error:",te);}

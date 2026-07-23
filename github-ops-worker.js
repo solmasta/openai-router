@@ -117,16 +117,21 @@ async function handleGitHubOp(body, env) {
         const writeData = await writeRes.json();
         return { success: true, commit: writeData.commit.sha, branch: targetBranch };
 
-      case "list_files":
-        if (!path) return { error: "Missing path" };
-        const listUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      case "list_files": {
+        // No path (or "."/"") means the repo root - GitHub's Contents API
+        // lists it at /repos/{owner}/{repo}/contents with no trailing
+        // path segment, so build the URL without one instead of requiring
+        // a path the caller may have no reason to know.
+        const listSubpath = (path && path !== ".") ? path : "";
+        const listUrl = `https://api.github.com/repos/${owner}/${repo}/contents${listSubpath ? "/" + listSubpath : ""}`;
         const listRes = await fetch(listUrl, { headers });
-        if (!listRes.ok) return { error: `Failed to list ${path}: ${await describeError(listRes)}`, status: listRes.status };
+        if (!listRes.ok) return { error: `Failed to list ${listSubpath || "(root)"}: ${await describeError(listRes)}`, status: listRes.status };
         const listData = await listRes.json();
         const files = Array.isArray(listData)
           ? listData.map(f => ({ name: f.name, type: f.type, path: f.path }))
           : { error: "Not a directory" };
         return { success: true, files };
+      }
 
       case "merge_branch": {
         if (!branch) return { error: "Missing branch" };

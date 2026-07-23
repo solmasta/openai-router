@@ -21,6 +21,11 @@
    - the final streaming call forces tool_choice:"none" so a model that
      wants to call another tool after a successful tool round doesn't
      silently render as "(empty response)"
+   - the tool round loop actually advances multiple rounds within one
+     message (not capped at one), and is bounded at MAX_TOOL_ROUNDS so a
+     model that keeps wanting to call tools can't loop indefinitely
+   - list_files no longer requires a path - its schema allows omitting it
+     to mean the repo root
    - Manual import's "Fetch from Drive" guards against an unconnected/
      expired Drive session instead of silently failing
    - "Open" deep-links straight to the Drive folder by id, falling back to
@@ -379,6 +384,11 @@ function assert(cond, label) {
   // round, which silently renders as "(empty response)" since nothing
   // reads or executes tool_calls deltas in the streaming loop.
   assert(lastRelatedBody && lastRelatedBody.tool_choice === 'none', `the final streaming call forces tool_choice:"none" so a tool-hungry model can't silently produce an empty response (got "${lastRelatedBody && lastRelatedBody.tool_choice}")`);
+  // list_files used to require a path, so the model had no legitimate way
+  // to ask for "the whole repo" - it had to guess a path or get an error
+  // either way. Confirm the tool's own schema no longer forces one.
+  const listFilesTool = (lastRelatedBody && lastRelatedBody.tools || []).find((t) => t.function.name === 'list_files');
+  assert(listFilesTool && !(listFilesTool.function.parameters.required || []).includes('path'), 'list_files no longer requires a path - omitting it can mean "list the repo root"');
 
   await page.evaluate(() => {
     document.getElementById('ghwPath').textContent = 'test';
@@ -593,6 +603,7 @@ function assert(cond, label) {
   await page.waitForTimeout(150);
 
   let capturedWriteBody = null;
+  let writeToolRoundCount = 0;
   await page.route('**/*', async (route) => {
     const req = route.request();
     const url = req.url();
@@ -609,25 +620,38 @@ function assert(cond, label) {
       let parsed = null;
       try { parsed = JSON.parse(req.postData()); } catch (e) {}
       if (parsed && parsed.stream === false) {
-        // The initial non-streaming tool-discovery call - fake a model
-        // response that calls write_file with NO branch specified, the
-        // exact case that used to silently land on the default branch.
+        writeToolRoundCount++;
+        if (writeToolRoundCount === 1) {
+          // The initial non-streaming tool-discovery call - fake a model
+          // response that calls write_file with NO branch specified, the
+          // exact case that used to silently land on the default branch.
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              choices: [{
+                finish_reason: 'tool_calls',
+                message: {
+                  role: 'assistant',
+                  tool_calls: [{
+                    id: 'regtest_call_1',
+                    type: 'function',
+                    function: { name: 'write_file', arguments: JSON.stringify({ path: 'regtest.txt', content: 'hello world', message: 'regtest commit' }) },
+                  }],
+                },
+              }],
+            }),
+          });
+          return;
+        }
+        // The tool round loop keeps going until the model stops calling
+        // tools - round 2 must say it's done, or it'd re-issue the same
+        // write_file call and pop a second approval dialog nothing here
+        // ever clicks through, hanging the send indefinitely.
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({
-            choices: [{
-              finish_reason: 'tool_calls',
-              message: {
-                role: 'assistant',
-                tool_calls: [{
-                  id: 'regtest_call_1',
-                  type: 'function',
-                  function: { name: 'write_file', arguments: JSON.stringify({ path: 'regtest.txt', content: 'hello world', message: 'regtest commit' }) },
-                }],
-              },
-            }],
-          }),
+          body: JSON.stringify({ choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: 'regtest done' } }] }),
         });
         return;
       }
@@ -674,6 +698,7 @@ function assert(cond, label) {
   await page.waitForTimeout(150);
 
   let capturedMergeBody = null;
+  let mergeToolRoundCount = 0;
   await page.route('**/*', async (route) => {
     const req = route.request();
     const url = req.url();
@@ -690,24 +715,37 @@ function assert(cond, label) {
       let parsed = null;
       try { parsed = JSON.parse(req.postData()); } catch (e) {}
       if (parsed && parsed.stream === false) {
-        // The initial non-streaming tool-discovery call - fake a model
-        // response that calls merge_branch for a fixed branch name.
+        mergeToolRoundCount++;
+        if (mergeToolRoundCount === 1) {
+          // The initial non-streaming tool-discovery call - fake a model
+          // response that calls merge_branch for a fixed branch name.
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              choices: [{
+                finish_reason: 'tool_calls',
+                message: {
+                  role: 'assistant',
+                  tool_calls: [{
+                    id: 'regtest_call_2',
+                    type: 'function',
+                    function: { name: 'merge_branch', arguments: JSON.stringify({ branch: 'ai-changes', title: 'regtest merge', message: 'regtest merge body' }) },
+                  }],
+                },
+              }],
+            }),
+          });
+          return;
+        }
+        // The tool round loop keeps going until the model stops calling
+        // tools - round 2 must say it's done, or it'd re-issue the same
+        // merge_branch call and pop a second approval dialog nothing here
+        // ever clicks through, hanging the send indefinitely.
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({
-            choices: [{
-              finish_reason: 'tool_calls',
-              message: {
-                role: 'assistant',
-                tool_calls: [{
-                  id: 'regtest_call_2',
-                  type: 'function',
-                  function: { name: 'merge_branch', arguments: JSON.stringify({ branch: 'ai-changes', title: 'regtest merge', message: 'regtest merge body' }) },
-                }],
-              },
-            }],
-          }),
+          body: JSON.stringify({ choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: 'regtest done' } }] }),
         });
         return;
       }
@@ -747,6 +785,129 @@ function assert(cond, label) {
   // chat's failed (no-egress) request above.
   await page.waitForTimeout(500);
 
+  console.log('\n-- tool round loop actually advances multiple rounds, not just one --');
+  // Before this fix, a message got exactly ONE non-streaming round to call
+  // a tool - a model that needed a second call (e.g. read_file right after
+  // list_files) either had it silently vanish (old bug: streamed
+  // "(empty response)") or, once the final call was locked to
+  // tool_choice:"none", dumped the attempted call as literal text instead
+  // (e.g. Qwen3 Coder's own <tool_call><function=...> training format)
+  // since the structured path was closed but it still wanted to act.
+  // Mock 2 sequential tool_calls rounds then a stop, and check both tools
+  // actually ran.
+  await page.click('#modelBtn'); await page.waitForTimeout(150);
+  await page.locator('.mc:has-text("Mistral Small")').first().click();
+  await page.waitForTimeout(150);
+
+  let toolRoundCount = 0;
+  let sawListFilesCall = false;
+  let sawReadFileCall = false;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    const url = req.url();
+    if (url.indexOf('github-ops-worker') >= 0 && req.method() === 'POST') {
+      let opBody = null;
+      try { opBody = JSON.parse(req.postData()); } catch (e) {}
+      if (opBody && opBody.op === 'list_files') sawListFilesCall = true;
+      if (opBody && opBody.op === 'read_file') sawReadFileCall = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, files: [{ name: 'index.html', type: 'file', path: 'index.html' }], content: 'regtest file content' }),
+      });
+      return;
+    }
+    if (req.method() === 'POST' && req.postData()) {
+      let parsed = null;
+      try { parsed = JSON.parse(req.postData()); } catch (e) {}
+      if (parsed && parsed.stream === false) {
+        toolRoundCount++;
+        if (toolRoundCount === 1) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ choices: [{ finish_reason: 'tool_calls', message: { role: 'assistant', tool_calls: [{ id: 'regtest_round1', type: 'function', function: { name: 'list_files', arguments: JSON.stringify({}) } }] } }] }),
+          });
+          return;
+        }
+        if (toolRoundCount === 2) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ choices: [{ finish_reason: 'tool_calls', message: { role: 'assistant', tool_calls: [{ id: 'regtest_round2', type: 'function', function: { name: 'read_file', arguments: JSON.stringify({ path: 'index.html' }) } }] } }] }),
+          });
+          return;
+        }
+        // Round 3: the model is done calling tools.
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: 'regtest done' } }] }),
+        });
+        return;
+      }
+      if (parsed && parsed.stream === true) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream',
+          body: 'data: {"choices":[{"delta":{"content":"done"}}]}\n\ndata: [DONE]\n\n',
+        });
+        return;
+      }
+    }
+    await route.continue();
+  });
+  await sendMsg('please read the readme after listing the repo');
+  await page.unroute('**/*');
+  assert(sawListFilesCall, 'round 1 of the tool loop actually calls list_files');
+  assert(sawReadFileCall, 'round 2 of the tool loop actually calls read_file - the loop did not stop after just one round');
+  assert(toolRoundCount === 3, `the loop stopped as soon as the model returned finish_reason:"stop" instead of always burning through every round (got ${toolRoundCount} non-streaming rounds, expected exactly 3)`);
+
+  console.log('\n-- tool round loop is bounded, does not call tools forever --');
+  // A model that keeps wanting to call tools every round must not loop
+  // indefinitely - MAX_TOOL_ROUNDS caps it, after which the final
+  // tool_choice:"none" call is the actual safety net that forces a text
+  // answer regardless of what the model still wants to do.
+  await page.click('#modelBtn'); await page.waitForTimeout(150);
+  await page.locator('.mc:has-text("Mistral Small")').first().click();
+  await page.waitForTimeout(150);
+
+  let unboundedRoundCount = 0;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    const url = req.url();
+    if (url.indexOf('github-ops-worker') >= 0 && req.method() === 'POST') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, files: [] }) });
+      return;
+    }
+    if (req.method() === 'POST' && req.postData()) {
+      let parsed = null;
+      try { parsed = JSON.parse(req.postData()); } catch (e) {}
+      if (parsed && parsed.stream === false) {
+        unboundedRoundCount++;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ choices: [{ finish_reason: 'tool_calls', message: { role: 'assistant', tool_calls: [{ id: 'regtest_round_' + unboundedRoundCount, type: 'function', function: { name: 'list_files', arguments: JSON.stringify({}) } }] } }] }),
+        });
+        return;
+      }
+      if (parsed && parsed.stream === true) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream',
+          body: 'data: {"choices":[{"delta":{"content":"done"}}]}\n\ndata: [DONE]\n\n',
+        });
+        return;
+      }
+    }
+    await route.continue();
+  });
+  await sendMsg('please explore the repo as much as needed');
+  await page.unroute('**/*');
+  assert(unboundedRoundCount === 4, `the tool loop stops after MAX_TOOL_ROUNDS (4) rounds even if the model keeps returning tool_calls every time (got ${unboundedRoundCount} rounds)`);
+  await page.waitForTimeout(500);
+
   console.log('\n-- App-control tools (create_project/remember/switch_model) actually execute, no confirm needed --');
   // These are the Overseer's new "full autonomy" tools - unlike write_file
   // they run immediately on a model-issued tool_call, no approval dialog.
@@ -756,28 +917,41 @@ function assert(cond, label) {
   await page.click('#modelBtn'); await page.waitForTimeout(150);
   await page.locator('.mc:has-text("Mistral Small")').first().click();
   await page.waitForTimeout(150);
+  let appControlRoundCount = 0;
   await page.route('**/*', async (route) => {
     const req = route.request();
     if (req.method() === 'POST' && req.postData()) {
       let parsed = null;
       try { parsed = JSON.parse(req.postData()); } catch (e) {}
       if (parsed && parsed.stream === false) {
+        appControlRoundCount++;
+        if (appControlRoundCount === 1) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              choices: [{
+                finish_reason: 'tool_calls',
+                message: {
+                  role: 'assistant',
+                  tool_calls: [
+                    { id: 'regtest_call_a', type: 'function', function: { name: 'create_project', arguments: JSON.stringify({ name: 'Regtest Tool Project', instructions: 'Regtest project instructions' }) } },
+                    { id: 'regtest_call_b', type: 'function', function: { name: 'remember', arguments: JSON.stringify({ fact: 'Regtest remembered fact' }) } },
+                    { id: 'regtest_call_c', type: 'function', function: { name: 'switch_model', arguments: JSON.stringify({ model_id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' }) } },
+                  ],
+                },
+              }],
+            }),
+          });
+          return;
+        }
+        // The tool round loop keeps going until the model stops calling
+        // tools - round 2 must say it's done, or these three tools would
+        // re-run every round up to MAX_TOOL_ROUNDS for no reason.
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({
-            choices: [{
-              finish_reason: 'tool_calls',
-              message: {
-                role: 'assistant',
-                tool_calls: [
-                  { id: 'regtest_call_a', type: 'function', function: { name: 'create_project', arguments: JSON.stringify({ name: 'Regtest Tool Project', instructions: 'Regtest project instructions' }) } },
-                  { id: 'regtest_call_b', type: 'function', function: { name: 'remember', arguments: JSON.stringify({ fact: 'Regtest remembered fact' }) } },
-                  { id: 'regtest_call_c', type: 'function', function: { name: 'switch_model', arguments: JSON.stringify({ model_id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' }) } },
-                ],
-              },
-            }],
-          }),
+          body: JSON.stringify({ choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: 'regtest done' } }] }),
         });
         return;
       }
