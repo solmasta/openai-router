@@ -18,6 +18,9 @@
    - merge_branch tool requires its own dedicated approval dialog before
      anything happens, and the approved branch/op reach the GitHub ops
      worker correctly
+   - the final streaming call forces tool_choice:"none" so a model that
+     wants to call another tool after a successful tool round doesn't
+     silently render as "(empty response)"
    - Manual import's "Fetch from Drive" guards against an unconnected/
      expired Drive session instead of silently failing
    - "Open" deep-links straight to the Drive folder by id, falling back to
@@ -369,6 +372,13 @@ function assert(cond, label) {
   for (let i = 0; i < 60 && lastRelatedBody === null; i++) await page.waitForTimeout(200);
   await page.unroute('**/*');
   assert(lastRelatedBody && Array.isArray(lastRelatedBody.tools) && lastRelatedBody.tools.length > 0, 'a genuinely code/github-relevant message still gets the repo tools');
+  // The final streaming call still lists tools (so the model knows what it
+  // already did/could have done) but must force tool_choice:"none" - that
+  // call's reader only handles delta.content, so a real tool_choice:"auto"
+  // here lets the model try to call a tool again after a successful first
+  // round, which silently renders as "(empty response)" since nothing
+  // reads or executes tool_calls deltas in the streaming loop.
+  assert(lastRelatedBody && lastRelatedBody.tool_choice === 'none', `the final streaming call forces tool_choice:"none" so a tool-hungry model can't silently produce an empty response (got "${lastRelatedBody && lastRelatedBody.tool_choice}")`);
 
   await page.evaluate(() => {
     document.getElementById('ghwPath').textContent = 'test';
