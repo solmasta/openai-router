@@ -253,7 +253,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.41</span></span>
+      <span class="wm">ai-router <span>v5.42</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -535,7 +535,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.41</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.42</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -550,6 +550,8 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <div class="sr"><div><div class="slb">Overseer monitoring</div><div class="ssb">Track progress, detect stuck situations, suggest next steps</div></div><button class="bg" id="overseerToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Brainstorming mode</div><div class="ssb">Generate prompts and suggestions during conversation</div></div><button class="bg" id="brainstormToggleBtn">ON</button></div>
     <div class="sr"><div><div class="slb">Auto prompt injection</div><div class="ssb">Overseer auto-generates optimal instructions for each model</div></div><button class="bg" id="autoPropomptToggleBtn">ON</button></div>
+    <div class="sr"><div><div class="slb">Overseer voice</div><div class="ssb">Which voice reads replies aloud</div></div><select id="voiceSelect" class="fi" style="max-width:170px"><option value="">Default</option></select></div>
+    <div class="sr"><div><div class="slb">Overseer personality</div><div class="ssb">Shapes tone and word choice in replies</div></div><input type="text" id="personalityInput" class="fi" placeholder="e.g. warm, direct, playful" style="max-width:180px" autocomplete="off"></div>
     <div class="sr"><div><div class="slb">Recent chats</div><div class="ssb">Restore any of the last 5 conversations</div></div><button class="bg" id="recentChatsBtn">View</button></div>
     <div class="sr"><div><div class="slb">Memory</div><div class="ssb">Facts the AI remembers about you across all conversations</div></div><button class="bg" id="memoryBtn">View</button></div>
     <div class="sr"><div><div class="slb">Document library</div><div class="ssb">Documents saved permanently, reusable in any conversation</div></div><button class="bg" id="docLibraryBtn">View</button></div>
@@ -1052,6 +1054,10 @@ function speakText(text){
   if(!(speakEnabled||voiceConversationMode)||!text||!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
   var utter=new SpeechSynthesisUtterance(text);
+  if(selectedVoiceName){
+    var pickedVoice=window.speechSynthesis.getVoices().find(function(v){return v.name===selectedVoiceName;});
+    if(pickedVoice)utter.voice=pickedVoice;
+  }
   var btn=document.getElementById("speakBtn");
   utter.onstart=function(){if(btn)btn.classList.add("speaking");};
   utter.onend=function(){
@@ -1084,6 +1090,46 @@ function toggleVoiceMode(){
   }
 }
 if(!recognition||!window.speechSynthesis)document.getElementById("voiceModeBtn").classList.add("off");
+
+/* ---- Overseer voice + personality ---- */
+/* A picked voice is a stated, ongoing preference ("I like this voice"),
+   not a per-session toggle - persisted the same way theme is, a plain
+   global key rather than profile-scoped, since it's about how this
+   device/browser sounds rather than anything tied to a specific profile's
+   data. Voice objects themselves aren't serializable, so the name is what
+   gets persisted and re-matched against getVoices() on each use. */
+var selectedVoiceName=localStorage.getItem("ai_voice_name")||"";
+var overseerPersonality=localStorage.getItem("ai_overseer_personality")||"";
+function populateVoiceOptions(){
+  if(!window.speechSynthesis)return;
+  var voices=window.speechSynthesis.getVoices();
+  if(!voices.length)return;
+  var sel=document.getElementById("voiceSelect");
+  sel.innerHTML='<option value="">Default</option>';
+  voices.forEach(function(v){
+    var opt=document.createElement("option");
+    opt.value=v.name;opt.textContent=v.name+" ("+v.lang+")";
+    if(v.name===selectedVoiceName)opt.selected=true;
+    sel.appendChild(opt);
+  });
+}
+if(window.speechSynthesis){
+  /* getVoices() is often empty on first call - most browsers load the
+     voice list asynchronously and fire voiceschanged once it's ready, so
+     this has to populate both immediately (voices already cached, e.g. a
+     repeat visit) and again whenever that event fires. */
+  populateVoiceOptions();
+  window.speechSynthesis.onvoiceschanged=populateVoiceOptions;
+}
+document.getElementById("voiceSelect").addEventListener("change",function(){
+  selectedVoiceName=this.value;
+  localStorage.setItem("ai_voice_name",selectedVoiceName);
+});
+document.getElementById("personalityInput").value=overseerPersonality;
+document.getElementById("personalityInput").addEventListener("input",function(){
+  overseerPersonality=this.value;
+  localStorage.setItem("ai_overseer_personality",overseerPersonality);
+});
 
 /* ---- Favorites ---- */
 var FK="ai_favorites";
@@ -2029,6 +2075,7 @@ function getModelSystemPrompt(ap){
   var curAp2=ap!==undefined?ap:getAP();
   var inProject=curAp2&&typeof curAp2.id==="string"&&curAp2.id.indexOf("wproj_")===0;
   var sys="You are the Overseer - the user's single point of contact in this app. You act directly using your tools instead of just describing what should be done, and you have advanced coding and repository control capabilities.\n\n";
+  if(overseerPersonality)sys+="Personality: "+overseerPersonality+" - let this come through naturally in your tone and word choice, without announcing or explaining it.\n\n";
   if(inProject){
     sys="You are a helpful assistant. An active project's instructions (sent separately) define your task and behavior for this conversation - follow them exactly.\n";
   }else if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
@@ -3750,6 +3797,7 @@ async function sendOverseerChatMsg(){
     return (m.role==="user"?"User: ":"Assistant: ")+t.slice(0,400);
   }).join("\n");
   var sys="You are the Overseer, a strategic advisor built into this app. The user has stepped out of their main conversation with the AI model to talk strategy with you directly - about approach, what to try next, or whether they're stuck. Be direct and concise. Base advice on the actual context below, not generic platitudes.\n\n"+
+    (overseerPersonality?("Personality: "+overseerPersonality+" - let this come through naturally in your tone and word choice, without announcing or explaining it.\n\n"):"")+
     "Goal: "+(overseerState.goalType||"not yet detected")+"\n"+
     "Progress: "+overseerState.progress+"%\n"+
     "Stuck: "+(overseerState.stuck?"yes":"no")+"\n"+
