@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.34</span></span>
+      <span class="wm">ai-router <span>v5.36</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -265,7 +265,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
     <span class="sa">&#8250;</span>
   </button>
   <div class="tabbar hidden" id="tabBar"></div>
-  <div class="chat" id="chat"><div class="es" id="emptyState"><div class="es-icon">✦</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div></div>
+  <div class="chat" id="chat"><div class="es" id="emptyState"><div class="es-icon">🤖</div><div class="es-title">I'm your Overseer.</div><div class="es-sub">Tell me what you need — I'll pick the right model, use your tools, and get it done.</div></div></div>
   <div class="ob hidden" id="overseerBar">
     <span class="obd" id="overseerBarDot"></span>
     <span id="overseerBarText">Overseer monitoring</span>
@@ -459,6 +459,20 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
   </div>
 </div></div>
 
+<div class="modal hidden" id="githubMergeConfirmModal"><div class="sheet">
+  <div class="sh"><span>&#9889; Merge into default branch?</span><button class="sc" id="closeGithubMergeConfirmModal">&#10005;</button></div>
+  <div class="sbody">
+    <div style="font-size:12px;font-weight:600;color:var(--er);background:rgba(248,113,113,0.1);border:1px solid var(--er);border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.4">&#9888;&#65039; This merges directly into the repository's default branch. This app can't show you a diff here - review the branch's actual changes on GitHub first if you're not sure.</div>
+    <div style="font-size:13px;color:var(--mu);margin-bottom:6px">Branch: <span id="ghmBranch" style="font-family:var(--mn);color:var(--tx)"></span></div>
+    <div style="font-size:13px;color:var(--mu);margin-bottom:6px">Pull request title: <span id="ghmTitle" style="color:var(--tx)"></span></div>
+    <div style="font-size:13px;color:var(--mu);margin-bottom:10px">Message: <span id="ghmMessage" style="color:var(--tx)"></span></div>
+  </div>
+  <div class="sf2 ef">
+    <button class="bg" id="ghmDenyBtn">Don't merge</button>
+    <button class="bp" id="ghmApproveBtn">Merge branch</button>
+  </div>
+</div></div>
+
 <div class="modal hidden" id="driveManualImportModal"><div class="sheet">
   <div class="sh"><span>Manual import</span><button class="sc" id="closeDriveManualImportModal">&#10005;</button></div>
   <div class="sbody">
@@ -516,7 +530,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.34</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.36</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -779,10 +793,25 @@ function confirmGithubWrite(toolArgs){
     openModal("githubWriteConfirmModal");
   });
 }
+/* Per-merge confirmation gate - resolves to true/false. Unlike
+   confirmGithubWrite there's no field for the user to redirect (the target
+   is always the repo's actual default branch, resolved server-side), so
+   this is a plain approve/deny with nothing editable. */
+var pendingGithubMergeResolve=null;
+function confirmGithubMerge(toolArgs){
+  return new Promise(function(resolve){
+    document.getElementById("ghmBranch").textContent=(ghRepoOwner||"")+"/"+(ghRepoName||"")+" - "+(toolArgs.branch||"");
+    document.getElementById("ghmTitle").textContent=toolArgs.title||"(default title)";
+    document.getElementById("ghmMessage").textContent=toolArgs.message||"(no message)";
+    pendingGithubMergeResolve=resolve;
+    openModal("githubMergeConfirmModal");
+  });
+}
 var REPO_TOOLS=[
   {type:"function","function":{name:"read_file",description:"Read a file from the connected GitHub repository. Returns file content.",parameters:{type:"object",properties:{path:{type:"string",description:"File path relative to repo root"}},required:["path"]}}},
   {type:"function","function":{name:"write_file",description:"Write or update a file in the connected GitHub repository. Creates a commit on a branch (never commits straight to the repo's default branch unless the user explicitly asked for that).",parameters:{type:"object",properties:{path:{type:"string",description:"File path"},content:{type:"string",description:"Full file content"},message:{type:"string",description:"Commit message"},branch:{type:"string",description:"Branch to commit to. NEVER use \"main\"/\"master\" unless the user explicitly asked you to change the default branch directly - otherwise use a short descriptive working-branch name. The branch is created automatically from the repo's default branch if it doesn't already exist."}},required:["path","content","message"]}}},
-  {type:"function","function":{name:"list_files",description:"List files in a directory of the connected repository.",parameters:{type:"object",properties:{path:{type:"string",description:"Directory path"}},required:["path"]}}}
+  {type:"function","function":{name:"list_files",description:"List files in a directory of the connected repository.",parameters:{type:"object",properties:{path:{type:"string",description:"Directory path"}},required:["path"]}}},
+  {type:"function","function":{name:"merge_branch",description:"Merge a branch into the connected repository's default branch via a pull request (creates one if it doesn't already exist, then merges it). This is a significant, hard-to-reverse action on the default branch - only call this when the user explicitly asked you to merge/ship/land the change, never automatically right after a write_file. Always requires explicit user approval before anything happens.",parameters:{type:"object",properties:{branch:{type:"string",description:"The branch to merge into the default branch"},title:{type:"string",description:"Pull request title / merge commit title"},message:{type:"string",description:"Pull request description / merge commit message"},merge_method:{type:"string",description:"How to merge",enum:["merge","squash","rebase"]}},required:["branch"]}}}
 ];
 /* App-control tools - let the model actually operate this app's own
    features (save a project, switch model, remember a fact) instead of
@@ -1830,6 +1859,7 @@ function displayToolExecution(toolName,input,result){
   if(toolName==="read_file"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Reading: "+esc(input.path)+"</div>";}
   else if(toolName==="write_file"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Writing: "+esc(input.path)+" (branch: "+esc(input.branch||"?")+")</div><div style='font-size:10px;color:var(--mu)'>"+esc(input.message)+"</div>";}
   else if(toolName==="list_files"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Listing: "+esc(input.path)+"</div>";}
+  else if(toolName==="merge_branch"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Merging: "+esc(input.branch||"?")+" into default branch</div>";}
   else if(toolName==="create_project"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Creating project: "+esc(input.name)+"</div>";}
   else if(toolName==="switch_model"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Switching model to: "+esc(input.model_id)+"</div>";}
   else if(toolName==="remember"){toolEl.innerHTML+="<div style='color:var(--mu);margin:4px 0'>Remembering: "+esc(input.fact)+"</div>";}
@@ -1875,6 +1905,10 @@ async function executeRepoTool(toolName,toolInput){
       var lres=await fetch(GH_OPS_URL,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET,"Authorization":"Bearer "+ghToken},body:JSON.stringify({op:"list_files",owner:ghRepoOwner,repo:ghRepoName,path:toolInput.path})});
       var ldata=await lres.json();
       return ldata.success?{success:true,files:ldata.files}:{error:ldata.error};
+    }else if(toolName==="merge_branch"){
+      var mres=await fetch(GH_OPS_URL,{method:"POST",headers:{"Content-Type":"application/json","X-App-Secret":APP_SECRET,"Authorization":"Bearer "+ghToken},body:JSON.stringify({op:"merge_branch",owner:ghRepoOwner,repo:ghRepoName,branch:toolInput.branch,title:toolInput.title,message:toolInput.message,merge_method:toolInput.merge_method})});
+      var mdata=await mres.json();
+      return mdata.success?{success:true,prNumber:mdata.prNumber,prUrl:mdata.prUrl,sha:mdata.sha}:{error:mdata.error};
     }
     return{error:"Unknown tool"};
   }catch(e){return{error:e.message};}
@@ -1897,7 +1931,7 @@ function getModelSystemPrompt(ap){
      the caller), not whatever happens to be selected right now. */
   var curAp2=ap!==undefined?ap:getAP();
   var inProject=curAp2&&typeof curAp2.id==="string"&&curAp2.id.indexOf("wproj_")===0;
-  var sys="You are an expert AI assistant with advanced coding and repository control capabilities.\n\n";
+  var sys="You are the Overseer - the user's single point of contact in this app. You act directly using your tools instead of just describing what should be done, and you have advanced coding and repository control capabilities.\n\n";
   if(inProject){
     sys="You are a helpful assistant. An active project's instructions (sent separately) define your task and behavior for this conversation - follow them exactly.\n";
   }else if(modelCanCodeAndControl&&ghToken&&ghRepoOwner&&ghRepoName){
@@ -1908,7 +1942,8 @@ function getModelSystemPrompt(ap){
     sys+="2. Use list_files(path) to explore repository structure\n";
     sys+="3. Use write_file(path, content, message, branch) to make changes - includes automatic git commit\n";
     sys+="4. Always provide COMPLETE working code in write_file calls - not snippets\n";
-    sys+="5. NEVER set branch to \"main\"/\"master\" unless the user explicitly asked you to change the default branch directly - use a short descriptive working-branch name instead, it's created automatically from the default branch if it doesn't exist\n\n";
+    sys+="5. NEVER set branch to \"main\"/\"master\" unless the user explicitly asked you to change the default branch directly - use a short descriptive working-branch name instead, it's created automatically from the default branch if it doesn't exist\n";
+    sys+="6. Use merge_branch(branch, title, message) to land a working branch into the default branch via a pull request - only call this when the user explicitly asked you to merge/ship/land the change. Never chain it automatically right after a write_file just because the write succeeded.\n\n";
     sys+="WORKFLOW:\n";
     sys+="- Understand the problem by reading relevant files\n";
     sys+="- Plan your approach in <think> tags\n";
@@ -1934,8 +1969,7 @@ function getModelSystemPrompt(ap){
     sys+="Execute tools immediately - don't ask for permission.\n";
     sys+="Show your reasoning in <think> tags. Be direct and action-oriented.\n";
   }else{
-    sys+="You are a helpful coding assistant. Provide clear explanations and code examples.\n";
-    sys+="For coding tasks, write complete, working code examples.\n";
+    sys+="Provide clear explanations and code examples. For coding tasks, write complete, working code.\n";
   }
   sys+="Always use <think> tags to show reasoning before acting.\n";
   sys+="\nIf you notice a durable fact about the user worth remembering for future conversations (a preference, an ongoing project, important context) - not something only relevant to this one message - wrap it in <memory>fact here</memory> tags. Use this sparingly, only for things genuinely worth remembering long-term. The user will be asked to approve before it's actually saved.\n";
@@ -2435,7 +2469,7 @@ function startWprojChat(){
   if(!p)return;
   if(chatHistory.length&&!confirm("Start a new chat in this project? Current chat will be cleared."))return;
   saveToRecent();
-  chatHistory=[];document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✶</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
+  chatHistory=[];document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">🤖</div><div class="es-title">I\'m your Overseer.</div><div class="es-sub">Tell me what you need — I\'ll pick the right model, use your tools, and get it done.</div></div>';
   lastUsedModelId="";sessionId=Date.now().toString();responseCount=0;
   document.getElementById("tokenBar").classList.add("hidden");
   activeWProjId=p.id;
@@ -2558,7 +2592,7 @@ function saveTabsToStorage(){
   try{localStorage.setItem(pk(TABS_KEY),JSON.stringify({tabs:openTabs,active:activeTabIndex}));}catch(e){}
 }
 function renderChatFromHistory(hist){
-  document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✦</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
+  document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">🤖</div><div class="es-title">I\'m your Overseer.</div><div class="es-sub">Tell me what you need — I\'ll pick the right model, use your tools, and get it done.</div></div>';
   chatHistory=[];
   (hist||[]).forEach(function(m){chatHistory.push({role:m.role,content:m.content});appendMsg(m.role,m.content);});
   setTimeout(function(){var c=document.getElementById("chat");c.scrollTop=c.scrollHeight;},50);
@@ -3427,6 +3461,18 @@ document.getElementById("ghwDenyBtn").addEventListener("click",function(){resolv
 document.getElementById("closeGithubWriteConfirmModal").addEventListener("click",function(){resolveGithubWriteConfirm(false);});
 document.getElementById("githubWriteConfirmModal").addEventListener("click",function(e){if(e.target===e.currentTarget)resolveGithubWriteConfirm(false);});
 
+function resolveGithubMergeConfirm(approved){
+  closeModal("githubMergeConfirmModal");
+  if(pendingGithubMergeResolve){
+    var r=pendingGithubMergeResolve;pendingGithubMergeResolve=null;
+    r(approved);
+  }
+}
+document.getElementById("ghmApproveBtn").addEventListener("click",function(){resolveGithubMergeConfirm(true);});
+document.getElementById("ghmDenyBtn").addEventListener("click",function(){resolveGithubMergeConfirm(false);});
+document.getElementById("closeGithubMergeConfirmModal").addEventListener("click",function(){resolveGithubMergeConfirm(false);});
+document.getElementById("githubMergeConfirmModal").addEventListener("click",function(e){if(e.target===e.currentTarget)resolveGithubMergeConfirm(false);});
+
 /* ---- Event listeners ---- */
 document.getElementById("deepinfraBtn").addEventListener("click",function(){if(activeBackend!=="deepinfra"){activeBackend="deepinfra";loadBackend();}});
 document.getElementById("openrouterBtn").addEventListener("click",function(){if(activeBackend!=="openrouter"){activeBackend="openrouter";loadBackend();}});
@@ -4023,6 +4069,18 @@ async function doSendRequest(userContent,isRegen,ap){
                   var listRes=await executeRepoTool("list_files",toolArgs);
                   displayToolExecution("list_files",toolArgs,listRes);
                   toolResult=listRes.success?JSON.stringify(listRes.files):(listRes.error||"Failed to list files");
+                }else if(toolName==="merge_branch"){
+                  asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">⚡ Waiting for approval to merge: '+esc(toolArgs.branch||"")+'&#8230;</span>';
+                  var approvedMerge=await confirmGithubMerge(toolArgs);
+                  if(!approvedMerge){
+                    displayToolExecution("merge_branch",toolArgs,{error:"Declined by user - not merged"});
+                    toolResult="The user declined this merge. Do not retry without asking first.";
+                  }else{
+                    asstMsg.body.innerHTML='<span style="color:var(--mu);font-size:13px">⚡ Merging '+esc(toolArgs.branch||"")+' into the default branch&#8230;</span>';
+                    var mergeRes=await executeRepoTool("merge_branch",toolArgs);
+                    displayToolExecution("merge_branch",toolArgs,mergeRes);
+                    toolResult=mergeRes.success?("Merged branch '"+toolArgs.branch+"' into the default branch via PR #"+mergeRes.prNumber+" ("+mergeRes.prUrl+")."):(mergeRes.error||"Failed to merge");
+                  }
                 }else if(toolName==="create_project"){
                   var cpRes=createProjectFromTool(toolArgs.name,toolArgs.instructions);
                   displayToolExecution("create_project",toolArgs,cpRes);
@@ -4134,7 +4192,7 @@ document.getElementById("clearBtn").addEventListener("click",function(){
   sessionId=Date.now().toString();responseCount=0;lastUsedModelId="";summarizing=false;
   clearActiveWproj();stopOverseerMonitoring();overseerState=defaultOverseerState();
   preVisionModel=null;declinedSwitchTargets={};switchSuggestionCooldown=0;
-  document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">✶</div><div class="es-title">What can I help you with?</div><div class="es-sub">Choose a model above and start chatting.</div></div>';
+  document.getElementById("chat").innerHTML='<div class="es" id="emptyState"><div class="es-icon">🤖</div><div class="es-title">I\'m your Overseer.</div><div class="es-sub">Tell me what you need — I\'ll pick the right model, use your tools, and get it done.</div></div>';
   document.getElementById("tokenBar").classList.add("hidden");
   updateOverseerBar();
   if(openTabs.length){openTabs[activeTabIndex]=currentTabSnapshot();renderTabBar();saveTabsToStorage();}
