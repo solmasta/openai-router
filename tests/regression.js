@@ -40,6 +40,9 @@
    - a model not in TOOL_MODELS (e.g. Claude, OpenRouter) never gets the
      "you have read_file/write_file tools" system prompt text, since it
      was never actually offered those tools in the API request
+   - every model, tool-capable or not, is explicitly told not to invent
+     or call a tool/function that was never actually defined for the
+     conversation (e.g. a fictional weather lookup)
    - the speak-replies-aloud toggle is off by default, actually calls
      speechSynthesis.speak once turned on, and stops again once turned off
    - voice-conversation mode: turning it on starts listening immediately,
@@ -1082,6 +1085,11 @@ function assert(cond, label) {
   await page.unroute('**/*');
   const checkupSysContent = ((lastCheckupBody && lastCheckupBody.messages) || []).filter((m) => m.role === 'system').map((m) => m.content).join('\n');
   assert(checkupSysContent.indexOf("THIS REPO IS THE APP YOU'RE RUNNING IN") >= 0, 'a maintenance/checkup request on the connected openai-router repo gets the hardcoded app-structure knowledge');
+  // The "don't invent tools" instruction is unconditional - a tool-capable
+  // model still needs it, since the failure mode it guards against
+  // (inventing an entirely fictional tool, e.g. a weather lookup) isn't
+  // specific to non-tool-capable models.
+  assert(checkupSysContent.indexOf('never invent or attempt to call a tool/function that wasn\'t given to you') >= 0, 'a tool-capable model also gets the explicit instruction not to invent undefined tools');
 
   await page.click('#settingsBtn'); await page.waitForTimeout(150);
   await page.click('#githubConnectBtn'); await page.waitForTimeout(150);
@@ -1150,6 +1158,13 @@ function assert(cond, label) {
   const nonToolSysContent = ((lastNonToolModelBody && lastNonToolModelBody.messages) || []).filter((m) => m.role === 'system').map((m) => m.content).join('\n');
   assert(nonToolSysContent.indexOf('REPOSITORY ACCESS ENABLED') < 0, 'a model not in TOOL_MODELS is never told it has repository tools it was never actually given');
   assert(nonToolSysContent.indexOf('read_file(path)') < 0, 'the same model does not get the read_file/write_file usage instructions either');
+  // Real user report, different flavor: a model invented an entirely
+  // fictional tool ("get_weather_by_coordinates") that was never one of
+  // this app's tools at all, regardless of whether real tools were
+  // offered - so this instruction is unconditional, not just for
+  // non-tool-capable models. Confirming it here since this test already
+  // has a captured system prompt handy.
+  assert(nonToolSysContent.indexOf('never invent or attempt to call a tool/function that wasn\'t given to you') >= 0, 'the system prompt explicitly forbids inventing tools that were never defined');
 
   // Switch back to a TOOL_MODELS model and restore auto-select, matching
   // the baseline the remaining tests expect.
