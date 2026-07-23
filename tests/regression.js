@@ -39,6 +39,10 @@
      connected to this actual repo, not some other repo
    - the speak-replies-aloud toggle is off by default, actually calls
      speechSynthesis.speak once turned on, and stops again once turned off
+   - voice-conversation mode: turning it on starts listening immediately,
+     a finished utterance auto-sends with no Send tap, the reply is
+     spoken even with the separate speak toggle off, and speaking's own
+     end restarts listening for the next turn
 
    Run: NODE_PATH=/opt/node22/lib/node_modules node tests/regression.js
 */
@@ -120,6 +124,25 @@ function assert(cond, label) {
       await page.waitForTimeout(150);
     }
   }
+
+  // Headless Chromium exposes a real webkitSpeechRecognition constructor,
+  // but calling .start() on it with no actual microphone/permission in
+  // this sandbox can't be driven deterministically - it never fires
+  // onresult with real transcript data. Replace it with a fully
+  // controllable fake before the app's own init IIFE runs (it reads
+  // window.SpeechRecognition once at load), so voice-conversation mode's
+  // listen -> send -> speak -> listen loop can be exercised precisely.
+  await page.addInitScript(() => {
+    window.__recognitionStartCount = 0;
+    function FakeSpeechRecognition() {
+      this.onresult = null; this.onend = null; this.onerror = null;
+      window.__fakeRecognition = this;
+    }
+    FakeSpeechRecognition.prototype.start = function () { window.__recognitionStartCount++; };
+    FakeSpeechRecognition.prototype.stop = function () { if (this.onend) this.onend(); };
+    window.SpeechRecognition = FakeSpeechRecognition;
+    window.webkitSpeechRecognition = FakeSpeechRecognition;
+  });
 
   // 'load' waits for every subresource to settle, including the external
   // Google/Workers scripts this sandbox's proxy is set up to reject - how
@@ -1083,7 +1106,16 @@ function assert(cond, label) {
   // toggle on, and must stop calling it again once turned back off.
   await page.evaluate(() => {
     window.__speakCalls = [];
-    window.speechSynthesis.speak = (utter) => { window.__speakCalls.push(utter.text); };
+    // Mimics real speechSynthesis by actually firing the utterance's own
+    // onstart/onend - later code (voice-conversation mode's auto-relisten,
+    // the speak button's "speaking" pulse) hangs off those callbacks, and
+    // a spy that only records the call without firing them would silently
+    // break that for every test running after this one.
+    window.speechSynthesis.speak = (utter) => {
+      window.__speakCalls.push(utter.text);
+      if (utter.onstart) utter.onstart();
+      if (utter.onend) utter.onend();
+    };
   });
   await page.route('**/*', async (route) => {
     const req = route.request();
@@ -1122,6 +1154,109 @@ function assert(cond, label) {
   const spokenCountAfterDisable = await page.evaluate(() => window.__speakCalls.length);
   assert(spokenCountAfterDisable === spokenTexts.length, 'once disabled again, a completed response does not call speechSynthesis.speak');
   await page.unroute('**/*');
+
+  console.log('\n-- voice-conversation mode: listens, auto-sends on silence, speaks the reply, then listens again --');
+  // The whole point of this mode is not having to touch mic or Send for
+  // every turn - toggling it on starts listening immediately, a finished
+  // utterance (recognition.onend firing with real text) auto-sends,
+  // completing the reply speaks it aloud, and the utterance's own onend
+  // restarts listening for the next turn - a continuous loop instead of
+  // tap mic, wait, tap Send, repeat.
+  // Pin a known model first, same as every other send-driving test in this
+  // file - without it, send()'s own switchToBestModel call inherits
+  // whatever model/backend a prior test happened to leave active, and can
+  // switch again mid-flow for a low-signal message, changing workerUrl out
+  // from under this test's route mock and turning the real (blocked in
+  // this sandbox) network fetch into an unhandled "Failed to fetch".
+  await page.click('#modelBtn'); await page.waitForTimeout(150);
+  await page.locator('.mc:has-text("Mistral Small")').first().click();
+  await page.waitForTimeout(150);
+  const startCountBeforeToggle = await page.evaluate(() => window.__recognitionStartCount || 0);
+  await page.click('#voiceModeBtn'); await page.waitForTimeout(150);
+  const voiceModeOnState = await page.evaluate(() => document.getElementById('voiceModeBtn').classList.contains('on'));
+  assert(voiceModeOnState, 'toggling voice-conversation mode on shows it as active');
+  const micOnAfterToggle = await page.evaluate(() => document.getElementById('micBtn').classList.contains('on'));
+  assert(micOnAfterToggle, 'turning voice-conversation mode on immediately starts listening (mic shows on)');
+  const startCountAfterToggle = await page.evaluate(() => window.__recognitionStartCount);
+  assert(startCountAfterToggle === startCountBeforeToggle + 1, 'turning voice-conversation mode on actually calls recognition.start() once');
+
+  // Playwright's page.route() reliably intercepts requests fired from a
+  // real click in every other test in this file, but the fetch this test
+  // triggers - several async hops downstream of a synthetic
+  // recognition.onend() call rather than a DOM event - was consistently
+  // rejecting with "Failed to fetch" before the route handler's very first
+  // line ever ran, across many repeated runs. Patching window.fetch itself
+  // sidesteps whatever CDP-level timing quirk that is: it's the app's own
+  // JS calling this function directly, no network/route layer involved.
+  await page.evaluate(() => {
+    window.__origFetch = window.fetch;
+    window.fetch = async (url, opts) => {
+      const u = String(url);
+      if (u.indexOf('/secret') >= 0) {
+        return new Response(JSON.stringify({ secret: 'regtest-secret' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (opts && opts.method === 'POST' && opts.body) {
+        let parsed = null;
+        try { parsed = JSON.parse(opts.body); } catch (e) {}
+        if (parsed && parsed.stream === false) {
+          // Whatever model/GitHub state carried over from earlier tests,
+          // this test only cares about the voice loop, not tool behavior -
+          // tell it there's nothing to call so it falls straight through
+          // to the final streaming reply below.
+          return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: 'regtest done' } }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
+        if (parsed && parsed.stream === true) {
+          return new Response('data: {"choices":[{"delta":{"content":"regtest voice reply"}}]}\n\ndata: [DONE]\n\n', { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+        }
+      }
+      return window.__origFetch(url, opts);
+    };
+  });
+  // Simulate the browser reporting a finished, transcribed utterance -
+  // shaped exactly like the real SpeechRecognition onresult event the
+  // app's own handler expects (resultIndex + results[i][0].transcript +
+  // results[i].isFinal).
+  await page.evaluate(() => {
+    window.__fakeRecognition.onresult({
+      resultIndex: 0,
+      results: { length: 1, 0: { length: 1, isFinal: true, 0: { transcript: 'regtest voice message' } } },
+    });
+  });
+  const promptAfterResult = await page.inputValue('#prompt');
+  assert(promptAfterResult === 'regtest voice message', `a transcribed result fills the compose box (got "${promptAfterResult}")`);
+
+  // The real API fires onend on its own as soon as it detects the user
+  // stopped talking - simulate that natural pause here.
+  await page.evaluate(() => { window.__fakeRecognition.onend(); });
+  await waitForSendDone();
+  await page.evaluate(() => { window.fetch = window.__origFetch; delete window.__origFetch; });
+
+  const promptClearedAfterAutoSend = await page.inputValue('#prompt');
+  assert(promptClearedAfterAutoSend === '', 'the finished utterance auto-sent on its own - no Send tap required (compose box cleared)');
+  // waitForSendDone() only guarantees the sendBtn label flipped back - poll
+  // briefly for the actual speak/relisten side effects too, same reasoning
+  // as the "poll for the intercepted body" fix used elsewhere in this file
+  // for requests that can land a beat after the button state settles.
+  let spokenAfterVoiceReply = null;
+  for (let i = 0; i < 20; i++) {
+    spokenAfterVoiceReply = await page.evaluate(() => window.__speakCalls[window.__speakCalls.length - 1]);
+    if (spokenAfterVoiceReply === 'regtest voice reply') break;
+    await page.waitForTimeout(200);
+  }
+  assert(spokenAfterVoiceReply === 'regtest voice reply', `the reply is spoken aloud even though the separate speak toggle is off (got "${spokenAfterVoiceReply}")`);
+  let startCountAfterReply = null;
+  for (let i = 0; i < 20; i++) {
+    startCountAfterReply = await page.evaluate(() => window.__recognitionStartCount);
+    if (startCountAfterReply === startCountAfterToggle + 1) break;
+    await page.waitForTimeout(200);
+  }
+  assert(startCountAfterReply === startCountAfterToggle + 1, `once the reply finishes speaking, listening restarts on its own for the next turn (got start count ${startCountAfterReply}, expected ${startCountAfterToggle + 1})`);
+
+  await page.click('#voiceModeBtn'); await page.waitForTimeout(150);
+  const voiceModeOffState = await page.evaluate(() => document.getElementById('voiceModeBtn').classList.contains('on'));
+  assert(!voiceModeOffState, 'toggling voice-conversation mode off turns it back off');
+  const micOffAfterDisable = await page.evaluate(() => document.getElementById('micBtn').classList.contains('on'));
+  assert(!micOffAfterDisable, 'turning voice-conversation mode off stops listening (mic shows off)');
 
   console.log(`\n-- page errors: ${realErrors().length} real (excluding expected sandbox network noise) --`);
   if (realErrors().length) console.log(realErrors());

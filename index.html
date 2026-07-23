@@ -156,6 +156,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 .mic.off{opacity:.3;cursor:default}
 .spk.on{color:var(--ac)}
 .spk.speaking{color:var(--er);animation:pu .8s ease-in-out infinite}
+.vc.on{color:var(--ac);animation:pu 2s ease-in-out infinite}
 @keyframes pu{0%,100%{opacity:1}50%{opacity:.5}}
 .ws{background:none;border:none;border-radius:20px;padding:9px 10px;font-size:13px;cursor:pointer;line-height:1;color:var(--mu);transition:background .15s,color .15s;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}
 .ws:hover{background:var(--up);color:var(--tx)}
@@ -252,7 +253,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.40</span></span>
+      <span class="wm">ai-router <span>v5.41</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -286,6 +287,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
         <input type="file" id="fileInput" hidden multiple accept="image/*,.txt,.js,.ts,.jsx,.tsx,.py,.html,.css,.json,.md,.yaml,.yml,.csv,.xml,.sh">
         <button class="mic" id="micBtn" title="Voice">&#127908;</button>
         <button class="mic spk" id="speakBtn" title="Speak replies aloud">&#128266;</button>
+        <button class="mic vc" id="voiceModeBtn" title="Live voice conversation - listens, sends, and replies aloud automatically">&#128222;</button>
         <button class="ws" id="overseerBtn" title="Overseer status (long-press to chat)">🤖</button>
         <button class="ws" id="brainstormBtn" title="Brainstorming suggestions">💭</button>
         <button class="ws" id="newTabBtn" title="New conversation tab" style="color:var(--ac);font-size:17px;font-weight:400">&#43;</button>
@@ -533,7 +535,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.40</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.41</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -982,7 +984,7 @@ async function doSummarize(){
 }
 
 /* ---- Voice ---- */
-var recognition=null,micOn=false;
+var recognition=null,micOn=false,voiceConversationMode=false;
 (function(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){document.getElementById("micBtn").classList.add("off");return;}
@@ -997,15 +999,34 @@ var recognition=null,micOn=false;
     el.value=(el.dataset.base||"")+fin+int;
     el.style.height="auto";el.style.height=Math.min(el.scrollHeight,150)+"px";
   };
-  recognition.onend=function(){micOn=false;document.getElementById("micBtn").classList.remove("on");delete document.getElementById("prompt").dataset.base;};
+  /* SpeechRecognition with continuous=false already stops itself as soon
+     as it detects a pause in speech - that natural "onend" is exactly the
+     cue voice-conversation mode needs to auto-send a finished turn
+     without the user ever touching Send. Only fires when there's actual
+     transcribed text, so stopping the mic with nothing said (or manually,
+     via toggleMic) never sends an empty message. */
+  recognition.onend=function(){
+    micOn=false;document.getElementById("micBtn").classList.remove("on");
+    var el=document.getElementById("prompt");
+    var hasText=(el.value||"").trim().length>0;
+    delete el.dataset.base;
+    if(voiceConversationMode&&hasText&&!sending)send();
+  };
   recognition.onerror=function(){recognition.onend();};
 })();
-function toggleMic(){
-  if(!recognition)return;
-  if(micOn){recognition.stop();return;}
+/* Shared by the manual mic tap and voice-conversation mode's own
+   listen -> send -> speak -> listen loop, so both go through the exact
+   same start path instead of two slightly different copies. */
+function startListening(){
+  if(!recognition||micOn)return;
   var el=document.getElementById("prompt");el.dataset.base=el.value?el.value+" ":"";
   micOn=true;document.getElementById("micBtn").classList.add("on");
   try{recognition.start();}catch(e){micOn=false;document.getElementById("micBtn").classList.remove("on");}
+}
+function toggleMic(){
+  if(!recognition)return;
+  if(micOn){recognition.stop();return;}
+  startListening();
 }
 
 /* ---- Speak replies aloud ---- */
@@ -1022,17 +1043,47 @@ function toggleSpeak(){
 }
 /* Called with the already-cleaned reply text (think-tags/memory-tags
    already stripped by the caller) right as a response finishes, so it
-   reads naturally instead of narrating markdown syntax or reasoning. */
+   reads naturally instead of narrating markdown syntax or reasoning.
+   Also fires in voice-conversation mode even if the separate "speak"
+   toggle is off - a hands-free conversation needs the reply spoken
+   regardless, and turning voice mode off doesn't silently flip the
+   independent speak toggle on for the rest of the session. */
 function speakText(text){
-  if(!speakEnabled||!text||!window.speechSynthesis)return;
+  if(!(speakEnabled||voiceConversationMode)||!text||!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
   var utter=new SpeechSynthesisUtterance(text);
   var btn=document.getElementById("speakBtn");
   utter.onstart=function(){if(btn)btn.classList.add("speaking");};
-  utter.onend=function(){if(btn)btn.classList.remove("speaking");};
+  utter.onend=function(){
+    if(btn)btn.classList.remove("speaking");
+    /* The mic only starts listening again once the reply has actually
+       finished playing out loud - starting it any earlier risks the mic
+       picking up the app's own voice through the speaker and feeding it
+       back in as if the user had said it. */
+    if(voiceConversationMode)startListening();
+  };
   utter.onerror=function(){if(btn)btn.classList.remove("speaking");};
   window.speechSynthesis.speak(utter);
 }
+/* Off by default. Turning it on immediately starts listening; from then
+   on each finished utterance auto-sends (via recognition.onend above),
+   the reply is spoken (via speakText above), and speaking's own end
+   restarts listening - a continuous, hands-free back-and-forth instead
+   of tapping mic then Send for every single turn. */
+function toggleVoiceMode(){
+  var btn=document.getElementById("voiceModeBtn");
+  if(!recognition||!window.speechSynthesis){btn.classList.add("off");return;}
+  voiceConversationMode=!voiceConversationMode;
+  btn.classList.toggle("on",voiceConversationMode);
+  if(voiceConversationMode){
+    startListening();
+  }else{
+    if(micOn)recognition.stop();
+    window.speechSynthesis.cancel();
+    var spkBtn=document.getElementById("speakBtn");if(spkBtn)spkBtn.classList.remove("speaking");
+  }
+}
+if(!recognition||!window.speechSynthesis)document.getElementById("voiceModeBtn").classList.add("off");
 
 /* ---- Favorites ---- */
 var FK="ai_favorites";
@@ -3565,6 +3616,7 @@ document.getElementById("convSearch").addEventListener("input",function(){
 });
 document.getElementById("micBtn").addEventListener("click",toggleMic);
 document.getElementById("speakBtn").addEventListener("click",toggleSpeak);
+document.getElementById("voiceModeBtn").addEventListener("click",toggleVoiceMode);
 document.getElementById("agentToggleBtn").addEventListener("click",function(){
   agentAutoSelect=!agentAutoSelect;
   this.textContent=agentAutoSelect?"ON":"OFF";
