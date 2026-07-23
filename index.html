@@ -250,7 +250,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.33</span></span>
+      <span class="wm">ai-router <span>v5.34</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -516,7 +516,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.33</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.34</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1073,7 +1073,7 @@ var allAvailableModels=[],agentAutoSelect=true,lastAgentSelection=null;
 function analyzeTask(text){
   var lower=typeof text==="string"?text.toLowerCase():(text.find&&text.find(function(c){return c.type==="text";})||{}).text||"";
   var tasks={github:0,code:0,write:0,reason:0,analyze:0,search:0};
-  var githubKeywords=["github","git","commit","push","pull request","pr","repo","branch","merge"];
+  var githubKeywords=["github","git","commit","push","pull request","pr","repo","branch","merge","checkup","maintenance","feature"];
   var codeKeywords=["code","fix","debug","bug","error","function","javascript","python","java","c++","react","node","implement","refactor","lint"];
   var writeKeywords=["write","essay","article","blog","poem","story","explain","describe","summarize","documentation","readme"];
   var reasonKeywords=["why","analyze","explain","think about","consider","philosophy","problem","solution"];
@@ -1914,6 +1914,23 @@ function getModelSystemPrompt(ap){
     sys+="- Plan your approach in <think> tags\n";
     sys+="- Make changes using write_file with clear commit messages, on a dedicated working branch\n";
     sys+="- Each write_file creates one git commit\n\n";
+    /* Hardcoded, accurate knowledge of THIS app's own structure and
+       conventions - only when the connected repo actually IS this app
+       (someone could point the GitHub connection at a totally different
+       repo, where this would just be wrong). Without this, a model asked
+       to do "a checkup" or "add a feature" on the app has to guess at its
+       architecture from scratch every single time instead of already
+       knowing it. */
+    if(ghRepoOwner==="solmasta"&&ghRepoName==="openai-router"){
+      sys+="THIS REPO IS THE APP YOU'RE RUNNING IN - its own real structure, not a guess:\n";
+      sys+="- index.html is the ENTIRE frontend: markup, CSS, and all JS in two inline <script> blocks, each wrapped in its own IIFE. A plain top-level function is NOT reachable as window.foo unless explicitly assigned (window.foo=function(){...}) - inline onclick=\"...\" handlers run in global scope and need that, or they silently no-op.\n";
+      sys+="- 4 Cloudflare Workers back it, each with its own wrangler config: openai-router.js (DeepInfra models + free web search), claude-worker.js (Claude/Anthropic), openrouter-worker.js (OpenRouter), github-ops-worker.js (this repo's own read_file/write_file/list_files - the tools you're using right now).\n";
+      sys+="- tests/regression.js is a Playwright suite covering flows that have actually broken before. You have no shell/execute_command access, so you cannot run it yourself - tell the user to run it (NODE_PATH=/opt/node22/lib/node_modules node tests/regression.js) before merging, and if your change touches a flow it covers, update the test in the same write_file call rather than letting it drift.\n";
+      sys+="- Bump the version string in BOTH spots (header \".wm span\" and the Settings modal title, both currently \"v5.x\") with every user-visible change, in the same commit.\n";
+      sys+="- Keep changes proportional to what's asked - this is a deliberately single-file app with no build step; don't introduce a framework, split it into multiple files, or add a build pipeline unless explicitly asked to.\n";
+      sys+="- For \"do a checkup\"/\"maintenance\" requests: read_file the relevant parts of index.html (and CLAUDE.md if useful), check the two version spots agree, look for obvious real issues, and report back or propose fixes via write_file - don't claim tests passed, since you can't run them.\n";
+      sys+="- For \"add a feature\"/\"new addition\" requests: read_file the relevant existing section first and match its actual patterns (naming, modal/localStorage/Drive-sync conventions already in use) rather than inventing a different style.\n\n";
+    }
     sys+="Execute tools immediately - don't ask for permission.\n";
     sys+="Show your reasoning in <think> tags. Be direct and action-oriented.\n";
   }else{

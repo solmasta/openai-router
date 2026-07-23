@@ -21,6 +21,8 @@
      a name search only when no id is known yet
    - App-control tools (create_project/remember/switch_model) execute
      immediately on a model tool_call, with real observable side effects
+   - Hardcoded app-structure knowledge only appears when GitHub is
+     connected to this actual repo, not some other repo
 
    Run: NODE_PATH=/opt/node22/lib/node_modules node tests/regression.js
 */
@@ -712,6 +714,72 @@ function assert(cond, label) {
 
   const modelLabelAfterToolSwitch = await page.textContent('#modelBtnLabel');
   assert(modelLabelAfterToolSwitch === 'Llama 3.3 70B Turbo', `switch_model tool call actually switches the active model (got "${modelLabelAfterToolSwitch}")`);
+
+  console.log('\n-- hardcoded app-structure knowledge only appears when the connected repo actually IS this app --');
+  // Without this, a model asked to do "a checkup" or "add a feature" on
+  // the app has to guess its own architecture from scratch every time.
+  // It must only apply to solmasta/openai-router specifically - injecting
+  // it for some other repo the user points GitHub at would just be wrong.
+  // The previous test's create_project call left a Work Project active -
+  // getModelSystemPrompt takes a completely different branch whenever a
+  // project is active (the project's own instructions take over), which
+  // would skip this block entirely regardless of GitHub state. Clear does
+  // this too, but also matches how a real user would move on for a new
+  // topic in this app.
+  await page.click('#clearBtn'); await page.waitForTimeout(200);
+  await page.click('#modelBtn'); await page.waitForTimeout(150);
+  await page.locator('.mc:has-text("Mistral Small")').first().click();
+  await page.waitForTimeout(150);
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  await page.click('#githubConnectBtn'); await page.waitForTimeout(150);
+  await page.fill('#ghOwnerInput', 'solmasta');
+  await page.fill('#ghRepoInput', 'openai-router');
+  await page.click('#githubSaveBtn'); await page.waitForTimeout(150);
+  let lastCheckupBody = null;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      try {
+        const parsed = JSON.parse(req.postData());
+        if (parsed.messages) lastCheckupBody = parsed;
+      } catch (e) {}
+    }
+    await route.continue();
+  });
+  await sendMsg('can you do a maintenance checkup on the app');
+  for (let i = 0; i < 60 && lastCheckupBody === null; i++) await page.waitForTimeout(200);
+  await page.unroute('**/*');
+  const checkupSysContent = ((lastCheckupBody && lastCheckupBody.messages) || []).filter((m) => m.role === 'system').map((m) => m.content).join('\n');
+  assert(checkupSysContent.indexOf("THIS REPO IS THE APP YOU'RE RUNNING IN") >= 0, 'a maintenance/checkup request on the connected openai-router repo gets the hardcoded app-structure knowledge');
+
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  await page.click('#githubConnectBtn'); await page.waitForTimeout(150);
+  await page.fill('#ghOwnerInput', 'someoneelse');
+  await page.fill('#ghRepoInput', 'unrelated-project');
+  await page.click('#githubSaveBtn'); await page.waitForTimeout(150);
+  let lastOtherRepoBody = null;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      try {
+        const parsed = JSON.parse(req.postData());
+        if (parsed.messages) lastOtherRepoBody = parsed;
+      } catch (e) {}
+    }
+    await route.continue();
+  });
+  await sendMsg('can you do a maintenance checkup on the app');
+  for (let i = 0; i < 60 && lastOtherRepoBody === null; i++) await page.waitForTimeout(200);
+  await page.unroute('**/*');
+  const otherRepoSysContent = ((lastOtherRepoBody && lastOtherRepoBody.messages) || []).filter((m) => m.role === 'system').map((m) => m.content).join('\n');
+  assert(otherRepoSysContent.indexOf("THIS REPO IS THE APP YOU'RE RUNNING IN") < 0, 'the same request against a different connected repo does NOT get openai-router-specific knowledge');
+
+  // Leave GitHub pointed back at the real repo, matching actual usage.
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  await page.click('#githubConnectBtn'); await page.waitForTimeout(150);
+  await page.fill('#ghOwnerInput', 'solmasta');
+  await page.fill('#ghRepoInput', 'openai-router');
+  await page.click('#githubSaveBtn'); await page.waitForTimeout(150);
 
   console.log(`\n-- page errors: ${realErrors().length} real (excluding expected sandbox network noise) --`);
   if (realErrors().length) console.log(realErrors());
