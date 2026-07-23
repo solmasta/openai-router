@@ -37,6 +37,9 @@
      immediately on a model tool_call, with real observable side effects
    - Hardcoded app-structure knowledge only appears when GitHub is
      connected to this actual repo, not some other repo
+   - a model not in TOOL_MODELS (e.g. Claude, OpenRouter) never gets the
+     "you have read_file/write_file tools" system prompt text, since it
+     was never actually offered those tools in the API request
    - the speak-replies-aloud toggle is off by default, actually calls
      speechSynthesis.speak once turned on, and stops again once turned off
    - voice-conversation mode: turning it on starts listening immediately,
@@ -1104,6 +1107,62 @@ function assert(cond, label) {
   await page.fill('#ghOwnerInput', 'solmasta');
   await page.fill('#ghRepoInput', 'openai-router');
   await page.click('#githubSaveBtn'); await page.waitForTimeout(150);
+
+  console.log('\n-- a model not in TOOL_MODELS never gets told it has tools it was never given --');
+  // Real user-reported bug: the system prompt used to claim "you have
+  // read_file/write_file tools, use them immediately" for ANY model
+  // whenever GitHub was connected, regardless of whether that model was
+  // actually in TOOL_MODELS - the only thing doSendRequest checks before
+  // actually attaching those tools to the API request. A model that was
+  // never really offered tools but was told it had them tried to call one
+  // anyway and, with no structured tool-calling mechanism available,
+  // dumped the attempt as literal text (e.g.
+  // "<tool_call><function=read_file>...") straight into its reply.
+  // Disable auto-select first - a repo-flavored message is exactly what
+  // switchToBestModel (fixed earlier this session) now actively steers
+  // toward a TOOL_MODELS model, which would silently defeat this test by
+  // switching away from Claude before the send this test cares about.
+  await page.click('#settingsBtn'); await page.waitForTimeout(150);
+  const agentAutoSelectWasOn = await page.evaluate(() => document.getElementById('agentToggleBtn').textContent === 'ON');
+  if (agentAutoSelectWasOn) { await page.click('#agentToggleBtn'); await page.waitForTimeout(150); }
+  await page.click('#closeSettingsModal'); await page.waitForTimeout(150);
+  await page.click('#modelBtn'); await page.waitForTimeout(150);
+  await page.click('#claudeBtn'); await page.waitForTimeout(300);
+  await page.click('#closeModelModal'); await page.waitForTimeout(150);
+  let lastNonToolModelBody = null;
+  await page.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST' && req.postData()) {
+      try {
+        const parsed = JSON.parse(req.postData());
+        if (parsed.messages) lastNonToolModelBody = parsed;
+      } catch (e) {}
+    }
+    await route.continue();
+  });
+  await sendMsg('can you check the repo files for me');
+  for (let i = 0; i < 60 && lastNonToolModelBody === null; i++) await page.waitForTimeout(200);
+  await page.unroute('**/*');
+  const nonToolSysContent = ((lastNonToolModelBody && lastNonToolModelBody.messages) || []).filter((m) => m.role === 'system').map((m) => m.content).join('\n');
+  assert(nonToolSysContent.indexOf('REPOSITORY ACCESS ENABLED') < 0, 'a model not in TOOL_MODELS is never told it has repository tools it was never actually given');
+  assert(nonToolSysContent.indexOf('read_file(path)') < 0, 'the same model does not get the read_file/write_file usage instructions either');
+
+  // Switch back to a TOOL_MODELS model and restore auto-select, matching
+  // the baseline the remaining tests expect.
+  await page.click('#modelBtn'); await page.waitForTimeout(150);
+  await page.click('#deepinfraBtn'); await page.waitForTimeout(300);
+  await page.locator('.mc:has-text("Mistral Small")').first().click();
+  await page.waitForTimeout(150);
+  if (agentAutoSelectWasOn) {
+    await page.click('#settingsBtn'); await page.waitForTimeout(150);
+    await page.click('#agentToggleBtn'); await page.waitForTimeout(150);
+    await page.click('#closeSettingsModal'); await page.waitForTimeout(150);
+  }
+  // Guard against any stray leftover text in the compose box carrying
+  // into a later test's transcript simulation (voice-conversation mode
+  // captures whatever's already in #prompt as its dataset.base and
+  // prepends it to the next transcribed result).
+  await page.fill('#prompt', '');
 
   console.log('\n-- speak-replies-aloud toggle actually speaks completed responses, off by default --');
   // Off by default (speakEnabled starts false) - a completed response must
