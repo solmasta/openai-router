@@ -1,1 +1,1 @@
-Updated README with resolved conflicts
+Updated README.md
