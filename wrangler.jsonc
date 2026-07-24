@@ -1,5 +1,5 @@
 {
-  "name": "openai-router-chat",
+  "name": "ai-router-drive",
   "main": "openai-router.js",
   "compatibility_date": "2024-09-23",
   "observability": {
