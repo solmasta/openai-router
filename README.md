@@ -2,5 +2,4 @@
 
 A router for OpenAI models.
 
-## Access Token
-The personal access token is expired or invalid and needs to be updated.
+Note: The personal access token used for GitHub operations is currently expired or invalid.
