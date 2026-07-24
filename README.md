@@ -2,5 +2,6 @@
 
 A router for OpenAI models.
 
-## Contributing
-Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to this project.
+## Getting Started
+1. Update your personal access token.
+2. Run the application.
