@@ -253,7 +253,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 <div class="app">
   <header>
     <div class="hl">
-      <span class="wm">ai-router <span>v5.46</span></span>
+      <span class="wm">ai-router <span>v5.47</span></span>
     </div>
     <div class="hr">
       <button class="mb" id="modelBtn" disabled><span class="mbl" id="modelBtnLabel">Loading&#8230;</span><span class="ma">&#9660;</span></button>
@@ -535,7 +535,7 @@ code.ic{font-family:var(--mn);font-size:13px;background:var(--up);border-radius:
 </div></div>
 
 <div class="modal hidden" id="settingsModal"><div class="sheet">
-  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.46</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
+  <div class="sh"><span>Settings</span><span style="font-family:var(--mn);font-size:11px;color:var(--mu)">v5.47</span><button class="sc" id="closeSettingsModal">&#10005;</button></div>
   <div class="sbody">
     <div class="sr"><div><div class="slb">Temperature</div><div class="ssb">Higher = creative, lower = focused</div></div><div style="display:flex;align-items:center;gap:8px"><input type="range" class="ts" id="tempSlider" min="0" max="1" step="0.05" value="0.7"><span class="tv" id="tempVal">0.7</span></div></div>
     <div class="sr"><div><div class="slb">Theme</div><div class="ssb">Switch between dark and light mode</div></div><button class="bg" id="themeBtn">&#9790; Light</button></div>
@@ -1600,6 +1600,13 @@ function showStepUpdate(prevStep,nextStep){
   notice.innerHTML="✓ <strong>Step completed:</strong> "+esc(prevStep)+"<br>→ <strong>Next:</strong> "+esc(nextStep);
   document.getElementById("chat").appendChild(notice);
 }
+/* Each condition below stays true across many 15s monitoring ticks (e.g.
+   progress sitting above 75% while idle) - without this check
+   makeProactiveRecommendation would push and render the same box again on
+   every tick instead of once per distinct recommendation. */
+function alreadyRecommended(reason){
+  return overseerState.recommendations.some(function(r){return r.reason===reason;});
+}
 function makeProactiveRecommendation(){
   if(overseerState.progress>75&&overseerState.goal==="debug"&&overseerState.messagesProcessed>5){
     var recs=[
@@ -1607,8 +1614,10 @@ function makeProactiveRecommendation(){
       {type:"next_step",reason:"Document what caused the bug and solution",confidence:80}
     ];
     var rec={type:"next_step",reason:"Debug nearly complete. Next: write test + document fix",confidence:85};
-    overseerState.recommendations.push(rec);
-    showBetterRecommendation(rec,recs.slice(1));
+    if(!alreadyRecommended(rec.reason)){
+      overseerState.recommendations.push(rec);
+      showBetterRecommendation(rec,recs.slice(1));
+    }
   }
   if(overseerState.progress>75&&overseerState.goal==="feature"&&overseerState.messagesProcessed>6){
     var recs2=[
@@ -1616,8 +1625,10 @@ function makeProactiveRecommendation(){
       {type:"next_step",reason:"Create PR for code review before merging",confidence:85}
     ];
     var rec2={type:"next_step",reason:"Feature nearly complete. Next: integration testing, then code review",confidence:90};
-    overseerState.recommendations.push(rec2);
-    showBetterRecommendation(rec2,recs2.slice(1));
+    if(!alreadyRecommended(rec2.reason)){
+      overseerState.recommendations.push(rec2);
+      showBetterRecommendation(rec2,recs2.slice(1));
+    }
   }
   if(overseerState.progress>80&&overseerState.goal==="design"&&overseerState.messagesProcessed>4){
     var recs3=[
@@ -1625,13 +1636,17 @@ function makeProactiveRecommendation(){
       {type:"next_step",reason:"Get feedback from team on proposed architecture",confidence:80}
     ];
     var rec3={type:"next_step",reason:"Design review nearly complete. Next: validate components, get team feedback",confidence:85};
-    overseerState.recommendations.push(rec3);
-    showBetterRecommendation(rec3,recs3.slice(1));
+    if(!alreadyRecommended(rec3.reason)){
+      overseerState.recommendations.push(rec3);
+      showBetterRecommendation(rec3,recs3.slice(1));
+    }
   }
   if(overseerState.efficiencyScore<50&&overseerState.messagesProcessed>3){
     var rec4={type:"approach",reason:"Conversation pace is slow. Try asking for shorter, more focused responses.",confidence:70};
-    overseerState.recommendations.push(rec4);
-    showBetterRecommendation(rec4,[]);
+    if(!alreadyRecommended(rec4.reason)){
+      overseerState.recommendations.push(rec4);
+      showBetterRecommendation(rec4,[]);
+    }
   }
 }
 function updateOverseerStatus(){
