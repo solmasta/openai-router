@@ -2,5 +2,5 @@
 
 A router for OpenAI models.
 
-## Troubleshooting
-If you receive an HTTP 403 error, your personal access token may be invalid.
+## Resolving Merge Conflicts
+To resolve merge conflicts, please update the conflicting files and commit the changes.
